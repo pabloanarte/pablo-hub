@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PABLO</title>
+<style>
+:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:#fff;color:#000;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+.w{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:34px;letter-spacing:5px;margin:8px 0 14px;font-weight:700}
+h2{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8e8e93;margin:26px 0 6px}h2 span{color:#000}
+nav,.seg,.ls,.bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}nav{flex-wrap:nowrap;overflow-x:auto}
+.seg{margin:10px 0}.bar{flex-wrap:nowrap;margin:14px 0 0}
+button{font-family:inherit}
+.t{border:0;background:#f2f2f7;border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;white-space:nowrap;color:#000}
+.t.on{background:#000;color:#fff}
+.b{border:0;background:#000;color:#fff;border-radius:12px;padding:10px 16px;font-size:14px;cursor:pointer;white-space:nowrap}
+.del{border:0;background:none;color:#ff3b30;font-size:14px;margin-top:22px;cursor:pointer;padding:8px 0}
+input,select,textarea{width:100%;font:inherit;font-size:16px;border:1px solid #e5e5ea;border-radius:12px;padding:10px 12px;background:#fff;color:#000;margin:4px 0}
+input.big{font-size:22px;font-weight:700;border:0;padding:6px 0}textarea{resize:vertical}
+label{display:block;font-size:12px;color:#8e8e93;margin:16px 0 2px}
+.st{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.st div{background:#f5f5f7;border-radius:14px;padding:12px 8px;text-align:center}.st b{display:block;font-size:24px}.st small{font-size:11px}
+.r{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #eee;cursor:pointer}
+.g{flex:1;min-width:0}.g b{display:block}small{color:#8e8e93;font-size:12px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.ln{font-size:12px;border:1px solid #e5e5ea;border-radius:999px;padding:4px 10px;color:#000;text-decoration:none;white-space:nowrap}
+.em{color:#8e8e93;font-size:14px;margin:18px 0}
+.lg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#8e8e93;margin:12px 0}.lg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.tcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px}.tc{border:1px solid #e5e5ea;border-radius:14px;padding:10px;cursor:pointer}.tc.on{border:2px solid #000;padding:9px}.tc b{display:block;font-size:13px;line-height:1.3}.tc span{display:block;font-size:24px;font-weight:700;line-height:1.1;margin:6px 0 4px}.tc span small{display:inline;font-size:14px;font-weight:400;margin-left:2px}.tc>small{display:block;line-height:1.4}
+#sh{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.sheet{background:#fff;width:100%;max-width:640px;max-height:94vh;overflow:auto;border-radius:22px 22px 0 0;padding:16px 16px calc(28px + env(safe-area-inset-bottom,0px))}
+.top{display:flex;justify-content:flex-end}
+.m{border-bottom:1px solid #eee;padding:8px 0;font-size:14px}pre{white-space:pre-wrap;font-family:inherit;font-size:14px;margin:8px 0}
+#lock{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+#lock input{max-width:260px;text-align:center}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#000;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:20}
+
+#hubnav{margin-bottom:10px}</style></head><body>
+<div class="w">
+<h1>PABLO</h1>
+<nav id="hubnav" hidden></nav>
+<section id="s-contactos">
+<div id="app"><nav id="nav"><button class="t" data-a="nav" data-v="hoy">Seguimiento</button><button class="t" data-a="nav" data-v="contactos">Contactos</button><button class="t" data-a="nav" data-v="plantillas">Plantillas</button><button class="t" data-a="nav" data-v="datos">Datos</button></nav>
+<main id="v"></main></div>
+</section>
+<!-- Nueva sección: añade aquí <section id="s-NOMBRE" hidden></section>, crea sections/NOMBRE.js y registra una línea en hub.js -->
+</div>
+<div id="sh" hidden><div class="sheet" id="shc"></div></div>
+<datalist id="dl"></datalist><div id="toast" hidden></div>
+<script src="hub.js"></script>
+</body></html>
