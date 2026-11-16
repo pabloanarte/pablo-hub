@@ -19,7 +19,7 @@ const $=s=>document.querySelector(s);
 const E=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 const D=d=>d?d.split("-").reverse().join("/"):"";
 const days=d=>Math.floor((Date.now()-new Date(d))/864e5);
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
 const ig=h=>h?"https://instagram.com/"+h.replace(/^.*instagram\.com\//,"").replace(/^@/,"").replace(/[\/?].*$/,""):"";
 const wa=t=>{t=(t||"").replace(/\D/g,"");return t?"https://wa.me/"+(t.length===9?"34"+t:t):""};
 const wb=u=>u?(/^https?:/.test(u)?u:"https://"+u):"";
@@ -29,6 +29,7 @@ let C=[],cfg={tpl:{},mo:[]},view="hoy",flt="",q="",open=null,store=null,loc=0,st
 const cur=()=>C.find(x=>x.id===open);
 const tipos=()=>T.concat((cfg.tipos||[]).map(x=>x.n)),col=t=>CL[t]||((cfg.tipos||[]).find(x=>x.n===t)||{}).c||"#c7c7cc";
 const save=c=>store&&store.set(c.id,c);
+const flush=()=>{clearTimeout(tm);const c=cur();if(c)save(c)};window.addEventListener("pagehide",flush);
 const M=c=>c.msgs||[];
 function toast(t,fn){const e=$("#toast");undo=fn;e.innerHTML=E(t)+(fn?` <button class="t" data-a="undo">Deshacer</button>`:"");e.hidden=false;clearTimeout(tt);tt=setTimeout(()=>e.hidden=true,fn?6000:2200)}
 function links(c,full,cmp){let em=sp(c.email),te=sp(c.tel);const ds=full?sp(c.dir):[];if(cmp){em=em.slice(0,1);te=te.slice(0,1)}
@@ -37,15 +38,19 @@ function links(c,full,cmp){let em=sp(c.email),te=sp(c.tel);const ds=full?sp(c.di
 function row(c,sub){return `<div class="r" data-a="o" data-id="${c.id}"><i class="dot" style="background:${EC[c.estado||"Pendiente"]}"></i><div class="g"><b>${E(c.nombre||"Sin nombre")}</b><small>${sub}</small></div><div class="ls">${links(c,0,1)}</div></div>`}
 const due=c=>c.estado==="Contactado"&&M(c).length>0&&M(c).length<3&&days(M(c).at(-1).d)>=7;
 let fh="";
+const ct=c=>M(c).length>0||["Contactado","Respondió","Reunión"].includes(c.estado),rs=c=>c.estado==="Respondió"||c.estado==="Reunión";
 function hoy(){
- const a=fh?C.filter(c=>c.tipo===fh):C,rs=c=>c.estado==="Respondió"||c.estado==="Reunión",st=[["Contactos",a.length],["Contactados",a.filter(c=>M(c).length).length],["Respuestas",a.filter(rs).length],["Reuniones",a.filter(c=>c.estado==="Reunión").length]];
+ const a=fh?C.filter(c=>c.tipo===fh):C,st=[["Contactos",a.length],["Contactados",a.filter(ct).length],["Respuestas",a.filter(rs).length],["Reuniones",a.filter(c=>c.estado==="Reunión").length]];
  const sec=(t,l,f)=>l.length?`<h2>${t} <span>${l.length}</span></h2>`+l.map(f).join(""):"";
- const tc=tipos().filter(t=>C.some(c=>c.tipo===t)).map(t=>{const l=C.filter(c=>c.tipo===t);return `<div class="tc ${fh===t?"on":""}" data-a="fh" data-t="${E(t)}"><b>${E(t)}</b><span>${l.filter(c=>M(c).length).length}<small>/${l.length}</small></span><small>contactados</small><small>${l.filter(rs).length} respuestas</small></div>`}).join("");
+ const tc=tipos().filter(t=>C.some(c=>c.tipo===t)).map(t=>{const l=C.filter(c=>c.tipo===t);return `<div class="tc ${fh===t?"on":""}" data-a="fh" data-t="${E(t)}"><b>${E(t)}</b><span>${l.filter(ct).length}<small>/${l.length}</small></span><small>contactados</small><small>${l.filter(rs).length} respuestas</small></div>`}).join("");
+ const la=c=>M(c).at(-1),pen=c=>(c.estado||"Pendiente")==="Pendiente",tp=c=>E(c.tipo||"");
  return `<div class="st">${st.map(x=>`<div><b>${x[1]}</b><small>${x[0]}</small></div>`).join("")}</div>`+
  (tc?`<h2>Por tipo (toca para filtrar)</h2><div class="tcs">${tc}</div>`:"")+LG+
- sec("Seguimientos pendientes",a.filter(due),c=>row(c,`Último envío hace ${days(M(c).at(-1).d)} días`))+
- sec("Por contactar",a.filter(c=>(c.estado||"Pendiente")==="Pendiente"),c=>row(c,E(c.tipo||"")))+
- sec("Esperando respuesta",a.filter(c=>c.estado==="Contactado"&&!due(c)&&M(c).length),c=>row(c,`Enviado ${D(M(c).at(-1).d)} · seguimiento en ${Math.max(0,7-days(M(c).at(-1).d))} días`))+
+ sec("Seguimientos pendientes",a.filter(due),c=>row(c,`${tp(c)} · último envío hace ${days(la(c).d)} días`))+
+ sec("Por contactar",a.filter(pen),c=>row(c,tp(c)))+
+ sec("Contactados · esperando respuesta",a.filter(c=>c.estado==="Contactado"&&!due(c)),c=>row(c,tp(c)+(la(c)?` · enviado ${D(la(c).d)} · seguimiento en ${Math.max(0,7-days(la(c).d))} días`:"")))+
+ sec("Han respondido",a.filter(rs),c=>row(c,`${tp(c)} · ${c.estado}`+(la(c)?` · último envío ${D(la(c).d)}`:"")))+
+ sec("Descartados",a.filter(c=>c.estado==="Descartado"),c=>row(c,tp(c)))+
  (a.length?"":`<p class="em">Aún no hay contactos.</p>`)}
 function contactos(){return `<div class="bar"><input id="q" placeholder="Buscar" value="${E(q)}"><button class="b" data-a="new">+ Nuevo</button></div><div class="seg">${[["Todos",""],["Productoras","Productora"],["Artistas","Artista"],["Managers","Manager"]].concat((cfg.tipos||[]).map(x=>[x.n,x.n])).map(x=>`<button class="t ${flt===x[1]?"on":""}" data-a="f" data-t="${x[1]}">${x[0]}</button>`).join("")}</div>${LG}<div id="lst"></div>`}
 function fill(){const k=q.toLowerCase(),l=C.filter(c=>(!flt||c.tipo===flt)&&(!k||[c.nombre,c.persona,c.notas,c.man].join(" ").toLowerCase().includes(k))).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
@@ -61,7 +66,7 @@ function side(c){
  const mg=C.find(x=>x.id===c.manId);
  $("#mg").innerHTML=(mg?`<a class="ln" href="#" data-a="o" data-id="${mg.id}">Ficha de ${E(mg.nombre)}</a>`:"")+(c.tipo==="Manager"?"<small>Representa a</small> "+C.filter(x=>x.manId===c.id).map(x=>`<a class="ln" href="#" data-a="o" data-id="${x.id}">${E(x.nombre)}</a>`).join(" "):"");
  $("#dl").innerHTML=C.filter(x=>x.id!==c.id).map(x=>`<option value="${E(x.nombre)}">`).join("");
- $("#ms").innerHTML=M(c).map((m,i)=>`<details class="m"><summary>${D(m.d)} · ${E(m.v)}</summary><pre>${E(m.t)}</pre><button class="del" style="margin:0 0 6px" data-a="um" data-i="${i}">Deshacer este envío</button></details>`).reverse().join("")||"<small>Aún sin envíos.</small>"}
+ $("#ms").innerHTML=M(c).map((m,i)=>`<details class="m"><summary>${D(m.d)} · ${E(m.v)}</summary><pre>${E(m.t)}</pre><label>Fecha del envío</label><input type="date" data-md="${i}" value="${E(m.d)}"><button class="del" style="margin:0 0 6px" data-a="um" data-i="${i}">Deshacer este envío</button></details>`).reverse().join("")||"<small>Aún sin envíos.</small>"}
 function sheet(id){
  const c=C.find(x=>x.id===id);if(!c)return;open=id;const y=$("#shc").scrollTop,cm=c.motivos||[];
  const inp=(f,p)=>`<input data-f="${f}" placeholder="${p}" value="${E(c[f])}">`;
@@ -73,11 +78,11 @@ function sheet(id){
  <label>Contacto</label>${inp("email","Email (varios, separados por coma)")}${inp("ig","Instagram (@usuario o enlace)")}${inp("tel","Teléfono (varios, separados por coma)")}${inp("web","Web")}<label>Dirección de oficinas (una por línea)</label><textarea data-f="dir" rows="2">${E(c.dir)}</textarea><div id="lk" class="ls"></div>
  ${c.tipo==="Productora"||c.tipo==="Manager"?"":`<label>Gestionado por (management)</label><input data-f="man" list="dl" placeholder="Nombre del manager" value="${E(c.man)}">`}<div id="mg" class="ls"></div>
  <label>Notas</label><textarea data-f="notas" rows="3">${E(c.notas)}</textarea>
- <label>Envíos</label><div id="ms"></div><div id="cmp"></div><div class="seg"><button class="b" data-a="cmp">Nuevo envío</button></div>
- <button class="del" data-a="del">Eliminar contacto</button>`;
+ <label>Envíos</label><div id="ms"></div><div id="cmp"></div><div class="seg"><button class="b" data-a="cmp">Nuevo envío</button></div><div id="rs" ${["Respondió","Reunión"].includes(c.estado)?"":"hidden"}><label>Respuesta (pega aquí lo que te han contestado)</label><textarea data-f="resp" rows="5">${E(c.resp)}</textarea></div>
+ <div class="seg"><button class="b" data-a="save" style="width:100%">Guardar</button></div><button class="del" data-a="del">Eliminar contacto</button>`;
  side(c);$("#sh").hidden=false;$("#shc").scrollTop=y}
 function cmp(c,via){via=via||({Productora:"Email",Artista:"Instagram"})[c.tipo]||(c.email?"Email":c.ig?"Instagram":"Teléfono");cv=via;
- $("#cmp").innerHTML=`<div class="seg">${VIAS.map(v=>`<button class="t ${v===via?"on":""}" data-a="via" data-v="${v}">${v}</button>`).join("")}</div><textarea id="tx" rows="9">${E(tplFor(c,via))}</textarea><div class="ls"><button class="b" data-a="cp">Copiar</button><a class="ln" id="op" target="_blank" rel="noopener">Abrir</a><button class="b" data-a="sent">Marcar como enviado</button></div>`;ol(c)}
+ $("#cmp").innerHTML=`<div class="seg">${VIAS.map(v=>`<button class="t ${v===via?"on":""}" data-a="via" data-v="${v}">${v}</button>`).join("")}</div><textarea id="tx" rows="9">${E(tplFor(c,via))}</textarea><label>Fecha del envío</label><input type="date" id="fd" value="${today()}"><div class="ls"><button class="b" data-a="cp">Copiar</button><a class="ln" id="op" target="_blank" rel="noopener">Abrir</a><button class="b" data-a="sent">Marcar como enviado</button></div>`;ol(c)}
 function ol(c){const t=$("#tx").value;$("#op").href=(cv==="Instagram"?ig(c.ig):cv==="Email"&&sp(c.email).length?"mailto:"+sp(c.email)[0]+"?"+sb(t):cv==="Teléfono"?wa(sp(c.tel)[0]):"")||"#"}
 async function copy(t){try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}toast("Copiado")}
 function csv(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';return ["nombre","persona","tipo","estado","motivos","email","instagram","telefono","web","direccion","gestionado_por","notas","envios","ultimo_envio"].join(",")+"\n"+C.map(c=>[c.nombre,c.persona,c.tipo,c.estado,(c.motivos||[]).join("; "),c.email,c.ig,c.tel,c.web,(c.dir||"").replace(/\n/g," | "),c.man,c.notas,M(c).length,M(c).length?M(c).at(-1).d:""].map(q).join(",")).join("\n")}
@@ -88,7 +93,8 @@ document.addEventListener("click",e=>{
  const a=b.dataset.a,c=cur(),d=b.dataset;
  if(a==="nav"){view=d.v;draw()}
  else if(a==="o")sheet(d.id)
- else if(a==="x"){open=null;$("#sh").hidden=true}
+ else if(a==="x"){flush();open=null;$("#sh").hidden=true;render()}
+ else if(a==="save"){clearTimeout(tm);Promise.resolve(save(c)).then(ok=>{if(ok!==false){toast("Guardado");open=null;$("#sh").hidden=true;render()}})}
  else if(a==="f"){flt=d.t;draw()}
  else if(a==="new"){const n={id:"c_"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),nombre:"",persona:"",tipo:flt||"Productora",estado:"Pendiente",motivos:[],email:"",ig:"",tel:"",web:"",dir:"",man:"",manId:"",notas:"",msgs:[]};C.push(n);save(n);sheet(n.id);render();$("#shc [data-f=nombre]").focus()}
  else if(a==="tp"){c.tipo=d.t;save(c);sheet(c.id)}
@@ -100,7 +106,7 @@ document.addEventListener("click",e=>{
  else if(a==="cmp")cmp(c)
  else if(a==="via")cmp(c,d.v)
  else if(a==="cp")copy($("#tx").value)
- else if(a==="sent"){const id=c.id,pm=M(c),pe=c.estado;c.msgs=pm.concat({d:today(),v:cv,t:$("#tx").value});if((c.estado||"Pendiente")==="Pendiente")c.estado="Contactado";save(c);sheet(id);toast("Envío registrado",()=>{const k=C.find(x=>x.id===id);k.msgs=pm;k.estado=pe;save(k);if(open===id)sheet(id)})}
+ else if(a==="sent"){const id=c.id,pm=M(c),pe=c.estado;c.msgs=pm.concat({d:$("#fd").value||today(),v:cv,t:$("#tx").value});if((c.estado||"Pendiente")==="Pendiente")c.estado="Contactado";save(c);sheet(id);toast("Envío registrado",()=>{const k=C.find(x=>x.id===id);k.msgs=pm;k.estado=pe;save(k);if(open===id)sheet(id)})}
  else if(a==="del"){if(!b.dataset.s){b.dataset.s=1;b.textContent="Pulsa otra vez para eliminar"}else{store.del(c.id);C=C.filter(x=>x.id!==c.id);open=null;$("#sh").hidden=true;render()}}
  else if(a==="ct")copy($(`textarea[data-k=${d.k}]`).value)
  else if(a==="rt"){delete cfg.tpl[d.k];store.set("cfg",cfg);draw()}
@@ -113,7 +119,8 @@ document.addEventListener("input",e=>{
  const t=e.target;
  if(t.id==="q"){q=t.value;fill()}
  else if(t.id==="tx")ol(cur());
- else if(t.dataset.f){const c=cur(),pv=c[t.dataset.f];c[t.dataset.f]=t.value;if(t.dataset.f==="estado"){const id=c.id;toast("Estado: "+t.value,()=>{const k=C.find(x=>x.id===id);k.estado=pv||"Pendiente";save(k);if(open===id)sheet(id)})}if(t.dataset.f==="man"){const m=C.find(x=>x.id!==c.id&&x.nombre===t.value);c.manId=m?m.id:""}clearTimeout(tm);tm=setTimeout(()=>{save(c);side(c)},400)}
+ else if(t.dataset.md!==undefined){const c=cur();c.msgs[+t.dataset.md].d=t.value;clearTimeout(tm);tm=setTimeout(()=>{save(c);render()},400)}
+ else if(t.dataset.f){const c=cur(),pv=c[t.dataset.f];c[t.dataset.f]=t.value;if(t.dataset.f==="estado"){const id=c.id;$("#rs").hidden=!["Respondió","Reunión"].includes(t.value);toast("Estado: "+t.value,()=>{const k=C.find(x=>x.id===id);k.estado=pv||"Pendiente";save(k);if(open===id)sheet(id)})}if(t.dataset.f==="man"){const m=C.find(x=>x.id!==c.id&&x.nombre===t.value);c.manId=m?m.id:""}clearTimeout(tm);tm=setTimeout(()=>{save(c);side(c);render()},400)}
  else if(t.dataset.k){cfg.tpl[t.dataset.k]=t.value;clearTimeout(tm2);tm2=setTimeout(()=>store.set("cfg",cfg),400)}
 });
 document.addEventListener("keydown",e=>{
@@ -128,7 +135,7 @@ function local(){loc=1;let d={};try{d=JSON.parse(localStorage.getItem("pdb")||"{
 async function init(){
  const api=(m,p,b)=>fetch("/api/"+p,{method:m,headers:{"content-type":"application/json"},body:b?JSON.stringify(b):undefined}).then(r=>{if(!r.ok)throw 0;return r.json()});
  try{const d=await api("GET","all");C=d.contacts;cfg=Object.assign({tpl:{},mo:[],tipos:[]},d.cfg||{})}catch(e){local();return}
- store={set:(id,o)=>api("PUT","doc/"+encodeURIComponent(id),o).catch(()=>toast("No se pudo guardar")),del:id=>api("DELETE","doc/"+encodeURIComponent(id)).catch(()=>{})};
+ store={set:(id,o)=>api("PUT","doc/"+encodeURIComponent(id),o).then(()=>true).catch(()=>{toast("No se pudo guardar");return false}),del:id=>api("DELETE","doc/"+encodeURIComponent(id)).catch(()=>{})};
  render()}
 function go(){if(!started){started=1;draw();init()}}
 go();
