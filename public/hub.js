@@ -11,6 +11,7 @@ const I = {
  guiones: "M5 3h10l4 4v14H5z M14 3v5h5 M8 12h8 M8 16h8",
  planes: "M3 7h18v13H3z M3 7l3-4h4l-3 4 M10 7l3-4h4l-3 4 M17 7l3-4",
  postproduccion: "M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4",
+ decks: "M3 5h14v10H3z M7 19h14V9 M6 12l3-3 3 3",
  web: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 3c3.5 3.5 3.5 14.5 0 18 M12 3c-3.5 3.5-3.5 14.5 0 18"
 };
 const SECTIONS = [
@@ -22,6 +23,7 @@ const SECTIONS = [
  {id:"preproduccion",label:"Preproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/preproduccion.js"},
  {id:"guiones",label:"Guions tècnics",desc:"Plans per escena, amb escales en color i imatges",src:"sections/guiones.js"},
  {id:"planes",label:"Plans de rodatge",desc:"Generats des del guió tècnic, ordenats i amb hores",src:"sections/planes.js"},
+ {id:"decks",label:"Decks",desc:"Dossiers i presentacions",src:"sections/decks.js"},
  {id:"postproduccion",label:"Postproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/postproduccion.js"},
  {id:"festivales",label:"Festivals",desc:"Festivals, labs i residències",src:"sections/festivales.js"},
  {id:"brainstorm",label:"Brainstorm",desc:"Idees soltes",src:"sections/brainstorm.js"},

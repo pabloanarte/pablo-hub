@@ -92,6 +92,23 @@ small{color:var(--mut);font-size:12px}.em{color:var(--mut);font-size:14px;margin
 .split{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:24px;align-items:start}@media(max-width:1000px){.split{grid-template-columns:1fr}}
 .pub{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));margin-top:20px;background:#000;color:#fff;border-radius:14px;padding:10px 10px 10px 16px;display:flex;justify-content:space-between;align-items:center;font-size:14px;max-width:760px}
 .form{max-width:760px}
+/* decks */
+.dkl{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}.dkcth{height:200px;display:flex;align-items:center;justify-content:center;background:var(--soft);border-radius:10px;overflow:hidden}.dkc{cursor:pointer;border:1px solid var(--bd);border-radius:14px;padding:5px;background:#fff}.dkc:hover{border-color:#c7c7cc;box-shadow:0 4px 14px rgba(0,0,0,.06)}.dkc .dkw{border-radius:10px}.dkc .g b{white-space:normal}
+.dkcols{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+.dkmain{min-width:0}#dkprev{width:100%;display:flex;justify-content:center}#dkprev .dkw{border-radius:10px;box-shadow:0 2px 20px rgba(0,0,0,.08);outline:1px solid var(--bd)}
+.dknav{display:flex;gap:10px;align-items:center;justify-content:center;margin:12px 0;font-size:14px;color:var(--mut)}
+.dkth{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;align-items:flex-start}
+.dkt{position:relative;border-radius:8px;outline:1px solid var(--bd);cursor:pointer;overflow:hidden;flex:none}.dkt.on{outline:3px solid #000}.dkt.amg{opacity:.35}.dkt>span{position:absolute;right:6px;bottom:4px;z-index:5;font-size:11px;background:rgba(255,255,255,.92);border-radius:6px;padding:1px 6px;color:#000}
+.dkadd{flex:none;align-self:stretch}
+.dkpan{border:1px solid var(--bd);border-radius:14px;padding:4px 16px 16px;max-height:calc(100vh - 210px);overflow:auto;position:sticky;top:70px}
+.dkst{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.dkst button{overflow:hidden}.dkst button{border:1px solid var(--bd);background:#fff;border-radius:10px;padding:4px;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center;font-size:12px}.dkst button.on{outline:3px solid #000;border-color:#000}.dkst .dkw{border-radius:6px}
+.dkst.sm{grid-template-columns:repeat(2,1fr)}
+.dkim{display:flex;gap:8px;align-items:center}.dkim .th,.dkims .th{width:72px;height:54px;border-radius:6px;background:#eee center/cover;flex:none;position:relative}.dkims{display:flex;flex-wrap:wrap;gap:8px}.dkims .th button{position:absolute;top:2px;right:2px;border:0;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;width:22px;height:22px;cursor:pointer}.dkims .add{display:flex;align-items:center;justify-content:center;border:1px dashed #c7c7cc;background:#fff;cursor:pointer;font-size:22px;color:var(--mut);margin:0}
+.dkit{border:1px solid var(--bd);border-radius:10px;padding:2px 12px 10px;margin:8px 0}.dkit label{margin-top:8px}.dkcat{border-top:1px solid var(--bd);padding-top:14px;margin-top:14px}
+.dkcol{display:grid;grid-template-columns:1fr 1fr;gap:6px}.dkcol input[type=color]{width:36px;height:36px!important;padding:2px;border-radius:8px}
+@media(max-width:1100px){.dkcols{grid-template-columns:1fr}.dkpan{position:static;max-height:none}}
+@media(max-width:700px){.tb{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.tb>*{flex:none}.tb input{min-width:200px}}
+.tb .del{min-height:40px;display:inline-flex;align-items:center;margin:0}.sheet .stk{position:sticky;bottom:-28px;background:#fff;padding:12px 0;z-index:2}
 .colr{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f2}.colr>input[type=checkbox]{width:18px;height:18px;margin:0;flex:none}.colr span,.colr .cn{flex:1}.colr .cn{margin:0;padding:6px 8px}.colr button{border:1px solid var(--bd);background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;flex:none}.colr i{width:30px;flex:none}
 .sfoot{display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:12px;border-top:1px solid var(--bd)}.sfoot .del{margin:0}.sfoot .b{min-width:110px}
 /* tablas tipo hoja (guiones técnicos y planes de rodaje) */
@@ -188,5 +205,6 @@ select.lang{width:auto;font-size:14px}.acc select{padding-right:4px!important;ba
 <script src="rodaje.js"></script>
 <script src="crono.js"></script>
 <script src="importar.js"></script>
+<script src="deck.js"></script>
 <script src="hub.js"></script>
 </body></html>

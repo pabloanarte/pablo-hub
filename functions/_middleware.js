@@ -7,6 +7,8 @@ export async function onRequest({ request, env, next }) {
   if (!pw) return next(); // sin contraseña configurada: abierto (la sección Mi web no funciona hasta configurarla)
   const token = await hash(pw);
   const url = new URL(request.url);
+  // pàgines i dades públiques dels dossiers compartits
+  if (/^\/d\/[a-z0-9]{8,24}$/.test(url.pathname) || url.pathname.startsWith("/api/public/") || url.pathname === "/deck.js") return next();
 
   if (url.pathname === "/entrar" && request.method === "POST") {
     const f = await request.formData();
