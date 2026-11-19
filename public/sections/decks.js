@@ -133,7 +133,7 @@
   }
   function prev() {
     const p = el.querySelector("#dkprev"); if (!p || !doc.slides.length) { if (p) p.innerHTML = `<p class="em">Sense diapositives. Afegeix-ne una o fes servir «Dades per categories».</p>`; return }
-    const r = DK.ratio(doc), cw = p.clientWidth || el.clientWidth - 40, hmax = Math.max(320, window.innerHeight - 280);
+    const r = DK.ratio(doc), cw = p.clientWidth || el.clientWidth - 40, hmax = Math.max(300, window.innerHeight - (r < 1 ? 420 : 280)); // vertical: que es vegin també les miniatures
     p.innerHTML = DK.escalada(doc, S(), Math.floor(Math.min(cw, 1300, hmax * r)), { img: imgUrl }); aj(p);
   }
   function refresca(tot) { doc.mod = Date.now(); save(); if (tot) return pintar(); prev(); const t = el.querySelector(`.dkt[data-i="${sel}"]`); if (t) { t.innerHTML = `<span>${sel + 1}</span>` + DK.escalada(doc, S(), Math.round(Math.min(186, 105 * DK.ratio(doc))), { img: imgUrl }); aj(t) } }
@@ -220,7 +220,7 @@
     const ls = a === "actual" ? [S()] : doc.slides.filter(s => !s.amaga), [w, h] = DK.mida(doc), nom = (doc.titulo || "dossier").replace(/[\\/:*?"<>|]/g, "");
     if (f === "PDF") {
       let z = document.getElementById("printzone"); if (!z) { z = document.createElement("div"); z.id = "printzone"; document.body.appendChild(z) }
-      z.innerHTML = `<style>@page{size:${w}px ${h}px;margin:0}#printzone .dk{page-break-after:always;break-after:page}</style>` + ls.map(s => DK.dibuixa(doc, s, { img: imgUrl, n: doc.slides.indexOf(s) + 1 })).join("");
+      z.innerHTML = `<style>@page{size:${w}px ${h}px;margin:0}#printzone .dk{page-break-after:always;break-after:page}</style>` + ls.map(s => DK.dibuixa(doc, s, { img: imgUrl, n: doc.slides.indexOf(s) + 1, final: 1 })).join("");
       document.body.classList.add("printing"); DK.ajusta(z); const fi = () => { document.body.classList.remove("printing"); z.innerHTML = ""; window.removeEventListener("afterprint", fi) }; window.addEventListener("afterprint", fi);
       await Promise.all([...z.querySelectorAll(".im")].map(x => { const u = (x.style.backgroundImage.match(/url\("?([^")]+)/) || [])[1]; return u ? new Image().decode.call(Object.assign(new Image(), { src: u })).catch(() => { }) : 0 }));
       await document.fonts.ready; setTimeout(() => window.print(), 150); return;
@@ -230,7 +230,7 @@
     const box = document.createElement("div"); box.style.cssText = "position:fixed;left:-30000px;top:0"; document.body.appendChild(box);
     const out = [];
     for (const [i, s] of ls.entries()) {
-      box.innerHTML = DK.dibuixa(doc, s, { img: imgUrl, n: doc.slides.indexOf(s) + 1 }); await document.fonts.ready; await new Promise(r => setTimeout(r, 60)); DK.ajusta(box);
+      box.innerHTML = DK.dibuixa(doc, s, { img: imgUrl, n: doc.slides.indexOf(s) + 1, final: 1 }); await document.fonts.ready; await new Promise(r => setTimeout(r, 60)); DK.ajusta(box);
       const fn = f === "PNG" ? htmlToImage.toBlob : (n, o) => htmlToImage.toJpeg(n, o).then(u => fetch(u).then(r => r.blob()));
       out.push([`${nom} ${String(doc.slides.indexOf(s) + 1).padStart(2, "0")}.${f === "PNG" ? "png" : "jpg"}`, await fn(box.firstElementChild, { pixelRatio: +q, quality: .92, width: w, height: h, cacheBust: false, backgroundColor: DK.tema(doc).bg })]);
     }
@@ -276,7 +276,7 @@
     const b = e.target.closest("[data-k]"); if (!b || b.disabled) return; const k = b.dataset.k, i = +b.dataset.i;
     if (k === "nou") return nou();
     if (k === "obre") return obre(b.dataset.id);
-    if (k === "impdf") { const [f] = await triaFitxer(".pdf"); if (!f) return; const d = { id: H.uid("deck"), titulo: f.name.replace(/\.pdf$/i, ""), estil: "minim", ratio: "16:9", slides: [], mod: Date.now() }; try { await importaPDF(f, d); doc = d; sel = 0; pintar() } catch (er) { H.toast("No s'ha pogut llegir el PDF") } return }
+    if (k === "impdf") { const [f] = await triaFitxer(".pdf"); if (!f) return; const d = { id: H.uid("deck"), titulo: f.name.replace(/\.pdf$/i, "").replace(/^[0-9a-f]{8}-/, "").replace(/[_]+/g, " ").trim(), estil: "minim", ratio: "16:9", slides: [], mod: Date.now() }; try { await importaPDF(f, d); doc = d; sel = 0; pintar() } catch (er) { H.toast("No s'ha pogut llegir el PDF") } return }
     if (!doc) return;
     if (k === "volver") return lista();
     if (k === "del" && confirm("Eliminar aquest dossier? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Dossier eliminat"); return lista() }

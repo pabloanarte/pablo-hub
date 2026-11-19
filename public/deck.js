@@ -50,7 +50,7 @@ window.DK = (() => {
 .dk *{box-sizing:border-box}.dk .p{position:absolute;inset:0;padding:96px 112px;display:flex;flex-direction:column}
 .dk h1,.dk h2{margin:0;font-weight:var(--tw);text-transform:var(--tt);letter-spacing:var(--ls);line-height:.98;color:inherit;font-family:inherit}
 .dk h1{font-size:calc(112px*var(--ts)*var(--fit,1))}.dk h2{font-size:calc(64px*var(--ts)*var(--fit,1));margin-bottom:calc(40px*var(--fit,1))}
-.dk p,.dk li{font-size:calc(30px*var(--fit,1));line-height:1.45;margin:0 0 calc(18px*var(--fit,1));color:inherit}.dk .mut{color:var(--mut)}.dk .sm{font-size:calc(22px*var(--fit,1))}
+.dk{--fl:max(var(--fit,1),.75)}.dk p,.dk li{font-size:calc(30px*var(--fl));line-height:1.45;margin:0 0 calc(18px*var(--fit,1));color:inherit}.dk .mut{color:var(--mut)}.dk .sm{font-size:calc(22px*var(--fl))}
 .dk ul{list-style:none;padding:0;margin:0}.dk li{padding-left:1.1em;text-indent:-1.1em}.dk li::before{content:"—";display:inline-block;width:1.1em;text-indent:0;color:var(--mut)}
 .dk.lc .sub,.dk.lc .dad span,.dk.lc .peu{text-transform:lowercase;letter-spacing:0}
 .dk .im{background:#cfc8bd center/cover no-repeat}.dk .im.ct{background-size:contain;background-color:transparent}
@@ -63,16 +63,16 @@ window.DK = (() => {
 .dk .grid{display:grid;gap:16px;flex:1;min-height:0}.dk .grid>div{min-height:0}
 .dk .items{display:grid;gap:40px;flex:1;align-content:start}.dk .it .im{aspect-ratio:1;border-radius:2px;margin-bottom:20px}
 .dk .it .im{width:100%;aspect-ratio:4/3;max-height:calc(var(--H)*.36*var(--fit,1))}
-.dk .it b{display:block;font-size:calc(30px*var(--fit,1))}.dk .it span{display:block;font-size:calc(24px*var(--fit,1));color:var(--mut);line-height:1.35;margin-top:6px}
-.dk .dad{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:calc(48px*var(--fit,1)) 64px}.dk .dad b{display:block;font-size:calc(52px*var(--fit,1));font-weight:var(--tw);letter-spacing:-.02em;overflow-wrap:anywhere}.dk .dad span{font-size:calc(20px*var(--fit,1));color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.dk .it b{display:block;font-size:calc(30px*var(--fit,1))}.dk .it span{display:block;font-size:calc(24px*var(--fl));color:var(--mut);line-height:1.35;margin-top:6px}
+.dk .dad{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:calc(48px*var(--fit,1)) 64px}.dk .dad b{display:block;font-size:calc(52px*var(--fit,1));font-weight:var(--tw);letter-spacing:-.02em;overflow-wrap:normal;hyphens:auto}.dk .dad span{font-size:calc(20px*var(--fl));color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
 .dk .pal{display:flex;flex:1;gap:0}.dk .pal div{flex:1;display:flex;align-items:flex-end;padding:24px;font-size:20px;font-family:'IBM Plex Mono',monospace}
-.dk .cal{display:flex;flex-direction:column;gap:calc(22px*var(--fit,1))}.dk .cal .fs{display:grid;grid-template-columns:34% 1fr;align-items:center;gap:24px;font-size:calc(26px*var(--fit,1))}.dk .cal .bb{height:calc(36px*var(--fit,1));background:var(--ac);border-radius:3px}
+.dk .cal{display:flex;flex-direction:column;gap:calc(22px*var(--fit,1))}.dk .cal .fs{display:grid;grid-template-columns:34% 1fr;align-items:center;gap:24px;font-size:calc(26px*var(--fl))}.dk .cal .bb{height:calc(36px*var(--fit,1));background:var(--ac);border-radius:3px}
 /* variants per estil (també a l'interior, no només a la portada) */
 .dk.th-editorial h2{font-size:calc(96px*var(--fit,1));letter-spacing:-.05em;line-height:.9}.dk.th-editorial .num{top:84px;bottom:auto}
 .dk.th-cinema h2{letter-spacing:.06em;font-size:calc(52px*var(--fit,1))}.dk.th-cinema .p{padding-top:calc(var(--H)*.12)}.dk.th-cinema .num{color:#777}
 .dk.th-tipografic h2{font-size:calc(120px*var(--fit,1));line-height:.84}.dk.th-tipografic .p::after{content:"";position:absolute;width:40px;height:40px;border-radius:50%;background:var(--ac);right:112px;top:96px}
 .dk.th-analogic .im:not(.ph):not(.ct){border:14px solid #fbf6ec;box-shadow:0 6px 24px rgba(59,47,36,.18)}.dk.th-analogic h2{font-style:normal;letter-spacing:-.01em}
-.dk.th-moodboard .grid{gap:8px}.dk.th-moodboard h2{font-size:calc(40px*var(--fit,1));letter-spacing:0}
+.dk.th-moodboard .grid{gap:8px}.dk.th-moodboard h2{font-size:calc(30px*var(--fit,1));letter-spacing:.16em;text-transform:uppercase;font-weight:500}.dk.th-moodboard .p{padding-top:64px}.dk.th-moodboard .it .im,.dk.th-moodboard .im:not(.ph){border-radius:0}.dk.th-moodboard p{max-width:1000px}
 .dk .play{width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center}.dk .play::after{content:"";border-left:40px solid #fff;border-top:24px solid transparent;border-bottom:24px solid transparent;margin-left:10px}
 `;
   function injecta() {
@@ -87,7 +87,7 @@ window.DK = (() => {
     injecta();
     const [w, h] = mida(d), t = tema(d), url = o.img || (id => "/api/archivo/" + id), vert = h > w;
     const TON = ["#cfc6b8", "#8d9aa6", "#b49a7c", "#6f7c6a", "#d9cfbf", "#4f5a63", "#a7a29a"]; let ti = 0;
-    const im = (id, cls = "", st = "") => id ? `<div class="im ${cls}" style="background-image:url('${url(id)}');${st}"></div>` : o.mostra ? `<div class="im ${cls}" style="background:${TON[ti++ % TON.length]};${st}"></div>` : `<div class="im ph ${cls}" style="${st}">imatge</div>`;
+    const im = (id, cls = "", st = "") => id ? `<div class="im ${cls}" style="background-image:url('${url(id)}');${st}"></div>` : o.mostra ? `<div class="im ${cls}" style="background:${TON[ti++ % TON.length]};${st}"></div>` : o.final ? `<div class="im ${cls}" style="${st};background:none"></div>` : `<div class="im ph ${cls}" style="${st}">imatge</div>`;
     const vars = `--bg:${t.bg};--fg:${t.fg};--mut:${t.mut};--ac:${t.ac};--ff:${FONTS[t.font] || FONTS.Helvetica};--tt:${t.tt};--tw:${t.tw};--ts:${t.ts * (vert ? .85 : 1)};--ls:${t.ls};--H:${h}px`;
     const n = o.n ? `<div class="num">${o.n}</div>` : "", pc = (s.titolPeu === false || !d.titol) ? "" : "";
     const frang = t.franges ? `<div class="fr" style="top:0;height:${Math.round(h * .09)}px"></div><div class="fr" style="bottom:0;height:${Math.round(h * .05)}px"></div>` : "";
@@ -119,13 +119,13 @@ window.DK = (() => {
       case "llista": c = P(`<h2>${E(s.titol)}</h2><ul style="margin:0;padding-left:1.1em;max-width:1200px">${String(s.punts || "").split("\n").filter(x => x.trim()).map(x => `<li>${E(x.replace(/^[-•*]\s*/, ""))}</li>`).join("")}</ul>`); break;
       case "dades": c = P(`<h2>${E(s.titol)}</h2><div class="dad">${(s.items || []).map(x => `<div><span>${E(x.nom)}</span><b>${E(x.text)}</b></div>`).join("")}</div>`); break;
       case "paleta": {
-        const cols = (s.auto && d._pal && d._pal.length ? d._pal : String(s.colors || "").split(/[\n,\s]+/).filter(x => /^#?[0-9a-f]{3,8}$/i.test(x)).map(x => x[0] === "#" ? x : "#" + x)).slice(0, 8);
+        const cols = (s.auto && d._pal && d._pal.length ? d._pal : String(s.colors || "").split(/[\n,\s]+/).filter(x => /^#?[0-9a-f]{3,8}$/i.test(x)).map(x => (x[0] === "#" ? x : "#" + x).toLowerCase())).filter((x, i, a) => a.indexOf(x) === i).slice(0, 8);
         c = P(`${s.titol ? `<h2>${E(s.titol)}</h2>` : ""}<div class="pal">${(cols.length ? cols : ["#cfc8bd", "#8d9aa6", "#3b2f24"]).map(x => `<div style="background:${E(x)};color:${lum(x) > .5 ? "#000" : "#fff"}">${E(x.toUpperCase())}</div>`).join("")}</div>`); break;
       }
       case "calendari": {
         const l = (s.items || []).map(x => { const m = String(x.text || "").match(/\d{4}-\d{2}-\d{2}/g) || [], a = x.a || m[0], b = x.b || m[1] || a; return { ...x, a, b: b && a && b < a ? a : b } }), ds = l.filter(x => x.a);
         const a = ds.length ? ds.reduce((m, x) => x.a < m ? x.a : m, ds[0].a) : null, b = ds.length ? ds.reduce((m, x) => x.b > m ? x.b : m, ds[0].b) : null, tot = a ? Math.max(1, (new Date(b) - new Date(a)) / 864e5 + 1) : 1;
-        c = P(`<h2>${E(s.titol)}</h2><div class="cal">${l.map(x => `<div class="fs"><span>${E(x.nom)}</span><div style="position:relative;height:28px">${x.a ? `<div class="bb" style="position:absolute;left:${(new Date(x.a) - new Date(a)) / 864e5 / tot * 100}%;width:${Math.max(1.5, ((new Date(x.b) - new Date(x.a)) / 864e5 + 1) / tot * 100)}%;top:0;bottom:0"></div>` : `<span class="mut sm">${E(x.text)}</span>`}</div></div>`).join("")}</div>${a ? `<p class="sm mut" style="margin-top:auto">${new Date(a).toLocaleDateString("ca-ES", { month: "long", year: "numeric" })} — ${new Date(b).toLocaleDateString("ca-ES", { month: "long", year: "numeric" })}</p>` : ""}`); break;
+        c = P(`<h2>${E(s.titol)}</h2><div class="cal">${l.map(x => `<div class="fs"><span>${E(x.nom)}</span><div style="position:relative;height:calc(36px*var(--fit,1))">${x.a ? `<div class="bb" style="position:absolute;left:${(new Date(x.a) - new Date(a)) / 864e5 / tot * 100}%;width:${Math.max(1.5, ((new Date(x.b) - new Date(x.a)) / 864e5 + 1) / tot * 100)}%;top:0;bottom:0"></div>` : `<span class="mut sm">${E(x.text)}</span>`}</div></div>`).join("")}</div>${a ? `<p class="sm mut" style="margin-top:auto;padding-top:calc(24px*var(--fit,1))">${new Date(a).toLocaleDateString("ca-ES", { month: "long", year: "numeric" })} — ${new Date(b).toLocaleDateString("ca-ES", { month: "long", year: "numeric" })}</p>` : ""}`); break;
       }
       case "video": c = P(`${s.titol ? `<h2>${E(s.titol)}</h2>` : ""}<div style="flex:1;position:relative;min-height:0">${im(s.img, "", "position:absolute;inset:0")}<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div class="play"></div></div></div>${s.url ? `<p class="sm mut" style="margin-top:20px"><a href="${E(/^https?:\/\//.test(s.url) ? s.url : "https://" + s.url)}" target="_blank" rel="noopener" style="color:inherit">${E(s.url.replace(/^https?:\/\/(www\.)?/, ""))}</a></p>` : ""}`); break;
       case "contacte": c = P(`<div style="margin:auto 0"><h1 style="font-size:calc(96px*var(--ts)*var(--fit,1))">${E(s.titol)}</h1><p style="margin-top:40px;font-size:calc(36px*var(--fit,1));line-height:1.5">${tx(s.text)}</p></div>`); break;
@@ -133,7 +133,7 @@ window.DK = (() => {
       default: c = P("");
     }
     return wrap(c + (d.estil === "tipografic" && s.tipus !== "pagina" ? "" : "") + n);
-    function wrap(inner) { return `<div class="dk th-${d.estil || "minim"}${t.franges ? " franges" : ""}${t.tt === "lowercase" ? " lc" : ""}" style="width:${w}px;height:${h}px;${vars}">${inner}</div>` }
+    function wrap(inner) { return `<div lang="ca" class="dk th-${d.estil || "minim"}${t.franges ? " franges" : ""}${t.tt === "lowercase" ? " lc" : ""}" style="width:${w}px;height:${h}px;${vars}">${inner}</div>` }
   }
   function lum(hex) { const h = String(hex).replace("#", ""), f = h.length === 3 ? h.split("").map(x => x + x).join("") : h.slice(0, 6), [r, g, b] = [0, 2, 4].map(i => parseInt(f.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * b }
   const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05) };
@@ -156,7 +156,8 @@ window.DK = (() => {
   // Redueix la mida del text (variable --fit) fins que tot hi cap. Es crida després d'inserir les diapositives al DOM.
   function ajusta(root) {
     (root.classList && root.classList.contains("dk") ? [root] : [...root.querySelectorAll(".dk")]).forEach(dk => {
-      const sobra = () => [dk.querySelector(".p") || dk, ...dk.querySelectorAll(".p > div, .it, .cal, .dad")].some(x => x.scrollHeight > x.clientHeight + 3 || x.scrollWidth > x.clientWidth + 3);
+      const p = dk.querySelector(".p") || dk, blocs = [p, ...p.querySelectorAll("div")], txt = [...dk.querySelectorAll("h1,h2,p,li,b,.it span,.dad span")];
+      const sobra = () => { if (blocs.some(x => x.scrollHeight > x.clientHeight + 3 || x.scrollWidth > x.clientWidth + 3)) return true; const r = dk.getBoundingClientRect(), k = r.width / dk.offsetWidth || 1; return txt.some(t => { const q = t.getBoundingClientRect(); return q.height && (q.top < r.top + 24 * k || q.bottom > r.bottom - 24 * k) }) };
       let f = 1; dk.style.setProperty("--fit", f);
       while (sobra() && f > .5) { f = Math.round((f - .06) * 100) / 100; dk.style.setProperty("--fit", f) }
     });
