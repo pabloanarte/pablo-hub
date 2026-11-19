@@ -140,7 +140,7 @@ document.addEventListener("click",e=>{
  else if(a==="mo"){const s=new Set(c.motivos||[]);s.has(d.m)?s.delete(d.m):s.add(d.m);c.motivos=[...s];b.classList.toggle("on");save(c)}
  else if(a==="fh"){fh=fh===d.t?"":d.t;draw()}
  else if(a==="sub"){c.sub=d.s;save(c);sheet(c.id)}
- else if(a==="um"){c.msgs=M(c).filter((_,i)=>i!==+d.i);if(!c.msgs.length&&c.estado==="Contactat")c.estado="Pendent";save(c);sheet(c.id)}
+ else if(a==="um"){const pm=M(c)[+d.i];if(pm&&pm.prog&&String(pm.prog).startsWith("P_")){if(!confirm("És un enviament programat: també es cancel·larà a Gmail. Continuar?"))return;H.api("POST","correu/cancela",{id:pm.prog}).catch(()=>toast("No s'ha pogut cancel·lar a Gmail"))}c.msgs=M(c).filter((_,i)=>i!==+d.i);if(!c.msgs.length&&c.estado==="Contactat")c.estado="Pendent";save(c);sheet(c.id)}
  else if(a==="undo"){undo&&undo();$("#toast").hidden=true}
  else if(a==="cmp")cmp(c)
  else if(a==="via")cmp(c,d.v)

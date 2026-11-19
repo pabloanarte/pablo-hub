@@ -52,7 +52,7 @@ const ACCIONS = {
     return {
       id: t.getId(), assumpte: t.getFirstMessageSubject(),
       missatges: t.getMessages().map(m => ({
-        id: m.getId(), de: m.getFrom(), a: m.getTo(), cc: m.getCc(), data: m.getDate().toISOString(),
+        id: m.getId(), de: m.getFrom(), rt: m.getReplyTo(), a: m.getTo(), cc: m.getCc(), data: m.getDate().toISOString(),
         cos: m.getPlainBody().slice(0, 60000), adjunts: m.getAttachments().map(a => ({ nom: a.getName(), mida: a.getSize() }))
       }))
     };
