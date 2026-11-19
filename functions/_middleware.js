@@ -32,6 +32,6 @@ function login(error) {
 form{display:flex;flex-direction:column;gap:12px;width:260px;text-align:center}h1{font-size:34px;letter-spacing:5px;margin:0 0 10px}
 input{font:inherit;font-size:16px;border:1px solid #e5e5ea;border-radius:12px;padding:12px;text-align:center}
 button{font:inherit;border:0;background:#000;color:#fff;border-radius:12px;padding:12px;font-size:15px;cursor:pointer}p{color:#ff3b30;font-size:14px;margin:0}</style></head>
-<body><form method="post" action="/entrar"><h1>PABLO</h1><input type="password" name="pw" placeholder="Contraseña" autofocus autocomplete="current-password">${error ? "<p>Contraseña incorrecta</p>" : ""}<button>Entrar</button></form></body></html>`,
+<body><form method="post" action="/entrar"><h1>PABLO</h1><input type="password" name="pw" placeholder="Contrasenya" autofocus autocomplete="current-password">${error ? "<p>Contrasenya incorrecta</p>" : ""}<button>Entrar</button></form></body></html>`,
     { status: error ? 401 : 200, headers: { "content-type": "text/html; charset=utf-8" } });
 }

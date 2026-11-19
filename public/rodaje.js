@@ -18,9 +18,9 @@ window.R = (() => {
 
   // ---------- subir imagen (storyboard / referencia) ----------
   async function subirImagen(file) {
-    if (file.size > 25 * 1024 * 1024) { H.toast("La imagen pasa de 25 MB"); return null }
-    H.toast("Subiendo imagen…");
-    try { const a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(file.name), file); H.toast("Imagen añadida"); return a.id } catch (e) { H.toast("No se pudo subir la imagen"); return null }
+    if (file.size > 25 * 1024 * 1024) { H.toast("La imatge passa de 25 MB"); return null }
+    H.toast("Pujant la imatge…");
+    try { const a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(file.name), file); H.toast("Imatge afegida"); return a.id } catch (e) { H.toast("No s'ha pogut pujar la imatge"); return null }
   }
   const imgUrl = id => "/api/archivo/" + id;
 
@@ -61,7 +61,7 @@ window.R = (() => {
   const argb = c => "FF" + String(c || "#ffffff").replace("#", "").toUpperCase();
   // hoja: {nombre, titulo, sub:[líneas], cols:[{l, w}], filas:[{banda:"texto", color} | {celdas:[...], color, colores:{i:color}, img:id, imgCol}]}
   async function excel(nombreArchivo, hojas) {
-    H.toast("Preparando Excel…");
+    H.toast("Preparant l'Excel…");
     const X = await cargaExcel(), wb = new X.Workbook();
     for (const h of hojas) {
       const ws = wb.addWorksheet((h.nombre || "Hoja").slice(0, 30), { pageSetup: { orientation: "landscape", paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
@@ -88,7 +88,7 @@ window.R = (() => {
     }
     const buf = await wb.xlsx.writeBuffer(), a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })); a.download = nombreArchivo.replace(/[\\/:*?"<>|]/g, "") + ".xlsx"; a.click();
-    H.toast("Excel descargado");
+    H.toast("Excel descarregat");
   }
 
   // ---------- celdas editables ----------
@@ -97,5 +97,35 @@ window.R = (() => {
   document.addEventListener("input", e => { if (e.target.matches("textarea.cel")) auto(e.target) });
   const ajusta = root => root.querySelectorAll("textarea.cel").forEach(auto);
 
-  return { E, ESC, escNorm, escColor, ORDEN_ESC, BANDA, FILA, aMin, aHora, uid, subirImagen, imgUrl, pegar, pdf, excel, ajusta };
+
+  // ---------- idioma de les exportacions (PDF i Excel): ca / es / en ----------
+  const L = {
+    ca: { c_num: "Pl.", c_sujeto: "Subjecte", c_escala: "Escala", c_angulo: "Angulació", c_posicion: "Posició càmera", c_mov: "Moviment", c_soporte: "Suport", c_lente: "Òptica", c_sonido: "So", c_fps: "FPS", c_desc: "Descripció", c_accion: "Acció / diàleg", c_notas: "Notes", c_set: "Set", c_dur: "Min. rodatge", c_img: "Imatge",
+      p_esc: "Esc.", p_mov: "Mov. càmera", p_personajes: "Personatges", p_vestuario: "Vestuari", p_notas: "FX / notes", p_dur: "Durada (min)", p_img: "Ref.", p_angulo: "Angulació", horario: "Horari", hora: "Hora",
+      gt: "GUIÓ TÈCNIC", pdr: "PLA DE RODATGE", jornada: "JORNADA", set: "SET", proceso: "PROCÉS", comida: "DINAR", wrap: "WRAP", ready: "READY TO SHOOT", esc: "ESC", pags: "pàg.", ad: "AD",
+      t_tarea: "Tasca", t_dep: "Departament", t_ini: "Inici", t_fin: "Fi", t_dias: "Dies", t_estado: "Estat", t_resp: "Responsable", t_proy: "Projecte", sin_dep: "Sense departament", pre: "Calendari de preproducció", post: "Calendari de postproducció" },
+    es: { c_num: "Pl.", c_sujeto: "Sujeto", c_escala: "Escala", c_angulo: "Angulación", c_posicion: "Posición cámara", c_mov: "Movimiento", c_soporte: "Soporte", c_lente: "Lente", c_sonido: "Sonido", c_fps: "FPS", c_desc: "Descripción", c_accion: "Acción / diálogo", c_notas: "Notas", c_set: "Set", c_dur: "Min. rodaje", c_img: "Imagen",
+      p_esc: "Esc.", p_mov: "Mov. cámara", p_personajes: "Personajes", p_vestuario: "Vestuario", p_notas: "FX / notas", p_dur: "Duración (min)", p_img: "Ref.", p_angulo: "Angulación", horario: "Horario", hora: "Hora",
+      gt: "GUION TÉCNICO", pdr: "PLAN DE RODAJE", jornada: "JORNADA", set: "SET", proceso: "PROCESO", comida: "COMIDA", wrap: "WRAP", ready: "READY TO SHOOT", esc: "ESC", pags: "págs.", ad: "AD",
+      t_tarea: "Tarea", t_dep: "Departamento", t_ini: "Inicio", t_fin: "Fin", t_dias: "Días", t_estado: "Estado", t_resp: "Responsable", t_proy: "Proyecto", sin_dep: "Sin departamento", pre: "Calendario de preproducción", post: "Calendario de postproducción" },
+    en: { c_num: "Shot", c_sujeto: "Subject", c_escala: "Shot size", c_angulo: "Angle", c_posicion: "Camera position", c_mov: "Movement", c_soporte: "Equipment", c_lente: "Lens", c_sonido: "Sound", c_fps: "FPS", c_desc: "Description", c_accion: "Action / dialogue", c_notas: "Notes", c_set: "Set", c_dur: "Shooting min.", c_img: "Image",
+      p_esc: "Sc.", p_mov: "Camera move", p_personajes: "Characters", p_vestuario: "Wardrobe", p_notas: "FX / notes", p_dur: "Duration (min)", p_img: "Ref.", p_angulo: "Angle", horario: "Block", hora: "Time",
+      gt: "SHOT LIST", pdr: "SHOOTING SCHEDULE", jornada: "DAY", set: "SET", proceso: "PROCESS", comida: "LUNCH", wrap: "WRAP", ready: "READY TO SHOOT", esc: "SC", pags: "pp.", ad: "AD",
+      t_tarea: "Task", t_dep: "Department", t_ini: "Start", t_fin: "End", t_dias: "Days", t_estado: "Status", t_resp: "Owner", t_proy: "Project", sin_dep: "No department", pre: "Pre-production schedule", post: "Post-production schedule" }
+  };
+  // valors (departaments, estats, moment del dia) en castellà i anglès
+  const V = {
+    es: { "Guió": "Guion", "Producció": "Producción", "Càsting": "Casting", "Localitzacions": "Localizaciones", "Art": "Arte", "Vestuari i maquillatge": "Vestuario y maquillaje", "Fotografia": "Fotografía", "So": "Sonido", "Muntatge": "Montaje", "Grafisme": "Grafismo", "Lliuraments": "Entregas", "Distribució": "Distribución", "Pendent": "Pendiente", "En curs": "En curso", "Fet": "Hecho", "DIA": "DÍA", "NIT": "NOCHE", "MATINADA": "AMANECER", "CAPVESPRE": "ATARDECER" },
+    en: { "Guió": "Script", "Producció": "Production", "Càsting": "Casting", "Localitzacions": "Locations", "Art": "Art", "Vestuari i maquillatge": "Wardrobe & make-up", "Fotografia": "Camera", "So": "Sound", "Muntatge": "Editing", "Música": "Music", "Color": "Colour", "Grafisme": "Graphics", "Lliuraments": "Deliverables", "Distribució": "Distribution", "Pendent": "To do", "En curs": "In progress", "Fet": "Done", "DIA": "DAY", "DÍA": "DAY", "NIT": "NIGHT", "NOCHE": "NIGHT" }
+  };
+  const ESC_EN = { GPG: "EWS", PG: "WS", PE: "FS", PA: "MLS", PM: "MS", PMC: "MCU", PP: "CU", PPP: "ECU", PD: "DETAIL", INS: "INSERT" };
+  const lang = () => { try { return localStorage.getItem("hub-lang-exp") || "ca" } catch (e) { return "ca" } };
+  const t = (k, def) => (L[lang()] || L.ca)[k] || L.ca[k] || def || k;
+  const tv = v => (V[lang()] || {})[v] || v;
+  const loc = () => ({ ca: "ca-ES", es: "es-ES", en: "en-GB" })[lang()];
+  const escX = v => lang() === "en" && v ? String(v).replace(/\b(GPG|PG|PE|PA|PMC|PM|PPP|PP|PD|INS)\b/g, m => ESC_EN[m] || m) : v || "";
+  const selLang = () => `<select class="lang" title="Idioma dels PDF i Excel">${[["ca", "Exportar en català"], ["es", "Exportar en castellà"], ["en", "Exportar en anglès"]].map(([v, l]) => `<option value="${v}" ${v === lang() ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+  document.addEventListener("change", e => { if (e.target.matches("select.lang")) { try { localStorage.setItem("hub-lang-exp", e.target.value) } catch (x) { } document.querySelectorAll("select.lang").forEach(s => s.value = e.target.value) } });
+
+  return { t, tv, loc, escX, selLang, lang, E, ESC, escNorm, escColor, ORDEN_ESC, BANDA, FILA, aMin, aHora, uid, subirImagen, imgUrl, pegar, pdf, excel, ajusta };
 })();

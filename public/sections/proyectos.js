@@ -1,22 +1,24 @@
 // Proyectos. Para añadir un campo: una línea en "campos".
 (() => {
-  const EST = ["Idea", "Desarrollo", "Financiación", "Preproducción", "Rodaje", "Postproducción", "Distribución", "Terminado"];
-  const CE = { Idea: "#8e8e93", Desarrollo: "#ff9f0a", Financiación: "#af52de", Preproducción: "#5ac8fa", Rodaje: "#ff375f", Postproducción: "#0a84ff", Distribución: "#30b27a", Terminado: "#000" };
+  const EST = ["Idea", "Desenvolupament", "Finançament", "Preproducció", "Rodatge", "Postproducció", "Distribució", "Acabat"];
+  const CE = { "Idea": "#8e8e93", "Desenvolupament": "#ff9f0a", "Finançament": "#af52de", "Preproducció": "#5ac8fa", "Rodatge": "#ff375f", "Postproducció": "#0a84ff", "Distribució": "#30b27a", "Acabat": "#000" };
   H.coleccion({
-    sec: "proyectos", tipo: "proyecto", nuevo: "Proyecto",
-    tabs: { f: "categoria", op: ["Largo", "Corto", "Videoclip", "Publicidad"] },
+    sec: "proyectos", tipo: "proyecto", nuevo: "Projecte",
+    tabs2: { f: "rol", op: ["Direcció", "Ajudant de direcció", "Script"] },
+    tabs: { f: "categoria", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
     campos: [
       { f: "titulo", tipo: "titulo" },
-      { f: "categoria", l: "Categoría", tipo: "pills", op: ["Largo", "Corto", "Videoclip", "Publicidad"] },
-      { f: "estado", l: "Estado", tipo: "pills", op: EST, col: CE },
-      { f: "anio", l: "Año", tipo: "number" },
+      { f: "categoria", l: "Categoria", tipo: "pills", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
+      { f: "rol", l: "El meu rol", tipo: "pills", op: ["Direcció", "Ajudant de direcció", "Script"], col: { "Direcció": "#000", "Ajudant de direcció": "#0a84ff", "Script": "#af52de" } },
+      { f: "estado", l: "Estat", tipo: "pills", op: EST, col: CE },
+      { f: "anio", l: "Any", tipo: "number" },
       { f: "logline", l: "Logline", tipo: "textarea", rows: 2 },
-      { f: "notas", l: "Notas", tipo: "textarea", rows: 8 },
-      { f: "archivos", l: "Archivos (canción, referencias, guion, fotos…)", tipo: "archivos" },
-      { f: "enlaces", l: "Enlaces (guion, carpeta, Vimeo…)", tipo: "links" }
+      { f: "notas", l: "Notes", tipo: "textarea", rows: 8 },
+      { f: "archivos", l: "Arxius (cançó, referències, guió, fotos…)", tipo: "archivos" },
+      { f: "enlaces", l: "Enllaços (guió, carpeta, Vimeo…)", tipo: "links" }
     ],
     orden: (a, b) => EST.indexOf(a.estado) - EST.indexOf(b.estado) || (a.titulo || "").localeCompare(b.titulo || ""),
-    fila: d => ({ t: d.titulo, s: [d.categoria, d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " archivos" : " archivo")].filter(Boolean).join(" · "), c: CE[d.estado] }),
+    fila: d => ({ t: d.titulo, s: [d.categoria, d.rol, d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " arxius" : " arxiu")].filter(Boolean).join(" · "), c: CE[d.estado] }),
     extra: d => H.relacionados(d.id)
   });
 })();

@@ -3,19 +3,19 @@
   const { E, today, fecha, addDays } = H;
   const el = document.getElementById("s-tareas");
   const CAMPOS = [
-    { f: "titulo", tipo: "titulo", ph: "Tarea" },
-    { f: "fecha", l: "Fecha", tipo: "date" },
-    { f: "hecha", l: "Hecha", tipo: "check" },
-    { f: "proyecto", l: "Proyecto", tipo: "proyecto" },
-    { f: "notas", l: "Notas", tipo: "textarea" }
+    { f: "titulo", tipo: "titulo", ph: "Tasca" },
+    { f: "fecha", l: "Data", tipo: "date" },
+    { f: "hecha", l: "Feta", tipo: "check" },
+    { f: "proyecto", l: "Projecte", tipo: "proyecto" },
+    { f: "notas", l: "Notes", tipo: "textarea" }
   ];
   const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a" };
   let vista = "lista", mes = today().slice(0, 7), verHechas = false;
 
-  el.innerHTML = `<div class="tabs"><button class="t on" data-k="v" data-v="lista">Lista</button><button class="t" data-k="v" data-v="cal">Calendario</button></div>
-  <div class="bar"><input id="tnew" placeholder="Nueva tarea… (escribe y pulsa Intro)"><input id="tnewf" type="date" style="width:auto"></div><div id="tv"><p class="em">Cargando…</p></div>`;
+  el.innerHTML = `<div class="tabs"><button class="t on" data-k="v" data-v="lista">Llista</button><button class="t" data-k="v" data-v="cal">Calendari</button></div>
+  <div class="bar"><input id="tnew" placeholder="Nova tasca… (escriu i prem Retorn)"><input id="tnewf" type="date" style="width:auto"></div><div id="tv"><p class="em">Carregant…</p></div>`;
 
-  const fila = t => `<div class="r"><input type="checkbox" class="tck" data-id="${t.id}" ${t.hecha ? "checked" : ""}><div class="g" data-k="abre" data-id="${t.id}"><b style="${t.hecha ? "text-decoration:line-through;color:#8e8e93" : ""}">${E(t.titulo || "Sin título")}</b><small>${[t.fecha && fecha(t.fecha), t.pn].filter(Boolean).map(E).join(" · ")}</small></div></div>`;
+  const fila = t => `<div class="r"><input type="checkbox" class="tck" data-id="${t.id}" ${t.hecha ? "checked" : ""}><div class="g" data-k="abre" data-id="${t.id}"><b style="${t.hecha ? "text-decoration:line-through;color:#8e8e93" : ""}">${E(t.titulo || "Sense títol")}</b><small>${[t.fecha && fecha(t.fecha), t.pn].filter(Boolean).map(E).join(" · ")}</small></div></div>`;
 
   async function datos() {
     const [t, r, f, p] = await Promise.all([H.col("tarea"), H.col("reunion"), H.col("convocatoria"), H.col("proyecto")]);
@@ -23,7 +23,7 @@
     t.forEach(x => x.pn = pn(x.proyecto));
     const ev = [].concat(
       t.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.tarea, t: x.titulo, id: x.id, tipo: "tarea", hecha: x.hecha })),
-      r.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.reunion, t: (x.hora ? x.hora + " " : "") + (x.titulo || "Reunión"), id: x.id, tipo: "reunion" })),
+      r.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.reunion, t: (x.hora ? x.hora + " " : "") + (x.titulo || "Reunió"), id: x.id, tipo: "reunion" })),
       f.filter(x => x.limite).map(x => ({ d: x.limite, c: COL.limite, t: "Límite: " + (x.titulo || ""), id: x.id, tipo: "convocatoria" })),
       f.filter(x => x.evento).map(x => ({ d: x.evento, c: COL.evento, t: x.titulo || "", id: x.id, tipo: "convocatoria" })));
     return { t, ev };
@@ -33,13 +33,13 @@
     const { t, ev } = await datos(), v = el.querySelector("#tv"), hoy = today(), sem = addDays(hoy, 7);
     if (vista === "lista") {
       const p = t.filter(x => !x.hecha).sort((a, b) => (a.fecha || "9").localeCompare(b.fecha || "9"));
-      const G = [["Atrasadas", p.filter(x => x.fecha && x.fecha < hoy)], ["Hoy", p.filter(x => x.fecha === hoy)], ["Próximos 7 días", p.filter(x => x.fecha > hoy && x.fecha <= sem)], ["Más adelante", p.filter(x => x.fecha > sem)], ["Sin fecha", p.filter(x => !x.fecha)]];
+      const G = [["Endarrerides", p.filter(x => x.fecha && x.fecha < hoy)], ["Avui", p.filter(x => x.fecha === hoy)], ["Propers 7 dies", p.filter(x => x.fecha > hoy && x.fecha <= sem)], ["Més endavant", p.filter(x => x.fecha > sem)], ["Sense data", p.filter(x => !x.fecha)]];
       const h = t.filter(x => x.hecha);
       const prox = ev.filter(e => e.tipo !== "tarea" && e.d >= hoy && e.d <= sem).sort((a, b) => a.d.localeCompare(b.d));
-      const agenda = `<div class="card"><h3>Próximos 7 días</h3>` + (prox.length ? prox.map(e => `<div class="r" data-k="evl" data-t="${e.tipo}" data-id="${e.id}"><i class="dot" style="background:${e.c}"></i><div class="g"><b>${E(e.t)}</b><small>${E(fecha(e.d))}</small></div></div>`).join("") : `<p class="em">Sin reuniones ni fechas límite.</p>`) + `</div>`;
+      const agenda = `<div class="card"><h3>Propers 7 dies</h3>` + (prox.length ? prox.map(e => `<div class="r" data-k="evl" data-t="${e.tipo}" data-id="${e.id}"><i class="dot" style="background:${e.c}"></i><div class="g"><b>${E(e.t)}</b><small>${E(fecha(e.d))}</small></div></div>`).join("") : `<p class="em">Sense reunions ni dates límit.</p>`) + `</div>`;
       v.innerHTML = `<div class="split"><div>` +
-        (G.some(g => g[1].length) ? G.filter(g => g[1].length).map(([n, l]) => `<h2 ${n === "Atrasadas" ? 'style="color:#ff3b30"' : ""}>${n} <span>${l.length}</span></h2>` + l.map(fila).join("")).join("") : `<p class="em">Sin tareas pendientes.</p>`) +
-        (h.length ? `<h2 data-k="hechas" style="cursor:pointer">Hechas <span>${h.length}</span> ${verHechas ? "▾" : "▸"}</h2>` + (verHechas ? h.map(fila).join("") : "") : "") + `</div>${agenda}</div>`;
+        (G.some(g => g[1].length) ? G.filter(g => g[1].length).map(([n, l]) => `<h2 ${n === "Endarrerides" ? 'style="color:#ff3b30"' : ""}>${n} <span>${l.length}</span></h2>` + l.map(fila).join("")).join("") : `<p class="em">Cap tasca pendent.</p>`) +
+        (h.length ? `<h2 data-k="hechas" style="cursor:pointer">Fetes <span>${h.length}</span> ${verHechas ? "▾" : "▸"}</h2>` + (verHechas ? h.map(fila).join("") : "") : "") + `</div>${agenda}</div>`;
     } else {
       const [y, m] = mes.split("-").map(Number), pri = new Date(y, m - 1, 1), ini = (pri.getDay() + 6) % 7, dias = new Date(y, m, 0).getDate();
       let c = "";
@@ -48,9 +48,9 @@
         const s = `${mes}-${String(d).padStart(2, "0")}`, es = ev.filter(e => e.d === s);
         c += `<div class="cd ${s === hoy ? "hoy" : ""}" data-k="dia" data-d="${s}"><b>${d}</b>${es.slice(0, 3).map(e => `<span style="background:${e.c}${e.hecha ? ";opacity:.35" : ""}">${E(e.t)}</span>`).join("")}${es.length > 3 ? `<small>+${es.length - 3}</small>` : ""}</div>`;
       }
-      v.innerHTML = `<div class="bar" style="justify-content:space-between"><button class="t" data-k="mes" data-n="-1">‹</button><b>${pri.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}</b><button class="t" data-k="mes" data-n="1">›</button></div>
+      v.innerHTML = `<div class="bar" style="justify-content:space-between"><button class="t" data-k="mes" data-n="-1">‹</button><b>${pri.toLocaleDateString("ca-ES", { month: "long", year: "numeric" })}</b><button class="t" data-k="mes" data-n="1">›</button></div>
       <div class="cal">${["L", "M", "X", "J", "V", "S", "D"].map(x => `<small>${x}</small>`).join("")}${c}</div>
-      <div class="lg"><span><i style="background:${COL.tarea}"></i>Tarea</span><span><i style="background:${COL.reunion}"></i>Reunión</span><span><i style="background:${COL.limite}"></i>Fecha límite</span><span><i style="background:${COL.evento}"></i>Festival / resolución</span></div>`;
+      <div class="lg"><span><i style="background:${COL.tarea}"></i>Tasca</span><span><i style="background:${COL.reunion}"></i>Reunió</span><span><i style="background:${COL.limite}"></i>Data límit</span><span><i style="background:${COL.evento}"></i>Festival / resolució</span></div>`;
     }
   }
 
@@ -62,8 +62,8 @@
   async function dia(s) {
     const { ev } = await datos(), es = ev.filter(e => e.d === s);
     H.sheet(`<h2 style="margin-top:0;color:#000;font-size:18px;text-transform:none;letter-spacing:0">${E(fecha(s, 1))}</h2>` +
-      (es.map(e => `<div class="r" data-k="ev" data-t="${e.tipo}" data-id="${e.id}"><i class="dot" style="background:${e.c}"></i><div class="g"><b>${E(e.t)}</b></div></div>`).join("") || `<p class="em">Nada este día.</p>`) +
-      `<div class="bar"><input id="tdia" placeholder="Nueva tarea este día… (Intro)" data-d="${s}" style="margin:0"></div>`, pintar);
+      (es.map(e => `<div class="r" data-k="ev" data-t="${e.tipo}" data-id="${e.id}"><i class="dot" style="background:${e.c}"></i><div class="g"><b>${E(e.t)}</b></div></div>`).join("") || `<p class="em">Res aquest dia.</p>`) +
+      `<div class="bar"><input id="tdia" placeholder="Nova tasca aquest dia… (Retorn)" data-d="${s}" style="margin:0"></div>`, pintar);
   }
   async function nueva(titulo, f) { await H.put({ id: H.uid("tarea"), titulo, fecha: f || "", hecha: false, proyecto: "" }, 1) }
 
@@ -92,5 +92,5 @@
   H.abrirTarea = id => abrir("tarea", id);
   H.nuevaTarea = nueva;
   H.onChange(() => { if (!el.hidden) pintar() });
-  pintar().catch(() => el.querySelector("#tv").innerHTML = `<p class="em">No se pudo cargar.</p>`);
+  pintar().catch(() => el.querySelector("#tv").innerHTML = `<p class="em">No s'ha pogut carregar.</p>`);
 })();
