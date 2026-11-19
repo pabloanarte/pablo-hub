@@ -1,7 +1,7 @@
 // Proyectos. Para añadir un campo: una línea en "campos".
 (() => {
   const EST = ["Idea", "Desarrollo", "Financiación", "Preproducción", "Rodaje", "Postproducción", "Distribución", "Terminado"];
-  const CE = { Idea: "#c7c7cc", Desarrollo: "#ff9f0a", Financiación: "#af52de", Preproducción: "#5ac8fa", Rodaje: "#ff375f", Postproducción: "#0a84ff", Distribución: "#30b27a", Terminado: "#000" };
+  const CE = { Idea: "#8e8e93", Desarrollo: "#ff9f0a", Financiación: "#af52de", Preproducción: "#5ac8fa", Rodaje: "#ff375f", Postproducción: "#0a84ff", Distribución: "#30b27a", Terminado: "#000" };
   H.coleccion({
     sec: "proyectos", tipo: "proyecto", nuevo: "Proyecto",
     tabs: { f: "categoria", op: ["Largo", "Corto", "Videoclip", "Publicidad"] },

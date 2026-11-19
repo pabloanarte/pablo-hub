@@ -12,8 +12,8 @@
   const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a" };
   let vista = "lista", mes = today().slice(0, 7), verHechas = false;
 
-  el.innerHTML = `<div class="seg"><button class="t on" data-k="v" data-v="lista">Lista</button><button class="t" data-k="v" data-v="cal">Calendario</button></div>
-  <div class="bar"><input id="tnew" placeholder="Nueva tarea… (Intro)" style="margin:0"><input id="tnewf" type="date" style="margin:0;width:auto"></div><div id="tv"><p class="em">Cargando…</p></div>`;
+  el.innerHTML = `<div class="tabs"><button class="t on" data-k="v" data-v="lista">Lista</button><button class="t" data-k="v" data-v="cal">Calendario</button></div>
+  <div class="bar"><input id="tnew" placeholder="Nueva tarea… (escribe y pulsa Intro)"><input id="tnewf" type="date" style="width:auto"></div><div id="tv"><p class="em">Cargando…</p></div>`;
 
   const fila = t => `<div class="r"><input type="checkbox" class="tck" data-id="${t.id}" ${t.hecha ? "checked" : ""}><div class="g" data-k="abre" data-id="${t.id}"><b style="${t.hecha ? "text-decoration:line-through;color:#8e8e93" : ""}">${E(t.titulo || "Sin título")}</b><small>${[t.fecha && fecha(t.fecha), t.pn].filter(Boolean).map(E).join(" · ")}</small></div></div>`;
 
@@ -36,9 +36,10 @@
       const G = [["Atrasadas", p.filter(x => x.fecha && x.fecha < hoy)], ["Hoy", p.filter(x => x.fecha === hoy)], ["Próximos 7 días", p.filter(x => x.fecha > hoy && x.fecha <= sem)], ["Más adelante", p.filter(x => x.fecha > sem)], ["Sin fecha", p.filter(x => !x.fecha)]];
       const h = t.filter(x => x.hecha);
       const prox = ev.filter(e => e.tipo !== "tarea" && e.d >= hoy && e.d <= sem).sort((a, b) => a.d.localeCompare(b.d));
-      v.innerHTML = (prox.length ? `<h2>Esta semana</h2>` + prox.map(e => `<div class="m"><i class="dot" style="background:${e.c};display:inline-block;margin-right:8px"></i>${E(fecha(e.d))} · ${E(e.t)}</div>`).join("") : "") +
+      const agenda = `<div class="card"><h3>Próximos 7 días</h3>` + (prox.length ? prox.map(e => `<div class="r" data-k="evl" data-t="${e.tipo}" data-id="${e.id}"><i class="dot" style="background:${e.c}"></i><div class="g"><b>${E(e.t)}</b><small>${E(fecha(e.d))}</small></div></div>`).join("") : `<p class="em">Sin reuniones ni fechas límite.</p>`) + `</div>`;
+      v.innerHTML = `<div class="split"><div>` +
         (G.some(g => g[1].length) ? G.filter(g => g[1].length).map(([n, l]) => `<h2 ${n === "Atrasadas" ? 'style="color:#ff3b30"' : ""}>${n} <span>${l.length}</span></h2>` + l.map(fila).join("")).join("") : `<p class="em">Sin tareas pendientes.</p>`) +
-        (h.length ? `<h2 data-k="hechas" style="cursor:pointer">Hechas <span>${h.length}</span> ${verHechas ? "▾" : "▸"}</h2>` + (verHechas ? h.map(fila).join("") : "") : "");
+        (h.length ? `<h2 data-k="hechas" style="cursor:pointer">Hechas <span>${h.length}</span> ${verHechas ? "▾" : "▸"}</h2>` + (verHechas ? h.map(fila).join("") : "") : "") + `</div>${agenda}</div>`;
     } else {
       const [y, m] = mes.split("-").map(Number), pri = new Date(y, m - 1, 1), ini = (pri.getDay() + 6) % 7, dias = new Date(y, m, 0).getDate();
       let c = "";
@@ -72,6 +73,7 @@
     if (k === "mes") { const [y, m] = mes.split("-").map(Number), d = new Date(y, m - 1 + +b.dataset.n, 1); mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; pintar() }
     if (k === "dia") dia(b.dataset.d);
     if (k === "abre") abrir("tarea", b.dataset.id);
+    if (k === "evl") H.abrir(b.dataset.t, b.dataset.id);
     if (k === "hechas") { verHechas = !verHechas; pintar() }
   });
   el.addEventListener("change", async e => {
@@ -87,6 +89,8 @@
   document.getElementById("hsh").addEventListener("click", e => {
     const b = e.target.closest('[data-k="ev"]'); if (!b) return; H.cerrar(); abrir(b.dataset.t, b.dataset.id);
   });
+  H.abrirTarea = id => abrir("tarea", id);
+  H.nuevaTarea = nueva;
   H.onChange(() => { if (!el.hidden) pintar() });
   pintar().catch(() => el.querySelector("#tv").innerHTML = `<p class="em">No se pudo cargar.</p>`);
 })();

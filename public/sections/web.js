@@ -20,7 +20,7 @@
   function marca() { sucio = true; el.querySelector("#wpub").hidden = false }
 
   function pintar() {
-    const lista = k => (W[k] || []).map((p, i) => `<div class="r"><div class="g" data-k="ed" data-i="${i}"><b>${E(p.titulo || "Sin título")}</b><small>${E(k === "videoclips" ? p.artista || "" : [p.tipo, p.nota].filter(Boolean).join(" · "))}${p.vimeo ? "" : p.poster ? " · póster" : " · sin vídeo"}</small></div><button class="t" data-k="sube" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="t" data-k="baja" data-i="${i}" ${i < W[k].length - 1 ? "" : "disabled"}>↓</button></div>`).join("") + `<div class="bar"><button class="b" data-k="add">+ Añadir proyecto</button></div>`;
+    const lista = k => (W[k] || []).map((p, i) => `<div class="r"><div class="g" data-k="ed" data-i="${i}"><b>${E(p.titulo || "Sin título")}</b><small>${E(k === "videoclips" ? p.artista || "" : [p.tipo, p.nota].filter(Boolean).join(" · "))}${p.vimeo ? "" : p.poster ? " · póster" : " · sin vídeo"}</small></div><button class="t" data-k="sube" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="t" data-k="baja" data-i="${i}" ${i < W[k].length - 1 ? "" : "disabled"}>↓</button></div>`).join("") + `<div class="bar" style="margin-top:14px"><button class="b" data-k="add">+ Añadir proyecto</button></div>`;
     const inp = (ruta, v, ph = "") => `<input data-w="${ruta}" value="${E(v)}" placeholder="${E(ph)}">`;
     const arch = (ruta, v, acc, carp, nota) => `<div class="r" style="cursor:default"><div class="g"><b>${E(v || "—")}</b>${nota ? `<small>${E(nota)}</small>` : ""}</div>${v ? `<a class="ln" target="_blank" rel="noopener" href="${WEB}/${E(v)}">Ver</a>` : ""}<label class="b" style="margin:0;color:#fff;font-size:14px">Cambiar<input type="file" accept="${acc}" data-up="${ruta}" data-c="${carp}" hidden></label></div>`;
     let h = "";
@@ -33,8 +33,8 @@
       `<label>Imagen mientras carga el vídeo</label>` + arch("video.poster", W.video.poster, "image/*", "assets") +
       `<label>Foto de sobre mí</label>` + arch("foto", W.foto, "image/*", "img");
     if (tab === "redes") h = `<label>Vimeo</label>${inp("redes.vimeo", W.redes.vimeo)}<label>IMDb</label>${inp("redes.imdb", W.redes.imdb)}<label>Instagram</label>${inp("redes.instagram", W.redes.instagram)}<small>Si dejas uno vacío, su icono desaparece de la web.</small>`;
-    el.innerHTML = `<div class="bar" style="justify-content:space-between"><div class="seg" style="margin:0">${TABS.map(([k, l]) => `<button class="t ${k === tab ? "on" : ""}" data-k="tab" data-v="${k}">${l}</button>`).join("")}</div><a class="ln" href="${WEB}" target="_blank" rel="noopener">Ver web</a></div>
-      <div style="margin-top:8px">${h}</div>
+    el.innerHTML = `<div class="tabs">${TABS.map(([k, l]) => `<button class="t ${k === tab ? "on" : ""}" data-k="tab" data-v="${k}">${l}</button>`).join("")}<span style="flex:1"></span><a class="ln" style="align-self:center" href="${WEB}" target="_blank" rel="noopener">Ver la web ↗</a></div>
+      <div class="split"><div class="form">${h}</div><div class="card"><h3>Vista previa</h3><iframe src="${WEB}${tab === "ficcion" ? "/#fiction" : tab === "videoclips" ? "/#videoclips" : tab === "textos" ? "/#about" : ""}" style="width:100%;aspect-ratio:16/10;border:1px solid var(--bd);border-radius:10px" loading="lazy"></iframe><small>Muestra la web publicada. Los cambios aparecen 1–2 minutos después de publicar.</small></div></div>
       <div id="wpub" class="pub" ${sucio ? "" : "hidden"}><span>Cambios sin publicar</span><button class="b" data-k="pub" style="background:#fff;color:#000">Publicar</button></div>`;
   }
 

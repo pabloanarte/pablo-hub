@@ -105,10 +105,11 @@ window.H = (() => {
       const l = await col(cfg.tipo);
       const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!q || JSON.stringify(d).toLowerCase().includes(q))).sort(cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
       const lista = cfg.grupos ? cfg.grupos(vis) : [["", vis]];
-      el.querySelector(".hl").innerHTML = vis.length ? lista.filter(g => g[1].length).map(([g, ds]) => (g ? `<h2>${E(g)} <span>${ds.length}</span></h2>` : "") + ds.map(d => { const r = cfg.fila(d); return `<div class="r" data-k="abre" data-id="${d.id}"><i class="dot" style="background:${r.c || "#c7c7cc"}"></i><div class="g"><b>${E(r.t || "Sin título")}</b><small>${E(r.s || "")}</small></div></div>` }).join("")).join("") : `<p class="em">Nada todavía.</p>`;
+      el.querySelectorAll('[data-k="tab"] small').forEach(x => { const v = x.parentNode.dataset.v, n = v ? l.filter(d => d[cfg.tabs.f] === v).length : l.length; x.textContent = n ? " " + n : "" });
+      el.querySelector(".hl").innerHTML = vis.length ? lista.filter(g => g[1].length).map(([g, ds]) => (g ? `<h2>${E(g)} <span>${ds.length}</span></h2>` : "") + ds.map(d => { const r = cfg.fila(d); return `<div class="r" data-k="abre" data-id="${d.id}"><i class="dot" style="background:${r.c || "#c7c7cc"}"></i><div class="g"><b>${E(r.t || "Sin título")}</b><small>${E(r.s || "")}</small></div></div>` }).join("")).join("") : `<p class="em">Nada todavía. Pulsa «+ ${E(cfg.nuevo)}» para empezar.</p>`;
     }
-    el.innerHTML = `<div class="bar"><input class="hq" placeholder="Buscar" style="margin:0"><button class="b" data-k="nuevo">+ ${E(cfg.nuevo)}</button></div>` +
-      (cfg.tabs ? `<div class="seg"><button class="t on" data-k="tab" data-v="">Todo</button>${cfg.tabs.op.map(o => `<button class="t" data-k="tab" data-v="${E(o)}">${E(o)}</button>`).join("")}</div>` : "") + `<div class="hl"><p class="em">Cargando…</p></div>`;
+    el.innerHTML = (cfg.tabs ? `<div class="tabs"><button class="t on" data-k="tab" data-v="">Todo<small></small></button>${cfg.tabs.op.map(o => `<button class="t" data-k="tab" data-v="${E(o)}">${E(o)}<small></small></button>`).join("")}</div>` : "") +
+      `<div class="bar"><input class="hq" placeholder="Buscar en ${E(cfg.sec)}…"><span style="flex:1"></span><button class="b" data-k="nuevo">+ ${E(cfg.nuevo)}</button></div><div class="hl"><p class="em">Cargando…</p></div>`;
     el.addEventListener("click", async e => {
       const b = e.target.closest("[data-k]"); if (!b) return;
       if (b.dataset.k === "tab") { tab = b.dataset.v; el.querySelectorAll('[data-k="tab"]').forEach(x => x.classList.toggle("on", x === b)); pintar() }
