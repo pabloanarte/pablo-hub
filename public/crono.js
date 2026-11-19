@@ -30,14 +30,14 @@ window.Crono = cfg => {
   }
   function chart(l, ppd, a, b, impr) {
     const n = dif(a, b) + 1, W = n * ppd, hoy = H.today(), meses = [], marcas = [];
-    for (let i = 0; i < n; i++) { const d = mas(a, i), x = dd(d); if (i === 0 || x.getDate() === 1) { const m = x.toLocaleDateString(impr ? R.loc() : "ca-ES", { month: "long", year: "numeric" }); meses.push([i, m[0].toUpperCase() + m.slice(1)]) }
+    for (let i = 0; i < n; i++) { const d = mas(a, i), x = dd(d); if (i === 0 || x.getDate() === 1) { const m = x.toLocaleDateString(impr ? R.loc() : "ca-ES", ppd < 6 ? { month: "short", year: "2-digit" } : { month: "long", year: "numeric" }); meses.push([i, m[0].toUpperCase() + m.slice(1)]) }
       if (zoom === "dias" && !impr) marcas.push([i, x.getDate(), [0, 6].includes(x.getDay())]); else if (x.getDay() === 1 && ppd >= 3) marcas.push([i, x.getDate(), false]) }
     const grupos = CATS.map(c => [c[0], l.filter(x => x.cat === c[0])]).concat([["Sense departament", l.filter(x => !CATS.some(c => c[0] === x.cat))]]).filter(g => g[1].length);
     const filas = grupos.flatMap(([g, ts]) => [{ g }].concat(ts.sort((x, y) => x.ini.localeCompare(y.ini)).map(t => ({ t }))));
     const fondo = zoom === "dias" && !impr ? marcas.filter(m => m[2]).map(m => `<i class="we" style="left:${m[0] * ppd}px;width:${ppd}px"></i>`).join("") : "";
-    return `<div class="gantt${impr ? " imp" : ""}"><div class="gl"><div class="gh">Tasca</div>${filas.map(f => f.g ? `<div class="gg" style="color:${col(f.g)}">${E(impr ? R.tv(f.g) : f.g)}</div>` : `<div class="gn" data-k="edt" data-id="${f.t.id}"><i class="dot" style="background:${col(f.t.cat)}"></i><span>${E(f.t.titulo || "Sense títol")}</span>${f.t.estado === "Fet" ? "<small>✓</small>" : ""}</div>`).join("")}</div>
+    return `<div class="gantt${impr ? " imp" : ""}"><div class="gl"><div class="gh">${impr ? R.t("t_tarea") : "Tasca"}</div>${filas.map(f => f.g ? `<div class="gg"><i class="dot" style="background:${col(f.g)}"></i>${E(impr ? (f.g === "Sense departament" ? R.t("sin_dep") : R.tv(f.g)) : f.g)}</div>` : `<div class="gn" data-k="edt" data-id="${f.t.id}"><i class="dot" style="background:${col(f.t.cat)}"></i><span>${E(f.t.titulo || "Sense títol")}</span>${f.t.estado === "Fet" ? "<small>✓</small>" : ""}</div>`).join("")}</div>
       <div class="gr"><div style="width:${W}px;position:relative"><div class="gh gm">${meses.map(m => `<span style="left:${m[0] * ppd}px">${E(m[1])}</span>`).join("")}${marcas.map(m => `<b style="left:${m[0] * ppd}px">${m[1]}</b>`).join("")}</div>
-      <div class="gb" style="height:${filas.length * 34}px">${fondo}${marcas.map(m => `<i class="vl" style="left:${m[0] * ppd}px"></i>`).join("")}${hoy >= a && hoy <= b ? `<i class="hoy" style="left:${(dif(a, hoy) + .5) * ppd}px"></i>` : ""}` +
+      <div class="gb" style="height:${filas.length * 34}px">${fondo}${marcas.map(m => `<i class="vl" style="left:${m[0] * ppd}px"></i>`).join("")}${hoy >= a && hoy <= b ? `<i class="ghoy" style="left:${(dif(a, hoy) + .5) * ppd}px"></i>` : ""}` +
       filas.map((f, i) => f.g ? `<div class="grow g" style="top:${i * 34}px;width:${W}px"></div>` : (() => { const t = f.t, x = dif(a, t.ini) * ppd, w = Math.max(ppd, (dif(t.ini, t.fin) + 1) * ppd), c = col(t.cat);
         return t.hito ? `<div class="hito" data-id="${t.id}" style="top:${i * 34 + 9}px;left:${x + ppd / 2 - 8}px;background:${c}" title="${E(t.titulo)}"></div><span class="blab" style="top:${i * 34 + 8}px;left:${x + ppd / 2 + 12}px">${E(t.titulo || "")}</span>`
           : `<div class="bar2${t.estado === "Fet" ? " ok" : ""}" data-id="${t.id}" style="top:${i * 34 + 6}px;left:${x}px;width:${w}px;background:${c}${t.estado === "Pendent" || !t.estado ? ";opacity:.75" : ""}" title="${E(t.titulo)} · ${E(H.fecha(t.ini))} – ${E(H.fecha(t.fin))}">${w >= 90 ? `<span>${E(t.titulo || "")}</span>` : ""}${impr ? "" : `<i class="rs"></i>`}</div>${w < 90 ? `<span class="blab" style="top:${i * 34 + 10}px;left:${x + w + 6}px">${E(t.titulo || "")}</span>` : ""}` })()).join("") + `</div></div></div></div>`;
@@ -63,7 +63,7 @@ window.Crono = cfg => {
       const ps = await H.col("proyecto");
       H.sheet(`<h2 style="margin-top:0">Plantilla de ${E(cfg.nombre)}</h2><p class="em" style="margin-top:0">Crea les fases habituals encadenades a partir d'una data. Després ajustes les dates arrossegant.</p>
         <label>Projecte</label><select id="pl-p"><option value="">—</option>${ps.map(p => `<option value="${p.id}" ${p.id === proy ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select>
-        <label>Comença el</label><input type="date" id="pl-f" value="${H.today()}">` + cfg.plantilla.map((t, i) => `<label class="ck"><input type="checkbox" data-pl="${i}" checked> ${E(t[0])} <small>· ${E(t[1])} · ${t[2]} dies</small></label>`).join("") + `<button class="b" data-k="plcrear" style="margin-top:14px">Crear tasques</button>`);
+        <label>Comença el</label><input type="date" id="pl-f" value="${H.today()}">` + cfg.plantilla.map((t, i) => `<label class="ck"><input type="checkbox" data-pl="${i}" checked> ${E(t[0])} <small>· ${E(t[1])} · ${t[2]} ${t[2] === 1 ? "dia" : "dies"}</small></label>`).join("") + `<button class="b" data-k="plcrear" style="margin-top:14px">Crear tasques</button>`);
     }
     if (k === "pdf") { const l = await datos(); if (!l.length) return; const [a, b] = rango(l, 1, 1); const n = dif(a, b) + 1, ppd = Math.max(1.5, Math.min(30, 830 / n)); R.pdf(`<div class="pz"><h1>${E(R.t(tipo))}${proy ? " · " + E(((await H.col("proyecto")).find(p => p.id === proy) || {}).titulo || "") : ""}</h1>` + chart(l, ppd, a, b, 1).replace('<div class="gantt', '<div style="zoom:1" class="gantt') + `<div class="lg">${CATS.map(c => `<span><i style="background:${c[1]}"></i>${E(R.tv(c[0]))}</span>`).join("")}</div></div>`) }
     if (k === "xls") exportarExcel();
@@ -115,6 +115,7 @@ window.Crono = cfg => {
       })) : [] })
     }]);
   }
+  (window.CronoAbrir = window.CronoAbrir || {})[tipo] = abrir;
   H.onChange(() => { if (!el.hidden && !dr) pintar() });
   window.addEventListener("hub-sec", e => { if (e.detail === cfg.sec) pintar() });
   pintar();

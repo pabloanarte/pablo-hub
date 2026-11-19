@@ -2,7 +2,7 @@
 window.R = (() => {
   const E = H.E;
   // ---------- escalas de plano y sus colores ----------
-  const ESC = [["GPG", "#5856d6"], ["PG", "#0a84ff"], ["PS", "#32ade6"], ["PA", "#00b8a9"], ["PM", "#30b27a"], ["PMC", "#8bc34a"], ["PP", "#ff9f0a"], ["PPP", "#ff6b35"], ["PD", "#ff375f"]];
+  const ESC = [["GPG", "#1d3557"], ["PG", "#1e88e5"], ["PS", "#00acc1"], ["PA", "#2e7d32"], ["PM", "#43a047"], ["PMC", "#9e9d24"], ["PP", "#fb8c00"], ["PPP", "#e64a19"], ["PD", "#ad1457"]];
   const SINON = { LS: "PG", WS: "PG", ELS: "GPG", EWS: "GPG", FS: "PS", PE: "PS", MLS: "PA", MS: "PM", MCU: "PMC", CU: "PP", ECU: "PPP", DETAIL: "PD", DETALLE: "PD", INSERT: "PD", INS: "PD", "PLA DETALL": "PD", "PLA SENCER": "PS", "PLANO ENTERO": "PS", "PLANO DETALLE": "PD", "PRIMER PLANO": "PP", "PLANO MEDIO": "PM", "PLANO GENERAL": "PG" };
   const escNorm = v => { const s = String(v || "").toUpperCase().trim(); if (!s) return ""; const f = s.split(/[\s/,+]|TO/)[0]; return SINON[s] || SINON[f] || (ESC.find(x => x[0] === f) || [])[0] || f };
   const escColor = v => (ESC.find(x => x[0] === escNorm(v)) || [])[1] || "#c7c7cc";
@@ -27,21 +27,23 @@ window.R = (() => {
   // ---------- pegar desde Google Sheets / Excel ----------
   // Reconoce las cabeceras habituales (castellano, catalán, inglés) y las convierte a campos del guion técnico.
   const CAB = {
-    esc: ["esc", "escena", "scene", "sc", "seq"], num: ["pla", "plano", "shot", "pl", "nº", "n", "#"], sujeto: ["sujeto", "subjecte", "subject", "personajes", "personatges"],
-    escala: ["valor de pl", "valor de plano", "escala", "shot size", "tamaño", "valor"], posicion: ["camera position", "posición", "posicio", "posició", "ang. horiz.", "ang. horitz.", "angulo horizontal", "ángulo horizontal", "angulación horizontal", "angulació horitzontal", "horizontal angle"],
-    angulo: ["angle", "angulación", "angulacio", "angulació", "ang. vert.", "angulo", "ángulo", "angulación vertical", "angulació vertical", "vertical angle"], mov: ["movement", "movimiento", "moviment", "mov. de càmera", "mov. de camara", "mov"],
-    soporte: ["equipment", "soporte", "suport", "equipo"], lente: ["lens", "lente", "òptica", "optica", "objetivo"], sonido: ["sound", "sonido", "so"],
+    esc: ["esc", "esc.", "escena", "scene", "sc", "seq"], num: ["pla", "pl.", "plano", "shot", "shot #", "pl", "nº", "n", "#"], sujeto: ["sujeto", "subjecte", "subject", "personajes", "personatges"],
+    escala: ["valor de pl", "valor de plano", "escala", "shot size", "tamaño", "valor"], posicion: ["camera position", "posición", "posicio", "posició", "ang. horiz.", "ang. horitz.", "ang. horitzontal", "ang. horizontal", "angulo horizontal", "ángulo horizontal", "angulación horizontal", "angulació horitzontal", "horizontal angle"],
+    angulo: ["angle", "angulación", "angulacio", "angulació", "ang. vert.", "ang. vertical", "angulo", "ángulo", "angulación vertical", "angulació vertical", "vertical angle"], mov: ["movement", "movimiento", "moviment", "mov. de càmera", "mov. càmera", "mov. de camara", "mov. cámara", "mov"],
+    soporte: ["equipment", "soporte", "suport", "equipo"], lente: ["lens", "lente", "òptica", "optica", "objetivo"], sonido: ["sound", "sonido", "so"], img: ["imatge", "imagen", "image", "ref.", "storyboard"],
     desc: ["description", "descripción", "descripcio", "descripció", "acció", "acción", "action", "accio"], dialogo: ["diálogo", "dialogo", "dialeg", "diàleg", "dialogue"],
-    notas: ["notes", "notas", "anotaciones", "anotacions", "fx/notes", "observaciones"], dur: ["duración", "durada", "duration", "dur"], fps: ["fps"], intext: ["int./ext.", "int/ext", "int.ext", "int-ext"], set: ["set", "localización", "localitzacio", "location"]
+    notas: ["notes", "notas", "anotaciones", "anotacions", "fx/notes", "observaciones"], dur: ["duración", "durada", "duration", "dur", "min. rodatge", "min. rodaje", "durada (min)", "dur. (min)", "shooting min."], fps: ["fps"], intext: ["int./ext.", "int/ext", "int.ext", "int-ext"], set: ["set", "localización", "localitzacio", "location"]
   };
   function pegar(texto) {
     const filas = texto.replace(/\r/g, "").split("\n").map(l => l.split("\t"));
     if (filas.length < 2) return [];
     const cab = filas[0].map(c => c.trim().toLowerCase()), mapa = {};
-    cab.forEach((c, i) => { for (const [k, ls] of Object.entries(CAB)) if (!(k in mapa) && ls.some(x => c === x || (x.length > 3 && c.startsWith(x)))) { mapa[k] = i; break } });
+    const usada = new Set();
+    cab.forEach((c, i) => { for (const [k, ls] of Object.entries(CAB)) if (!(k in mapa) && ls.includes(c)) { mapa[k] = i; usada.add(i); break } });
+    cab.forEach((c, i) => { if (usada.has(i)) return; for (const [k, ls] of Object.entries(CAB)) if (!(k in mapa) && ls.some(x => x.length > 3 && c.startsWith(x + " "))) { mapa[k] = i; usada.add(i); break } });
     // si "acción" y "descripción" van en columnas distintas, la segunda va a acción
     const ia = cab.findIndex(c => /^acci/.test(c)); if (ia >= 0 && mapa.desc !== ia) mapa.accion = ia;
-    return filas.slice(1).filter(f => f.some(c => c.trim())).map(f => { const o = { id: uid() }; for (const [k, i] of Object.entries(mapa)) o[k] = (f[i] || "").trim(); return o });
+    return filas.slice(1).filter(f => f.some(c => c.trim())).map(f => { const o = { id: uid() }; for (const [k, i] of Object.entries(mapa)) if (k !== "img") o[k] = (f[i] || "").trim(); return o });
   }
 
   // ---------- exportar a PDF (imprimir) ----------
@@ -64,7 +66,7 @@ window.R = (() => {
     H.toast("Preparant l'Excel…");
     const X = await cargaExcel(), wb = new X.Workbook();
     for (const h of hojas) {
-      const ws = wb.addWorksheet((h.nombre || "Hoja").slice(0, 30), { pageSetup: { orientation: "landscape", paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+      const ws = wb.addWorksheet((h.nombre || "Full").slice(0, 30), { pageSetup: { orientation: "landscape", paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
       const n = h.cols.length; ws.columns = h.cols.map(c => ({ width: c.w || 14 }));
       const borde = { top: { style: "thin", color: { argb: "FFD0D0D0" } }, left: { style: "thin", color: { argb: "FFD0D0D0" } }, bottom: { style: "thin", color: { argb: "FFD0D0D0" } }, right: { style: "thin", color: { argb: "FFD0D0D0" } } };
       const banda = (txt, color, opts = {}) => { const r = ws.addRow([txt]); ws.mergeCells(r.number, 1, r.number, n); const c = r.getCell(1); c.alignment = { horizontal: "center", vertical: "middle", wrapText: true }; c.font = { bold: true, size: opts.size || 10, color: { argb: opts.blanco ? "FFFFFFFF" : "FF000000" } }; if (color) c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(color) } }; r.height = opts.alto || 18; return r };
@@ -103,22 +105,22 @@ window.R = (() => {
   // ---------- idioma de les exportacions (PDF i Excel): ca / es / en ----------
   const L = {
     ca: { c_num: "Pl.", c_sujeto: "Subjecte", c_escala: "Escala", c_angulo: "Angulació vertical", c_posicion: "Angulació horitzontal", c_mov: "Moviment", c_soporte: "Suport", c_lente: "Òptica", c_sonido: "So", c_fps: "FPS", c_desc: "Descripció", c_accion: "Acció / diàleg", c_notas: "Notes", c_set: "Set", c_dur: "Min. rodatge", c_img: "Imatge",
-      p_esc: "Esc.", p_mov: "Mov. càmera", p_personajes: "Personatges", p_vestuario: "Vestuari", p_notas: "FX / notes", p_dur: "Durada (min)", p_img: "Ref.", p_angulo: "Angulació", horario: "Horari", hora: "Hora",
+      p_esc: "Esc.", p_mov: "Mov. càmera", p_personajes: "Personatges", p_vestuario: "Vestuari", p_notas: "FX / notes", p_dur: "Durada (min)", p_img: "Ref.", p_angulo: "Angulació vertical", horario: "Horari", hora: "Hora",
       gt: "GUIÓ TÈCNIC", pdr: "PLA DE RODATGE", jornada: "JORNADA", set: "SET", proceso: "PROCÉS", comida: "DINAR", wrap: "WRAP", ready: "READY TO SHOOT", esc: "ESC", pags: "pàg.", ad: "AD",
       t_tarea: "Tasca", t_dep: "Departament", t_ini: "Inici", t_fin: "Fi", t_dias: "Dies", t_estado: "Estat", t_resp: "Responsable", t_proy: "Projecte", sin_dep: "Sense departament", pre: "Calendari de preproducció", post: "Calendari de postproducció" },
     es: { c_num: "Pl.", c_sujeto: "Sujeto", c_escala: "Escala", c_angulo: "Angulación vertical", c_posicion: "Angulación horizontal", c_mov: "Movimiento", c_soporte: "Soporte", c_lente: "Lente", c_sonido: "Sonido", c_fps: "FPS", c_desc: "Descripción", c_accion: "Acción / diálogo", c_notas: "Notas", c_set: "Set", c_dur: "Min. rodaje", c_img: "Imagen",
-      p_esc: "Esc.", p_mov: "Mov. cámara", p_personajes: "Personajes", p_vestuario: "Vestuario", p_notas: "FX / notas", p_dur: "Duración (min)", p_img: "Ref.", p_angulo: "Angulación", horario: "Horario", hora: "Hora",
+      p_esc: "Esc.", p_mov: "Mov. cámara", p_personajes: "Personajes", p_vestuario: "Vestuario", p_notas: "FX / notas", p_dur: "Duración (min)", p_img: "Ref.", p_angulo: "Angulación vertical", horario: "Horario", hora: "Hora",
       gt: "GUION TÉCNICO", pdr: "PLAN DE RODAJE", jornada: "JORNADA", set: "SET", proceso: "PROCESO", comida: "COMIDA", wrap: "WRAP", ready: "READY TO SHOOT", esc: "ESC", pags: "págs.", ad: "AD",
       t_tarea: "Tarea", t_dep: "Departamento", t_ini: "Inicio", t_fin: "Fin", t_dias: "Días", t_estado: "Estado", t_resp: "Responsable", t_proy: "Proyecto", sin_dep: "Sin departamento", pre: "Calendario de preproducción", post: "Calendario de postproducción" },
     en: { c_num: "Shot", c_sujeto: "Subject", c_escala: "Shot size", c_angulo: "Vertical angle", c_posicion: "Horizontal angle", c_mov: "Movement", c_soporte: "Equipment", c_lente: "Lens", c_sonido: "Sound", c_fps: "FPS", c_desc: "Description", c_accion: "Action / dialogue", c_notas: "Notes", c_set: "Set", c_dur: "Shooting min.", c_img: "Image",
-      p_esc: "Sc.", p_mov: "Camera move", p_personajes: "Characters", p_vestuario: "Wardrobe", p_notas: "FX / notes", p_dur: "Duration (min)", p_img: "Ref.", p_angulo: "Angle", horario: "Block", hora: "Time",
+      p_esc: "Sc.", p_mov: "Camera move", p_personajes: "Characters", p_vestuario: "Wardrobe", p_notas: "FX / notes", p_dur: "Duration (min)", p_img: "Ref.", p_angulo: "Vertical angle", horario: "Block", hora: "Time",
       gt: "SHOT LIST", pdr: "SHOOTING SCHEDULE", jornada: "DAY", set: "SET", proceso: "PROCESS", comida: "LUNCH", wrap: "WRAP", ready: "READY TO SHOOT", esc: "SC", pags: "pp.", ad: "AD",
       t_tarea: "Task", t_dep: "Department", t_ini: "Start", t_fin: "End", t_dias: "Days", t_estado: "Status", t_resp: "Owner", t_proy: "Project", sin_dep: "No department", pre: "Pre-production schedule", post: "Post-production schedule" }
   };
   // valors (departaments, estats, moment del dia) en castellà i anglès
   const V = {
-    es: { "Guió": "Guion", "Producció": "Producción", "Càsting": "Casting", "Localitzacions": "Localizaciones", "Art": "Arte", "Vestuari i maquillatge": "Vestuario y maquillaje", "Fotografia": "Fotografía", "So": "Sonido", "Muntatge": "Montaje", "Grafisme": "Grafismo", "Lliuraments": "Entregas", "Distribució": "Distribución", "Pendent": "Pendiente", "En curs": "En curso", "Fet": "Hecho", "DIA": "DÍA", "NIT": "NOCHE", "MATINADA": "AMANECER", "CAPVESPRE": "ATARDECER" },
-    en: { "Guió": "Script", "Producció": "Production", "Càsting": "Casting", "Localitzacions": "Locations", "Art": "Art", "Vestuari i maquillatge": "Wardrobe & make-up", "Fotografia": "Camera", "So": "Sound", "Muntatge": "Editing", "Música": "Music", "Color": "Colour", "Grafisme": "Graphics", "Lliuraments": "Deliverables", "Distribució": "Distribution", "Pendent": "To do", "En curs": "In progress", "Fet": "Done", "DIA": "DAY", "DÍA": "DAY", "NIT": "NIGHT", "NOCHE": "NIGHT" }
+    es: { "Canvi de set / muntatge": "Cambio de set / montaje", "(continuació)": "(continuación)", "Sense set": "Sin set", "Guió": "Guion", "Producció": "Producción", "Càsting": "Casting", "Localitzacions": "Localizaciones", "Art": "Arte", "Vestuari i maquillatge": "Vestuario y maquillaje", "Fotografia": "Fotografía", "So": "Sonido", "Muntatge": "Montaje", "Grafisme": "Grafismo", "Lliuraments": "Entregas", "Distribució": "Distribución", "Pendent": "Pendiente", "En curs": "En curso", "Fet": "Hecho", "DIA": "DÍA", "NIT": "NOCHE", "MATINADA": "AMANECER", "CAPVESPRE": "ATARDECER" },
+    en: { "Canvi de set / muntatge": "Set change / setup", "(continuació)": "(continued)", "Sense set": "No set", "Guió": "Script", "Producció": "Production", "Càsting": "Casting", "Localitzacions": "Locations", "Art": "Art", "Vestuari i maquillatge": "Wardrobe & make-up", "Fotografia": "Camera", "So": "Sound", "Muntatge": "Editing", "Música": "Music", "Color": "Colour", "Grafisme": "Graphics", "Lliuraments": "Deliverables", "Distribució": "Distribution", "Pendent": "To do", "En curs": "In progress", "Fet": "Done", "DIA": "DAY", "DÍA": "DAY", "NIT": "NIGHT", "NOCHE": "NIGHT" }
   };
   const ESC_EN = { GPG: "EWS", PG: "WS", PS: "FS", PA: "MLS", PM: "MS", PMC: "MCU", PP: "CU", PPP: "ECU", PD: "INSERT" };
   const lang = () => { try { return localStorage.getItem("hub-lang-exp") || "ca" } catch (e) { return "ca" } };

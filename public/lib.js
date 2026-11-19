@@ -9,6 +9,7 @@ window.H = (() => {
   const addDays = (s, n) => { const d = new Date(s + "T12:00"); d.setDate(d.getDate() + n); return iso(d) };
   const fecha = (s, largo) => s ? new Date(s + "T12:00").toLocaleDateString("ca-ES", largo ? { weekday: "long", day: "numeric", month: "long" } : { weekday: "short", day: "numeric", month: "short" }) : "";
   const uid = t => t + ":" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const valors = o => o == null ? "" : typeof o === "object" ? Object.entries(o).filter(([k]) => k !== "id" && k !== "img").map(([, v]) => valors(v)).join(" ") : String(o);
   const url = u => u ? (/^https?:/.test(u) ? u : "https://" + u) : "";
 
   // ---------- datos ----------
@@ -32,6 +33,7 @@ window.H = (() => {
   function del(d) { const l = cache[tipo(d)] || []; const i = l.indexOf(d); if (i >= 0) l.splice(i, 1); clearTimeout(tSave[d.id]); return api("DELETE", "doc/" + encodeURIComponent(d.id)).then(changed) }
   function changed() { subs.forEach(f => f()) }
   const onChange = f => subs.push(f);
+  const refrescaContactes = () => { cT = 0; changed() };
   let cT = 0, cC = [];
   async function contactos() { if (Date.now() - cT > 30000) { try { cC = (await api("GET", "all")).contacts; cT = Date.now() } catch (e) { } } return cC }
 
@@ -75,7 +77,7 @@ window.H = (() => {
       case "pills": {
         const ops = opsDe(c), edita = c.llista && ed && ed.editL === c.llista;
         if (edita) return lb + `<div class="seg">${ops.map((o, i) => `<span class="chip">${E(o)} <button data-k="lldel" data-l="${c.llista}" data-i="${i}" title="Eliminar de la llista">×</button></span>`).join("")}</div><div class="row"><input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nou tipus… (Retorn)"><button class="b2" data-k="llfet">Fet</button></div><small>Treure un tipus de la llista no canvia els projectes que ja el tenen.</small>`;
-        return lb + `<div class="seg">${ops.concat(v && !ops.includes(v) ? [v] : []).map(o => `<button class="t ${v === o ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] ? ` style="${v === o ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nom del nou tipus (p. ex. Fashion film) i Retorn" autofocus>` : ""}`;
+        return lb + `<div class="seg">${ops.concat(v && !ops.includes(v) ? [v] : []).map(o => `<button class="t ${v === o ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] && !/^#(8e8e93|c7c7cc)$/i.test(c.col[o]) ? ` style="${v === o ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nom del nou tipus (p. ex. Fashion film) i Retorn" autofocus>` : ""}`;
       }
       case "url": return lb + `<div class="row"><input data-f="${c.f}" value="${E(v)}" placeholder="https://"><a class="ln" target="_blank" rel="noopener" href="${E(url(v))}" ${v ? "" : "hidden"}>Obrir</a></div>`;
       case "links": return lb + `<textarea data-f="${c.f}" rows="2" placeholder="Un enllaç per línia">${E(v)}</textarea><div class="ls">${String(v).split("\n").filter(x => x.trim()).map(x => `<a class="ln" target="_blank" rel="noopener" href="${E(url(x.trim()))}">${E(x.trim().replace(/^https?:\/\/(www\.)?/, "").slice(0, 40))}</a>`).join("")}</div>`;
@@ -147,11 +149,11 @@ window.H = (() => {
     const opt = d => ({ acciones: cfg.acciones, extra: cfg.extra, alCerrar: () => { if (!d.titulo && !d.texto && !d.apuntes) del(d); pintar() } });
     async function pintar() {
       const l = await col(cfg.tipo);
-      const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!tab2 || d[cfg.tabs2.f] === tab2) && (!q || JSON.stringify(d).toLowerCase().includes(q))).sort(cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
+      const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!tab2 || d[cfg.tabs2.f] === tab2) && (!q || valors(d).toLowerCase().includes(q))).sort(cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
       const lista = cfg.grupos ? cfg.grupos(vis) : [["", vis]];
       await llistes();
-      if (cfg.tabs) { const ops = opsDe(cfg.tabs); el.querySelector(".tabsw").innerHTML = `<div class="tabs"><button class="t ${tab ? "" : "on"}" data-k="tab" data-v="">Tot<small></small></button>${ops.map(o => `<button class="t ${tab === o ? "on" : ""}" data-k="tab" data-v="${E(o)}">${E(o)}<small></small></button>`).join("")}</div>` }
-      el.querySelectorAll('[data-k="tab"] small').forEach(x => { const v = x.parentNode.dataset.v, n = v ? l.filter(d => d[cfg.tabs.f] === v).length : l.length; x.textContent = n ? " " + n : "" });
+      if (cfg.tabs) { const ops = opsDe(cfg.tabs); el.querySelector(".tabsw").innerHTML = `<div class="tabs"><button class="t ${tab ? "" : "on"}" data-k="tab" data-v="">Tots<small></small></button>${ops.map(o => `<button class="t ${tab === o ? "on" : ""}" data-k="tab" data-v="${E(o)}">${E(o)} <small></small></button>`).join("")}</div>` }
+      el.querySelectorAll('[data-k="tab"] small').forEach(x => { const v = x.parentNode.dataset.v, n = v ? l.filter(d => d[cfg.tabs.f] === v).length : l.length; x.textContent = n ? n : "" });
       el.querySelector(".hl").innerHTML = vis.length ? lista.filter(g => g[1].length).map(([g, ds]) => (g ? `<h2>${E(g)} <span>${ds.length}</span></h2>` : "") + ds.map(d => { const r = cfg.fila(d); return `<div class="r" data-k="abre" data-id="${d.id}"><i class="dot" style="background:${r.c || "#c7c7cc"}"></i><div class="g"><b>${E(r.t || "Sense títol")}</b><small>${E(r.s || "")}</small></div></div>` }).join("")).join("") : `<p class="em">Encara no hi ha res. Prem «+ ${E(cfg.nuevo)}» per començar.</p>`;
     }
     el.innerHTML = `<div class="tabsw"></div>` +
@@ -177,8 +179,8 @@ window.H = (() => {
     const sec = (n, l, fn) => l.length ? `<h2>${n} <span>${l.length}</span></h2>` + l.map(x => `<div class="m">${fn(x)}</div>`).join("") : "";
     return sec("Reunions", r.filter(x => x.proyecto === pid), x => `${E(fecha(x.fecha))} · ${E(x.titulo || "")}`) +
       sec("Tasques", t.filter(x => x.proyecto === pid && !x.hecha), x => `${x.fecha ? E(fecha(x.fecha)) + " · " : ""}${E(x.titulo || "")}`) +
-      sec("Festivals i convocatòries", f.filter(x => x.proyecto === pid), x => `${E(x.titulo || "")}${x.estado ? " · " + E(x.estado) : ""}`);
+      sec("Festivals", f.filter(x => x.proyecto === pid), x => `${E(x.titulo || "")}${x.estado ? " · " + E(x.estado) : ""}`);
   }
 
-  return { llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
+  return { valors, refrescaContactes, llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
 })();

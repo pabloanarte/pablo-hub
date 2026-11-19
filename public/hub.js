@@ -29,7 +29,7 @@ const SECTIONS = [
 ];
 const nav = document.getElementById("hubnav"), wrap = document.querySelector(".w");
 SECTIONS.forEach(s => { if (!document.getElementById("s-" + s.id)) { const e = document.createElement("section"); e.id = "s-" + s.id; e.hidden = true; wrap.appendChild(e) } });
-nav.innerHTML = SECTIONS.map(s => `<button data-id="${s.id}"><svg viewBox="0 0 24 24"><path d="${I[s.id] || I.inicio}"/></svg>${s.label}<span class="n" id="n-${s.id}" hidden></span></button>`).join("") + `<hr><button class="out" onclick="location.href='/salir'">Tancar la sessió</button>`;
+nav.innerHTML = SECTIONS.map(s => `<button data-id="${s.id}"><svg viewBox="0 0 24 24"><path d="${I[s.id] || I.inicio}"/></svg>${s.label}<span class="n" id="n-${s.id}" hidden></span></button>`).join("") + `<hr><button class="out" onclick="location.href='/salir'">Tancar la sessió</button><button class="out mclose" onclick="document.body.classList.remove('menu')">Tancar el menú</button>`;
 function show(id) {
  if (!SECTIONS.some(s => s.id === id)) id = SECTIONS[0].id;
  const s = SECTIONS.find(x => x.id === id);
@@ -60,22 +60,27 @@ async function contar() {
  } catch (e) {}
 }
 
-// Búsqueda global
+// Cerca global (Retorn)
 document.getElementById("gq").addEventListener("keydown", async e => {
  if (e.key !== "Enter" || !e.target.value.trim()) return;
- const q = e.target.value.trim().toLowerCase(), E = H.E;
- const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Brainstorm"]];
+ const q = e.target.value.trim().toLowerCase(), E = H.E, txt = d => H.valors(d).toLowerCase();
+ const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Brainstorm"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["pdr", "Plans de rodatge", "planes"]];
  const ls = await Promise.all(T.map(([t]) => H.col(t))), cs = await H.contactos();
+ const data = (t, d) => t === "convocatoria" ? (d.limite ? "Límit " + H.fecha(d.limite) : "") : t === "pre" || t === "post" ? H.fecha(d.ini) : t === "pdr" ? (d.dias && d.dias[0] && d.dias[0].fecha ? H.fecha(d.dias[0].fecha) : "") : d.fecha ? H.fecha(d.fecha) : "";
  let h = `<h2 style="margin-top:0">Resultats de «${E(q)}»</h2>`, n = 0;
- T.forEach(([t, l], i) => { const m = ls[i].filter(d => JSON.stringify(d).toLowerCase().includes(q)); n += m.length; if (m.length) h += `<h2>${l} <span>${m.length}</span></h2>` + m.map(d => `<div class="r" data-k="gq" data-t="${t}" data-id="${d.id}"><div class="g"><b>${E(d.titulo || "Sense títol")}</b><small>${E(d.fecha ? H.fecha(d.fecha) : "")}</small></div></div>`).join("") });
- const mc = cs.filter(c => JSON.stringify(c).toLowerCase().includes(q)); n += mc.length;
- if (mc.length) h += `<h2>Contactes <span>${mc.length}</span></h2>` + mc.map(c => `<div class="r" data-k="gc"><div class="g"><b>${E(c.nombre)}</b><small>${E([c.persona, c.tipo, c.estado].filter(Boolean).join(" · "))}</small></div></div>`).join("");
+ T.forEach(([t, l], i) => { const m = ls[i].filter(d => txt(d).includes(q)); n += m.length; if (m.length) h += `<h2>${l} <span>${m.length}</span></h2>` + m.map(d => `<div class="r" data-k="gq" data-t="${t}" data-id="${d.id}"><div class="g"><b>${E(d.titulo || "Sense títol")}</b><small>${E(data(t, d))}</small></div></div>`).join("") });
+ const mc = cs.filter(c => txt(c).includes(q)); n += mc.length;
+ if (mc.length) h += `<h2>Contactes <span>${mc.length}</span></h2>` + mc.map(c => `<div class="r" data-k="gc" data-id="${c.id}"><div class="g"><b>${E(c.nombre)}</b><small>${E([c.persona, c.tipo, c.estado].filter(Boolean).join(" · "))}</small></div></div>`).join("");
  H.sheet(n ? h : h + `<p class="em">No s'ha trobat res.</p>`);
 });
 document.getElementById("hsh").addEventListener("click", e => {
  const b = e.target.closest('[data-k="gq"],[data-k="gc"]'); if (!b) return;
- H.cerrar(); if (b.dataset.k === "gc") return show("contactos");
- b.dataset.t === "tarea" ? H.abrirTarea(b.dataset.id) : H.abrir(b.dataset.t, b.dataset.id);
+ H.cerrar(); const t = b.dataset.t, id = b.dataset.id;
+ if (b.dataset.k === "gc") { show("contactos"); setTimeout(() => { const nb = document.querySelector('#nav [data-v="contactos"]'); nb && nb.click(); setTimeout(() => { const r = document.querySelector(`#s-contactos [data-a="o"][data-id="${id}"]`); r && r.click() }, 150) }, 50); return }
+ if (t === "gt") { show("guiones"); return window.GT && GT.abrir(id) }
+ if (t === "pdr") { show("planes"); return window.P && P.abrir(id) }
+ if (t === "pre" || t === "post") { show(t === "pre" ? "preproduccion" : "postproduccion"); return window.CronoAbrir && CronoAbrir[t] && CronoAbrir[t](id) }
+ t === "tarea" ? H.abrirTarea(id) : H.abrir(t, id);
 });
 
 let ini = SECTIONS[0].id; try { ini = localStorage.getItem("hub-sec") || ini } catch (e) {}

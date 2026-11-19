@@ -48,15 +48,15 @@ function hoy(){
  (tc?`<h2>Per tipus (toca per filtrar)</h2><div class="tcs">${tc}</div>`:"")+LG+
  sec("Seguiments pendents",a.filter(due),c=>row(c,`${tp(c)} · últim enviament fa ${days(la(c).d)} dies`))+
  sec("Per contactar",a.filter(pen),c=>row(c,tp(c)))+
- sec("Contactats · esperant resposta",a.filter(c=>c.estado==="Contactat"&&!due(c)),c=>row(c,tp(c)+(la(c)?` · enviado ${D(la(c).d)} · seguiment en ${Math.max(0,7-days(la(c).d))} dies`:"")))+
+ sec("Contactats · esperant resposta",a.filter(c=>c.estado==="Contactat"&&!due(c)),c=>row(c,tp(c)+(la(c)?` · enviat ${D(la(c).d)} · ${(n=>n<=0?"seguiment avui":n===1?"seguiment demà":"seguiment en "+n+" dies")(7-days(la(c).d))}`:"")))+
  sec("Han respost",a.filter(rs),c=>row(c,`${tp(c)} · ${c.estado}`+(la(c)?` · últim enviament ${D(la(c).d)}`:"")))+
  sec("Descartats",a.filter(c=>c.estado==="Descartat"),c=>row(c,tp(c)))+
  (a.length?"":`<p class="em">Encara no hi ha contactes.</p>`)}
 function contactos(){return `<div class="bar"><input id="q" placeholder="Cerca" value="${E(q)}"><button class="b" data-a="new">+ Nou</button></div><div class="seg">${[["Tots",""],["Productores","Productora"],["Artistes","Artista"],["Mànagers","Mànager"]].concat((cfg.tipos||[]).map(x=>[x.n,x.n])).map(x=>`<button class="t ${flt===x[1]?"on":""}" data-a="f" data-t="${x[1]}">${x[0]}</button>`).join("")}</div>${LG}<div id="lst"></div>`}
 function fill(){const k=q.toLowerCase(),l=C.filter(c=>(!flt||c.tipo===flt)&&(!k||[c.nombre,c.persona,c.notas,c.man].join(" ").toLowerCase().includes(k))).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
  $("#lst").innerHTML=l.map(c=>row(c,E([c.tipo,c.estado||"Pendent",(c.motivos||[]).join(", ")].filter(Boolean).join(" · ")))).join("")||`<p class="em">Sense resultats.</p>`}
-function plantillas(){return `<p class="em">Es desen soles. [Nombre] se substitueix pel nom del contacte en crear un enviament.</p>`+Object.keys(TN).map(k=>`<h2>${TN[k]}</h2><textarea data-k="${k}" rows="${k==="seg"||k.startsWith("ig")?5:10}">${E(cfg.tpl&&cfg.tpl[k]||DT[k])}</textarea><div class="ls"><button class="b" data-a="ct" data-k="${k}">Copiar</button><button class="t" data-a="rt" data-k="${k}">Restaurar</button></div>`).join("")}
-function datos(){return `<h2>Dades</h2><p>${C.length} contactes desats${loc?" solo en este dispositivo (no se pudo conectar con tu cuenta)":" en tu base de datos de Cloudflare, accesibles desde cualquier dispositivo"}.</p><div class="ls"><button class="b" data-a="ej">Exportar JSON</button><button class="b" data-a="ec">Exportar CSV</button></div><h2>Importar</h2><button class="b" data-a="im">Importar JSON</button><input id="fi" type="file" accept=".json" hidden>`}
+function plantillas(){return `<p class="em">Es desen soles. [Nombre] es substitueix pel nom del contacte en crear un enviament.</p>`+Object.keys(TN).map(k=>`<h2>${TN[k]}</h2><textarea data-k="${k}" rows="${k==="seg"||k.startsWith("ig")?5:10}">${E(cfg.tpl&&cfg.tpl[k]||DT[k])}</textarea><div class="ls"><button class="b" data-a="ct" data-k="${k}">Copiar</button><button class="t" data-a="rt" data-k="${k}">Restaurar</button></div>`).join("")}
+function datos(){return `<h2>Dades</h2><p>${C.length} contactes desats${loc?" només en aquest dispositiu (no s'ha pogut connectar amb el teu compte)":" a la teva base de dades de Cloudflare, accessibles des de qualsevol dispositiu"}.</p><div class="ls"><button class="b" data-a="ej">Exportar JSON</button><button class="b" data-a="ec">Exportar CSV</button></div><h2>Importar</h2><button class="b" data-a="im">Importar JSON</button><input id="fi" type="file" accept=".json" hidden>`}
 function draw(){document.querySelectorAll("#nav .t").forEach(b=>b.classList.toggle("on",b.dataset.v===view));$("#v").innerHTML=({hoy,contactos,plantillas,datos})[view]();if(view==="contactos")fill()}
 function render(){if(view==="contactos"&&$("#lst"))fill();else if(!(view==="plantillas"&&document.activeElement&&document.activeElement.tagName==="TEXTAREA"))draw()}
 function tk(c,via){if(M(c).length)return"seg";const p=via==="Email"?"email":"ig";if(c.tipo==="Artista")return p+"A"+(c.sub==="Grup"?"g":"s");return p+(c.tipo==="Mànager"?"M":"P")}
@@ -74,12 +74,12 @@ function sheet(id){
  <input class="big" data-f="nombre" placeholder="Empresa o artista" value="${E(c.nombre)}">${inp("persona","Persona de contacte")}
  <div class="seg">${tipos().map(t=>`<button class="t ${c.tipo===t?"on":""}" data-a="tp" data-t="${E(t)}">${E(t)}</button>`).join("")}<input id="nt" placeholder="+ Un altre tipus (Retorn)" style="width:150px"></div>${c.tipo==="Artista"?`<div class="seg">${["Solista","Grup"].map(x=>`<button class="t ${(c.sub||"Solista")===x?"on":""}" data-a="sub" data-s="${x}">${x}</button>`).join("")}</div>`:""}
  <label>Estat</label><select data-f="estado">${ES.map(s=>`<option ${s===(c.estado||"Pendent")?"selected":""}>${s}</option>`).join("")}</select>
- <label>El contacto per</label><div class="seg">${MO.concat(cfg.mo||[]).map(m=>`<button class="t ${cm.includes(m)?"on":""}" data-a="mo" data-m="${E(m)}">${E(m)}</button>`).join("")}<input id="nm" placeholder="+ Un altre (Retorn)" style="width:150px"></div>
+ <label>Motiu del contacte</label><div class="seg">${MO.concat(cfg.mo||[]).map(m=>`<button class="t ${cm.includes(m)?"on":""}" data-a="mo" data-m="${E(m)}">${E(m)}</button>`).join("")}<input id="nm" placeholder="+ Un altre (Retorn)" style="width:150px"></div>
  <label>Contacte</label>${inp("email","Email (diversos, separats per comes)")}${inp("ig","Instagram (@usuari o enllaç)")}${inp("tel","Telèfon (diversos, separats per comes)")}${inp("web","Web")}<label>Adreça de les oficines (una per línia)</label><textarea data-f="dir" rows="2">${E(c.dir)}</textarea><div id="lk" class="ls"></div>
- ${c.tipo==="Productora"||c.tipo==="Mànager"?"":`<label>Gestionat per (management)</label><input data-f="man" list="dl" placeholder="Nom del mànager" value="${E(c.man)}">`}<div id="mg" class="ls"></div>
+ ${c.tipo==="Productora"||c.tipo==="Mànager"?"":`<label>Gestionat per (mànager)</label><input data-f="man" list="dl" placeholder="Nom del mànager" value="${E(c.man)}">`}<div id="mg" class="ls"></div>
  <label>Notes</label><textarea data-f="notas" rows="3">${E(c.notas)}</textarea>
  <label>Enviaments</label><div id="ms"></div><div id="cmp"></div><div class="seg"><button class="b" data-a="cmp">Nou enviament</button></div><div id="rs" ${["Ha respost","Reunió"].includes(c.estado)?"":"hidden"}><label>Resposta (enganxa aquí el que t'han contestat)</label><textarea data-f="resp" rows="5">${E(c.resp)}</textarea></div>
- <div class="seg"><button class="b" data-a="save" style="width:100%">Desar</button></div><button class="del" data-a="del">Eliminar contacte</button>`;
+ <div class="sfoot"><button class="del" data-a="del">Eliminar contacte</button><button class="b" data-a="save">Desar</button></div>`;
  side(c);$("#sh").hidden=false;$("#shc").scrollTop=y}
 function cmp(c,via){via=via||({"Productora":"Email","Artista":"Instagram"})[c.tipo]||(c.email?"Email":c.ig?"Instagram":"Telèfon");cv=via;
  $("#cmp").innerHTML=`<div class="seg">${VIAS.map(v=>`<button class="t ${v===via?"on":""}" data-a="via" data-v="${v}">${v}</button>`).join("")}</div><textarea id="tx" rows="9">${E(tplFor(c,via))}</textarea><label>Data de l'enviament</label><input type="date" id="fd" value="${today()}"><div class="ls"><button class="b" data-a="cp">Copiar</button><a class="ln" id="op" target="_blank" rel="noopener">Obrir</a><button class="b" data-a="sent">Marcar com a enviat</button></div>`;ol(c)}
@@ -135,10 +135,13 @@ function local(){loc=1;let d={};try{d=JSON.parse(localStorage.getItem("pdb")||"{
 async function init(){
  const api=(m,p,b)=>fetch("/api/"+p,{method:m,headers:{"content-type":"application/json"},body:b?JSON.stringify(b):undefined}).then(r=>{if(!r.ok)throw 0;return r.json()});
  try{const d=await api("GET","all");C=d.contacts;cfg=Object.assign({tpl:{},mo:[],tipos:[]},d.cfg||{})}catch(e){local();return}
- store={set:(id,o)=>api("PUT","doc/"+encodeURIComponent(id),o).then(()=>true).catch(()=>{toast("No s'ha pogut desar");return false}),del:id=>api("DELETE","doc/"+encodeURIComponent(id)).catch(()=>{})};
+ store={set:(id,o)=>api("PUT","doc/"+encodeURIComponent(id),o).then(()=>{H.refrescaContactes&&H.refrescaContactes();return true}).then(()=>true).catch(()=>{toast("No s'ha pogut desar");return false}),del:id=>api("DELETE","doc/"+encodeURIComponent(id)).then(()=>H.refrescaContactes&&H.refrescaContactes()).catch(()=>{})};
  {const M=H.MIG,mm=v=>M[v]||v;C.forEach(c=>{const a=JSON.stringify([c.estado,c.tipo,c.motivos]);c.estado=mm(c.estado);c.tipo=mm(c.tipo);if(Array.isArray(c.motivos))c.motivos=c.motivos.map(mm);if(JSON.stringify([c.estado,c.tipo,c.motivos])!==a)store.set(c.id,c)});const b=JSON.stringify(cfg);cfg.mo=(cfg.mo||[]).map(mm);(cfg.tipos||[]).forEach(t=>t.n=mm(t.n));if(JSON.stringify(cfg)!==b)store.set("cfg",cfg)}
  render()}
 function go(){if(!started){started=1;draw();init()}}
 go();
 
-document.addEventListener("change",async e=>{if(e.target.id!=="fi")return;const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text()),n=j.contactos||[];C=C.filter(x=>!n.some(y=>y.id===x.id)).concat(n);n.forEach(save);if(j.config){cfg=Object.assign(cfg,j.config);store.set("cfg",cfg)}render();toast("Importats "+n.length+" contactos")}catch(x){toast("Arxiu no vàlid")}e.target.value=""});
+document.addEventListener("change",async e=>{if(e.target.id!=="fi")return;const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text()),n=j.contactos||[];C=C.filter(x=>!n.some(y=>y.id===x.id)).concat(n);n.forEach(save);if(j.config){cfg=Object.assign(cfg,j.config);store.set("cfg",cfg)}render();toast("Importats "+n.length+(n.length===1?" contacte":" contactes"))}catch(x){toast("Arxiu no vàlid")}e.target.value=""});
+
+document.getElementById("sh").addEventListener("click",e=>{if(e.target.id==="sh"){const b=document.querySelector('#shc [data-a="x"]');b&&b.click()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.getElementById("sh").hidden){const b=document.querySelector('#shc [data-a="x"]');b&&b.click()}});

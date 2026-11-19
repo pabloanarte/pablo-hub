@@ -1,7 +1,7 @@
 // Preproducción: cronograma por departamentos (ver crono.js). Departamentos y plantilla editables aquí.
 Crono({
   sec: "preproduccion", tipo: "pre", nombre: "preproducció", titulo: "Calendari de preproducció",
-  cats: [["Guió", "#5856d6"], ["Producció", "#0a84ff"], ["Càsting", "#ff375f"], ["Localitzacions", "#30b27a"], ["Art", "#ff9f0a"], ["Vestuari i maquillatge", "#af52de"], ["Fotografia", "#32ade6"], ["So", "#a2845e"]],
+  cats: [["Guió", "#5e35b1"], ["Producció", "#1e88e5"], ["Càsting", "#e53935"], ["Localitzacions", "#43a047"], ["Art", "#fb8c00"], ["Vestuari i maquillatge", "#d81b60"], ["Fotografia", "#00897b"], ["So", "#6d4c41"]],
   plantilla: [
     ["Desglossament de guió", "Producció", 3], ["Pressupost i finançament", "Producció", 5, 0, 1], ["Càsting", "Càsting", 10, 0, 1],
     ["Scouting de localitzacions", "Localitzacions", 7], ["Guió tècnic i storyboard", "Fotografia", 5, 0, 1], ["Disseny d'art i vestuari", "Art", 7],

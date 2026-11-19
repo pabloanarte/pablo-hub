@@ -24,7 +24,7 @@
     const ev = [].concat(
       t.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.tarea, t: x.titulo, id: x.id, tipo: "tarea", hecha: x.hecha })),
       r.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.reunion, t: (x.hora ? x.hora + " " : "") + (x.titulo || "Reunió"), id: x.id, tipo: "reunion" })),
-      f.filter(x => x.limite).map(x => ({ d: x.limite, c: COL.limite, t: "Límite: " + (x.titulo || ""), id: x.id, tipo: "convocatoria" })),
+      f.filter(x => x.limite).map(x => ({ d: x.limite, c: COL.limite, t: "Límit: " + (x.titulo || ""), id: x.id, tipo: "convocatoria" })),
       f.filter(x => x.evento).map(x => ({ d: x.evento, c: COL.evento, t: x.titulo || "", id: x.id, tipo: "convocatoria" })));
     return { t, ev };
   }
@@ -38,7 +38,7 @@
       const prox = ev.filter(e => e.tipo !== "tarea" && e.d >= hoy && e.d <= sem).sort((a, b) => a.d.localeCompare(b.d));
       const agenda = `<div class="card"><h3>Propers 7 dies</h3>` + (prox.length ? prox.map(e => `<div class="r" data-k="evl" data-t="${e.tipo}" data-id="${e.id}"><i class="dot" style="background:${e.c}"></i><div class="g"><b>${E(e.t)}</b><small>${E(fecha(e.d))}</small></div></div>`).join("") : `<p class="em">Sense reunions ni dates límit.</p>`) + `</div>`;
       v.innerHTML = `<div class="split"><div>` +
-        (G.some(g => g[1].length) ? G.filter(g => g[1].length).map(([n, l]) => `<h2 ${n === "Endarrerides" ? 'style="color:#ff3b30"' : ""}>${n} <span>${l.length}</span></h2>` + l.map(fila).join("")).join("") : `<p class="em">Cap tasca pendent.</p>`) +
+        (G.some(g => g[1].length) ? G.filter(g => g[1].length).map(([n, l]) => `<h2 ${n === "Endarrerides" ? 'style="color:#d70015"' : ""}>${n} <span>${l.length}</span></h2>` + l.map(fila).join("")).join("") : `<p class="em">Cap tasca pendent.</p>`) +
         (h.length ? `<h2 data-k="hechas" style="cursor:pointer">Fetes <span>${h.length}</span> ${verHechas ? "▾" : "▸"}</h2>` + (verHechas ? h.map(fila).join("") : "") : "") + `</div>${agenda}</div>`;
     } else {
       const [y, m] = mes.split("-").map(Number), pri = new Date(y, m - 1, 1), ini = (pri.getDay() + 6) % 7, dias = new Date(y, m, 0).getDate();
@@ -49,7 +49,7 @@
         c += `<div class="cd ${s === hoy ? "hoy" : ""}" data-k="dia" data-d="${s}"><b>${d}</b>${es.slice(0, 3).map(e => `<span style="background:${e.c}${e.hecha ? ";opacity:.35" : ""}">${E(e.t)}</span>`).join("")}${es.length > 3 ? `<small>+${es.length - 3}</small>` : ""}</div>`;
       }
       v.innerHTML = `<div class="bar" style="justify-content:space-between"><button class="t" data-k="mes" data-n="-1">‹</button><b>${pri.toLocaleDateString("ca-ES", { month: "long", year: "numeric" })}</b><button class="t" data-k="mes" data-n="1">›</button></div>
-      <div class="cal">${["L", "M", "X", "J", "V", "S", "D"].map(x => `<small>${x}</small>`).join("")}${c}</div>
+      <div class="cal">${["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"].map(x => `<small>${x}</small>`).join("")}${c}</div>
       <div class="lg"><span><i style="background:${COL.tarea}"></i>Tasca</span><span><i style="background:${COL.reunion}"></i>Reunió</span><span><i style="background:${COL.limite}"></i>Data límit</span><span><i style="background:${COL.evento}"></i>Festival / resolució</span></div>`;
     }
   }

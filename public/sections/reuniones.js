@@ -23,7 +23,7 @@
         const ya = (await H.col("tarea")).filter(t => t.reunion === d.id).map(t => t.titulo);
         const nuevos = ls.filter(x => !ya.includes(x));
         for (const t of nuevos) await H.put({ id: H.uid("tarea"), titulo: t, proyecto: d.proyecto || "", reunion: d.id, hecha: false }, 1);
-        H.toast(nuevos.length ? nuevos.length + " tasques creadas" : "Ja eren a Tasques");
+        H.toast(nuevos.length ? nuevos.length + (nuevos.length > 1 ? " tasques creades" : " tasca creada") : "Ja eren a Tasques");
       }
     }]
   });

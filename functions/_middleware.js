@@ -27,7 +27,7 @@ async function hash(s) {
 }
 
 function login(error) {
-  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PABLO</title>
+  return new Response(`<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PABLO</title>
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Helvetica,Arial,sans-serif;background:#fff;color:#000}
 form{display:flex;flex-direction:column;gap:12px;width:260px;text-align:center}h1{font-size:34px;letter-spacing:5px;margin:0 0 10px}
 input{font:inherit;font-size:16px;border:1px solid #e5e5ea;border-radius:12px;padding:12px;text-align:center}

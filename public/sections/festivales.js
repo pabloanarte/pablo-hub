@@ -3,9 +3,9 @@
   const EST = ["Per presentar", "Presentat", "Seleccionat", "Rebutjat", "Descartat"];
   const CE = { "Per presentar": "#ff9f0a", "Presentat": "#0a84ff", "Seleccionat": "#30b27a", "Rebutjat": "#8e8e93", "Descartat": "#c7c7cc" };
   H.coleccion({
-    sec: "festivales", tipo: "convocatoria", nuevo: "Afegir",
+    sec: "festivales", tipo: "convocatoria", nuevo: "Convocatòria",
     tabs: { f: "tipo", op: ["Festival", "Lab / residència"] },
-    defecto: () => ({ estado: "Per presentar" }),
+    defecto: () => ({ estado: "Per presentar", tipo: "Festival" }),
     campos: [
       { f: "titulo", tipo: "titulo", ph: "Nom" },
       { f: "tipo", l: "Tipus", tipo: "pills", op: ["Festival", "Lab / residència"] },
