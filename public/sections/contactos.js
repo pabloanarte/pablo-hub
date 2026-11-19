@@ -15,6 +15,20 @@ emailM:"Asunto: Director de videoclips para tus artistas\n\nHola [Nombre],\n\nSo
 igM:"Hola [Nombre]! Soy Pablo, director de videoclips de Barcelona. Me gustaría ponerme a disposición de los artistas que representas por si alguno tiene un videoclip en camino. Mi trabajo: pabloanarte.com. Si te encaja, hablamos y te cuento cómo trabajo.",
 seg:"Hola [Nombre], retomo mi mensaje anterior por si se perdió. Sigo con ganas de hablar, sin prisa. Un saludo, Pablo"};
 const TN={emailP:"Productora · Email",igP:"Productora · Instagram i telèfon",emailAs:"Artista solista · Email",igAs:"Artista solista · Instagram i telèfon",emailAg:"Artista grup · Email",igAg:"Artista grup · Instagram i telèfon",emailM:"Mànager · Email",igM:"Mànager · Instagram i telèfon",seg:"Seguiment"};
+
+// Plantillas en inglés (mismas claves con _en)
+const DT_EN={
+emailP:"Subject: Director based in Barcelona\n\nHi [Nombre],\n\nI'm Pablo Anarte, a film director based in Barcelona. I've directed fiction short films and music videos; the latest one has just come out.\n\nI'd love you to keep me in mind if a project comes up where a director could fit. All my work is at pabloanarte.com.\n\nIf you're up for it, I'd be happy to grab a coffee and meet you.\n\nBest,\nPablo",
+igP:"Hi [Nombre]! I'm Pablo Anarte, a film director based in Barcelona. I've directed fiction short films and music videos. I'd love you to keep me in mind if a project comes up where a director could fit. My work: pabloanarte.com. Happy to grab a coffee anytime.",
+emailAs:"Subject: Music video\n\nHi [Nombre],\n\nI'm Pablo, a director based in Barcelona. I really like your music and I'd love to make a music video with you. I direct with a cinematic eye on tight budgets. My work is at pabloanarte.com.\n\nIf you're interested and have a new track coming out, let's talk!\n\nCheers,\nPablo",
+emailAg:"Subject: Music video\n\nHi [Nombre],\n\nI'm Pablo, a director based in Barcelona. I really like your music and I'd love to make a music video with you all. I direct with a cinematic eye on tight budgets. My work is at pabloanarte.com.\n\nIf you're interested and have a new track coming out, let's talk!\n\nCheers,\nPablo",
+igAs:"Hi [Nombre]! I'm Pablo, a music video and short film director from Barcelona. I really like your music and I'd love to make a music video with you. My work: pabloanarte.com. If you're interested and have a new track coming out, let's talk! :)",
+igAg:"Hi [Nombre]! I'm Pablo, a music video and short film director from Barcelona. I really like your music and I'd love to make a music video with you all. My work: pabloanarte.com. If you're interested and have a new track coming out, let's talk! :)",
+emailM:"Subject: Music video director for your artists\n\nHi [Nombre],\n\nI'm Pablo Anarte, a director based in Barcelona. I direct music videos with a cinematic eye on tight budgets, and I'd like to offer my work to the artists you represent in case any of them has a music video coming up.\n\nMy work is at pabloanarte.com. If it's a fit, I'd be glad to talk and send you a proposal for whichever artist you have in mind.\n\nBest,\nPablo",
+igM:"Hi [Nombre]! I'm Pablo, a music video director from Barcelona. I'd like to offer my work to the artists you represent in case any of them has a music video coming up. My work: pabloanarte.com. If it's a fit, let's talk and I'll tell you how I work.",
+seg:"Hi [Nombre], just following up on my previous message in case it got lost. Still keen to talk, no rush. Best, Pablo"};
+Object.keys(DT_EN).forEach(k=>{DT[k+"_en"]=DT_EN[k];const b=TN[k];TN[k]=b+" · Castellà";TN[k+"_en"]=b+" · Anglès"});
+let ml="es";
 const $=s=>document.querySelector(s);
 const E=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 const D=d=>d?d.split("-").reverse().join("/"):"";
@@ -24,7 +38,7 @@ const ig=h=>h?"https://instagram.com/"+h.replace(/^.*instagram\.com\//,"").repla
 const wa=t=>{t=(t||"").replace(/\D/g,"");return t?"https://wa.me/"+(t.length===9?"34"+t:t):""};
 const wb=u=>u?(/^https?:/.test(u)?u:"https://"+u):"";
 const sp=v=>(v||"").split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
-const sb=t=>{const m=t.match(/^Asunto: (.*)\n+([\s\S]*)$/);return m?"subject="+encodeURIComponent(m[1])+"&body="+encodeURIComponent(m[2]):"body="+encodeURIComponent(t)};
+const sb=t=>{const m=t.match(/^(?:Asunto|Subject): (.*)\n+([\s\S]*)$/);return m?"subject="+encodeURIComponent(m[1])+"&body="+encodeURIComponent(m[2]):"body="+encodeURIComponent(t)};
 let C=[],cfg={tpl:{},mo:[]},view="hoy",flt="",q="",open=null,store=null,loc=0,started=0,cv="",tm,tm2,tt,undo,downloads=null;
 const cur=()=>C.find(x=>x.id===open);
 const tipos=()=>T.concat((cfg.tipos||[]).map(x=>x.n)),col=t=>CL[t]||((cfg.tipos||[]).find(x=>x.n===t)||{}).c||"#c7c7cc";
@@ -60,7 +74,7 @@ function datos(){return `<h2>Dades</h2><p>${C.length} contactes desats${loc?" no
 function draw(){document.querySelectorAll("#nav .t").forEach(b=>b.classList.toggle("on",b.dataset.v===view));$("#v").innerHTML=({hoy,contactos,plantillas,datos})[view]();if(view==="contactos")fill()}
 function render(){if(view==="contactos"&&$("#lst"))fill();else if(!(view==="plantillas"&&document.activeElement&&document.activeElement.tagName==="TEXTAREA"))draw()}
 function tk(c,via){if(M(c).length)return"seg";const p=via==="Email"?"email":"ig";if(c.tipo==="Artista")return p+"A"+(c.sub==="Grup"?"g":"s");return p+(c.tipo==="Mànager"?"M":"P")}
-function tplFor(c,via){const k=tk(c,via);return (cfg.tpl[k]||DT[k]).replace(/\[Nombre\]/g,(c.persona||c.nombre||"").split(" ")[0])}
+function tplFor(c,via){const k=tk(c,via)+(ml==="en"?"_en":"");return (cfg.tpl[k]||DT[k]).replace(/\[Nombre\]/g,(c.persona||c.nombre||"").split(" ")[0])}
 function side(c){
  $("#lk").innerHTML=links(c,1);
  const mg=C.find(x=>x.id===c.manId);
@@ -82,7 +96,7 @@ function sheet(id){
  <div class="sfoot"><button class="del" data-a="del">Eliminar contacte</button><button class="b" data-a="save">Desar</button></div>`;
  side(c);$("#sh").hidden=false;$("#shc").scrollTop=y}
 function cmp(c,via){via=via||({"Productora":"Email","Artista":"Instagram"})[c.tipo]||(c.email?"Email":c.ig?"Instagram":"Telèfon");cv=via;
- $("#cmp").innerHTML=`<div class="seg">${VIAS.map(v=>`<button class="t ${v===via?"on":""}" data-a="via" data-v="${v}">${v}</button>`).join("")}</div><textarea id="tx" rows="9">${E(tplFor(c,via))}</textarea><label>Data de l'enviament</label><input type="date" id="fd" value="${today()}"><div class="ls"><button class="b" data-a="cp">Copiar</button><a class="ln" id="op" target="_blank" rel="noopener">Obrir</a><button class="b" data-a="sent">Marcar com a enviat</button></div>`;ol(c)}
+ $("#cmp").innerHTML=`<div class="seg">${VIAS.map(v=>`<button class="t ${v===via?"on":""}" data-a="via" data-v="${v}">${v}</button>`).join("")}<span style="flex:1"></span>${[["es","Castellà"],["en","Anglès"]].map(([v,l])=>`<button class="t ${v===ml?"on":""}" data-a="ml" data-v="${v}">${l}</button>`).join("")}</div><textarea id="tx" rows="9">${E(tplFor(c,via))}</textarea><label>Data de l'enviament</label><input type="date" id="fd" value="${today()}"><div class="ls"><button class="b" data-a="cp">Copiar</button><a class="ln" id="op" target="_blank" rel="noopener">Obrir</a><button class="b" data-a="sent">Marcar com a enviat</button></div>`;ol(c)}
 function ol(c){const t=$("#tx").value;$("#op").href=(cv==="Instagram"?ig(c.ig):cv==="Email"&&sp(c.email).length?"mailto:"+sp(c.email)[0]+"?"+sb(t):cv==="Telèfon"?wa(sp(c.tel)[0]):"")||"#"}
 async function copy(t){try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}toast("Copiat")}
 function csv(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';return ["nombre","persona","tipo","estado","motivos","email","instagram","telefono","web","direccion","gestionado_por","notas","envios","ultimo_envio"].join(",")+"\n"+C.map(c=>[c.nombre,c.persona,c.tipo,c.estado,(c.motivos||[]).join("; "),c.email,c.ig,c.tel,c.web,(c.dir||"").replace(/\n/g," | "),c.man,c.notas,M(c).length,M(c).length?M(c).at(-1).d:""].map(q).join(",")).join("\n")}
@@ -105,6 +119,7 @@ document.addEventListener("click",e=>{
  else if(a==="undo"){undo&&undo();$("#toast").hidden=true}
  else if(a==="cmp")cmp(c)
  else if(a==="via")cmp(c,d.v)
+ else if(a==="ml"){ml=d.v;cmp(c,cv)}
  else if(a==="cp")copy($("#tx").value)
  else if(a==="sent"){const id=c.id,pm=M(c),pe=c.estado;c.msgs=pm.concat({d:$("#fd").value||today(),v:cv,t:$("#tx").value});if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);sheet(id);toast("Enviament registrat",()=>{const k=C.find(x=>x.id===id);k.msgs=pm;k.estado=pe;save(k);if(open===id)sheet(id)})}
  else if(a==="del"){if(!b.dataset.s){b.dataset.s=1;b.textContent="Prem un altre cop per eliminar"}else{store.del(c.id);C=C.filter(x=>x.id!==c.id);open=null;$("#sh").hidden=true;render()}}
