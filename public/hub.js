@@ -7,6 +7,10 @@ const I = {
  proyectos: "M3 5h18v14H3z M7 5v14 M17 5v14 M3 9h4 M3 15h4 M17 9h4 M17 15h4",
  festivales: "M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z",
  brainstorm: "M9 18h6 M10 21h4 M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z",
+ preproduccion: "M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M8 14h3",
+ guiones: "M5 3h10l4 4v14H5z M14 3v5h5 M8 12h8 M8 16h8",
+ planes: "M3 7h18v13H3z M3 7l3-4h4l-3 4 M10 7l3-4h4l-3 4 M17 7l3-4",
+ postproduccion: "M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4",
  web: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 3c3.5 3.5 3.5 14.5 0 18 M12 3c-3.5 3.5-3.5 14.5 0 18"
 };
 const SECTIONS = [
@@ -15,6 +19,10 @@ const SECTIONS = [
  {id:"contactos",label:"Contactos",desc:"Productoras, artistas y managers",src:"sections/contactos.js"},
  {id:"reuniones",label:"Reuniones",desc:"Apuntes y próximos pasos",src:"sections/reuniones.js"},
  {id:"proyectos",label:"Proyectos",desc:"Largos, cortos, videoclips y publicidad",src:"sections/proyectos.js"},
+ {id:"preproduccion",label:"Preproducción",desc:"Calendario por semanas, días o meses",src:"sections/preproduccion.js"},
+ {id:"guiones",label:"Guiones técnicos",desc:"Planos por escena, con escalas en color e imágenes",src:"sections/guiones.js"},
+ {id:"planes",label:"Planes de rodaje",desc:"Generados desde el guion técnico, ordenados y con horas",src:"sections/planes.js"},
+ {id:"postproduccion",label:"Postproducción",desc:"Calendario por semanas, días o meses",src:"sections/postproduccion.js"},
  {id:"festivales",label:"Festivales",desc:"Festivales, labs y residencias",src:"sections/festivales.js"},
  {id:"brainstorm",label:"Brainstorm",desc:"Ideas sueltas",src:"sections/brainstorm.js"},
  {id:"web",label:"Mi web",desc:"pabloanarte.com",src:"sections/web.js"}
