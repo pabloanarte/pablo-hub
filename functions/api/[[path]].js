@@ -18,12 +18,12 @@ export async function onRequest({ request, env, params }) {
       return j(out);
     }
     if (p.startsWith("col/") && m === "GET") { // Colección de una sección: /api/col/reunion
-      const t = decodeURIComponent(p.slice(4)); if (t === "secret") return j({ error: "no" }, 403);
+      const t = decodeURIComponent(p.slice(4)); if (!/^[a-z]+$/.test(t) || t === "secret") return j({ error: "no" }, 403); // sense comodins de LIKE
       const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE ?1").bind(t + ":%").all();
       return j(results.map(r => ({ ...JSON.parse(r.data), id: r.id })));
     }
     if (p.startsWith("doc/")) {
-      const id = decodeURIComponent(p.slice(4)); if (id.startsWith("secret:")) return j({ error: "no" }, 403);
+      const id = decodeURIComponent(p.slice(4)); if (id.toLowerCase().startsWith("secret:")) return j({ error: "no" }, 403);
       if (m === "PUT") {
         const b = await request.text(); JSON.parse(b);
         await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, b, Date.now()).run();
@@ -143,8 +143,11 @@ async function correu(accio, m, request, db, j) {
     return j({ ok: 1 });
   }
   if (!cfg) return j({ error: "config" }, 503);
+  if (!["llista", "fil", "programats", "envia", "cancela", "resum"].includes(accio)) return j({ error: "no" }, 404);
+  // el que envia o cancel·la només per POST amb JSON (un enllaç o un formulari d'una altra web no ho pot fer)
+  if (["envia", "cancela", "resum"].includes(accio) && (m !== "POST" || !/application\/json/.test(request.headers.get("content-type") || ""))) return j({ error: "no" }, 405);
   const q = m === "GET" ? Object.fromEntries(new URL(request.url).searchParams) : await request.json();
-  const o = await pont(cfg, { ...q, accio });
+  const { clau, ...o } = await pont(cfg, { ...q, accio }); // la clau no surt mai cap al navegador
   return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200); // 401 faria tornar a demanar la contrasenya del hub
 }
 async function pont(cfg, q) {

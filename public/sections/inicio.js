@@ -41,9 +41,10 @@
     try {
       if (!cache || Date.now() - cache.t > 5 * 6e4) { const [r, p] = await Promise.all([H.api("POST", "correu/resum", { correus: ems }), H.api("GET", "correu/programats")]); cache = { t: Date.now(), r, p: p.llista.length } }
       const { r, p } = cache, M = x => x.msgs || [];
-      const resp = c.map(x => { const d = sp(x.email).map(e => r.de[e]).filter(Boolean).sort().pop(), ult = M(x).length ? M(x).at(-1).d : ""; return { x, d, ult } }).filter(o => o.d && o.d.slice(0, 10) >= (o.ult || "0") && !["Ha respost", "Reunió", "Descartat"].includes(o.x.estado)).sort((a, b) => b.d.localeCompare(a.d));
+      const loc = s => { const x = new Date(s); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+      const resp = c.filter(x => M(x).length).map(x => { const d = sp(x.email).map(e => r.de[e]).filter(Boolean).sort().pop(), ult = M(x).at(-1).d; return { x, d, ult } }).filter(o => o.d && loc(o.d) >= o.ult && !["Ha respost", "Reunió", "Descartat"].includes(o.x.estado)).sort((a, b) => b.d.localeCompare(a.d));
       box.outerHTML = card("Correu", "correu", `<div class="st s3">${[["No llegits", r.nollegits], ["T'han respost", resp.length], ["Programats", p]].map(([l, n]) => `<div><b>${n}</b><small>${l}</small></div>`).join("")}</div>` +
-        (resp.length ? `<h2>T'han escrit i encara no ho has marcat</h2>` + resp.slice(0, 6).map(o => `<div class="r"><i class="dot" style="background:#30b27a"></i><div class="g" data-ct="${o.x.id}"><b>${E(o.x.nombre)}</b><small>${E(o.x.estado || "Pendent")} · correu del ${fecha(o.d.slice(0, 10))}</small></div><button class="b2" data-hr="${o.x.id}">Ha respost</button></div>`).join("") : ""));
+        (resp.length ? `<h2>T'han escrit i encara no ho has marcat</h2>` + resp.slice(0, 6).map(o => `<div class="r"><i class="dot" style="background:#30b27a"></i><div class="g" data-ct="${o.x.id}"><b>${E(o.x.nombre)}</b><small>${E(o.x.estado || "Pendent")} · correu del ${fecha(loc(o.d))}</small></div><button class="b2" data-hr="${o.x.id}">Ha respost</button></div>`).join("") : ""));
     } catch (e) { box.remove() }
   }
   el.addEventListener("click", e => {

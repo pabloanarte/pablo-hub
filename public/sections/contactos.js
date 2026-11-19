@@ -101,14 +101,15 @@ async function correuOk(){if(corOk===null){try{corOk=(await H.api("GET","correu/
 async function correus(c){const em=sp(c.email);if(!em.length||!await correuOk()||open!==c.id)return;const el=$("#crr");if(!el)return;el.innerHTML=`<label>Correus</label><small>Carregant…</small>`;
  try{const r=await H.api("GET","correu/llista?max=8&q="+encodeURIComponent(em.map(x=>`from:${x} OR to:${x}`).join(" OR ")));if(open!==c.id||!$("#crr"))return;
   $("#crr").innerHTML=`<label>Correus</label>`+(r.fils.length?r.fils.map(f=>`<div class="r" data-a="fil" data-id="${f.id}"><i class="dot" style="background:${f.nollegit?"#000":"transparent"}"></i><div class="g"><b>${E(f.assumpte||"(sense assumpte)")}</b><small>${E(f.de)} · ${new Date(f.data).toLocaleDateString("ca-ES",{day:"numeric",month:"short"})} · ${E(f.resum.slice(0,90))}</small></div></div>`).join(""):`<small>Encara no hi ha correus amb aquest contacte.</small>`)}catch(e){$("#crr").innerHTML=""}}
-async function envia(c,quan){const t=$("#tx").value,m=t.match(/^(?:Asunto|Subject): (.*)\n+([\s\S]*)$/),a=sp(c.email)[0];if(!a)return toast("Aquest contacte no té email");
- const b=$("#cmp [data-a=envia]");if(b){b.disabled=true;b.textContent="Enviant…"}
- try{const r=await H.api("POST","correu/envia",{a,assumpte:m?m[1]:"",cos:m?m[2]:t,quan:quan||""});const id=c.id;c.msgs=M(c).concat(Object.assign({d:quan?quan.slice(0,10):today(),v:"Email",t},r.programat?{prog:r.programat}:{}));if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);sheet(id);toast(quan?"Programat per al "+new Date(quan).toLocaleString("ca-ES",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Enviat")}
- catch(e){toast("No s'ha pogut enviar");if(b){b.disabled=false;b.textContent="Enviar ara"}}}
+let envOc=0;
+async function envia(c,quan){if(envOc)return;const t=$("#tx").value,m=t.match(/^(?:Asunto|Subject): (.*)\n+([\s\S]*)$/),a=sp(c.email)[0];if(!a)return toast("Aquest contacte no té email");
+ const b=$("#cmp [data-a=envia]"),bp=$("#cmp [data-a=prog]");envOc=1;if(bp)bp.disabled=true;if(b){b.disabled=true;b.textContent="Enviant…"}
+ try{const r=await H.api("POST","correu/envia",{a,assumpte:m?m[1]:"",cos:m?m[2]:t,quan:quan||""});const id=c.id;const lq=quan&&(x=>new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10))(new Date(quan));envOc=0;c.msgs=M(c).concat(Object.assign({d:quan?lq:today(),v:"Email",t},r.programat?{prog:r.programat}:{}));if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);sheet(id);toast(quan?"Programat per al "+new Date(quan).toLocaleString("ca-ES",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Enviat")}
+ catch(e){envOc=0;toast("No s'ha pogut enviar"+(e&&e.error?": "+(e.error==="config"?"el correu no està connectat":e.error):""));if(bp)bp.disabled=false;if(b){b.disabled=false;b.textContent="Enviar ara"}}}
 // Perquè altres seccions (Correu, Inici) puguin obrir i actualitzar contactes
 window.CONT={
  obre:id=>{hubShow("contactos");setTimeout(()=>sheet(id),60)},
- registra:(em,t,d,pid)=>{em=String(em||"").toLowerCase();const c=C.find(x=>sp(x.email).some(y=>y.toLowerCase()===em));if(!c)return;c.msgs=M(c).concat(Object.assign({d:d||today(),v:"Email",t},pid?{prog:pid}:{}));if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);render()},
+ registra:(em,t,d,pid)=>{em=(String(em||"").match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/)||[""])[0].toLowerCase();if(!em)return;const c=C.find(x=>sp(x.email).some(y=>y.toLowerCase()===em));if(!c)return;c.msgs=M(c).concat(Object.assign({d:d||today(),v:"Email",t},pid?{prog:pid}:{}));if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);render()},
  desprograma:pid=>{C.forEach(c=>{if(!M(c).some(m=>m.prog===pid))return;c.msgs=M(c).filter(m=>m.prog!==pid);if(!c.msgs.length&&c.estado==="Contactat")c.estado="Pendent";save(c)});render()},
  estat:(id,e)=>{const c=C.find(x=>x.id===id);if(!c)return;c.estado=e;save(c);render()},
  tots:()=>C,

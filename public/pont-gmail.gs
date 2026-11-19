@@ -19,7 +19,7 @@ function resposta(q) {
   try {
     const clau = PropertiesService.getScriptProperties().getProperty("CLAU");
     if (!clau || q.clau !== clau) r = { error: "clau" };
-    else if (!ACCIONS[q.accio]) r = { error: "accio" };
+    else if (!Object.prototype.hasOwnProperty.call(ACCIONS, q.accio)) r = { error: "accio" };
     else r = ACCIONS[q.accio](q);
   } catch (err) { r = { error: String(err && err.message || err) } }
   return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON);

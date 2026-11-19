@@ -69,7 +69,9 @@
     try {
       const [f, cs] = await Promise.all([api("GET", "fil?llegit=1&id=" + encodeURIComponent(id)), contactes()]); if (v !== ver) return;
       const ems = [...new Set(f.missatges.flatMap(m => [m.de, m.a, m.cc].join(",").split(",").map(adr)))].filter(x => x && x !== COMPTE), c = deContacte(cs, ems);
-      const ult = f.missatges[f.missatges.length - 1], resp = adr(ult.de) === COMPTE ? adr(ult.a.split(",")[0]) : adr(ult.de);
+      // el pont respon a l'últim missatge de l'altra persona; aquí es mostra i s'apunta la mateixa adreça
+      const EM = /[\w.+-]+@[\w-]+(\.[\w-]+)+/g, alt = f.missatges.filter(m => adr(m.de) !== COMPTE), ult = f.missatges[f.missatges.length - 1];
+      const resp = alt.length ? adr(alt[alt.length - 1].de) : ((ult.a.match(EM) || [])[0] || "").toLowerCase();
       el.querySelector(".em").outerHTML = `<h2 class="cass">${E(f.assumpte || "(sense assumpte)")}</h2>
         ${c ? `<div class="ls" style="margin-bottom:10px"><span class="xip"><i style="background:${window.CONT ? CONT.color(c.estado) : "#c7c7cc"}"></i>${E(c.nombre)} · ${E(c.estado || "Pendent")}</span><button class="b2" data-k="contacte" data-id="${c.id}">Obrir la fitxa</button>${c.estado === "Contactat" && f.missatges.some(m => adr(m.de) !== COMPTE) ? `<button class="b2" data-k="respost" data-id="${c.id}">Marcar «Ha respost»</button>` : ""}</div>` : ""}
         ${f.missatges.map((m, i) => `<details class="cms" ${i >= f.missatges.length - 2 ? "open" : ""}><summary><b>${E(nom(m.de))}</b><span class="mut"> ${E(adr(m.de))}</span><span class="cdt">${new Date(m.data).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></summary><small class="mut">Per a: ${E(m.a)}${m.cc ? " · Cc: " + E(m.cc) : ""}</small><div class="ccos">${E(m.cos.replace(/\n{3,}/g, "\n\n").trim())}</div>${m.adjunts.length ? `<small class="mut">Adjunts: ${m.adjunts.map(a => E(a.nom)).join(", ")} (obre'ls a Gmail)</small>` : ""}</details>`).join("")}
@@ -89,18 +91,22 @@
       <label>Missatge</label><textarea id="cn-t" rows="12">${E(cos)}</textarea>
       ${envBar("nou")}`);
   }
+  let ocupat = false;
+  const local = d => { const x = new Date(d); return new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
   async function envia(k, quan) {
-    const b = document.querySelector(`[data-k="env-${k}"]`), cos = (document.getElementById(k === "nou" ? "cn-t" : "cr-t") || {}).value || "";
+    if (ocupat) return;
+    const b = document.querySelector(`[data-k="env-${k}"]`), bp = document.querySelector(`[data-k="prog-${k}"]`), cos = (document.getElementById(k === "nou" ? "cn-t" : "cr-t") || {}).value || "";
     const o = k === "nou" ? { a: document.getElementById("cn-a").value.trim(), cc: document.getElementById("cn-cc").value.trim(), assumpte: document.getElementById("cn-s").value.trim(), cos } : { a: el.dataset.resp, assumpte: "Re: " + el.dataset.ass.replace(/^re:\s*/i, ""), cos, fil: obert };
     if (!/@/.test(o.a)) return H.toast("Falta l'adreça"); if (!cos.trim()) return H.toast("El missatge és buit");
     if (quan) { if (new Date(quan) <= new Date()) return H.toast("Ha de ser una hora futura"); o.quan = new Date(quan).toISOString() }
-    if (b) { b.disabled = true; b.textContent = quan ? "Programant…" : "Enviant…" }
+    ocupat = true; if (bp) bp.disabled = true; if (b) { b.disabled = true; b.textContent = quan ? "Programant…" : "Enviant…" }
     try {
       const r = await api("POST", "envia", o);
-      window.CONT && CONT.registra(o.a, (o.assumpte ? "Asunto: " + o.assumpte + "\n\n" : "") + cos, quan ? o.quan.slice(0, 10) : H.today(), r.programat);
+      window.CONT && CONT.registra(o.a, (o.assumpte ? "Asunto: " + o.assumpte + "\n\n" : "") + cos, quan ? local(o.quan) : H.today(), r.programat);
       H.toast(quan ? "Programat per al " + new Date(quan).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Enviat");
       if (k === "nou") H.cerrar(); else fil(obert);
-    } catch (e) { H.toast(errText(e)); if (b) { b.disabled = false; b.textContent = "Enviar ara" } }
+    } catch (e) { H.toast(errText(e)); if (b) { b.disabled = false; b.textContent = "Enviar ara" } if (bp) bp.disabled = false }
+    ocupat = false;
   }
 
   // ---------- esdeveniments ----------
