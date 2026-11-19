@@ -30,7 +30,7 @@
     const [gs, ps] = await Promise.all([H.col("gt"), H.col("proyecto")]);
     if (v !== ver) return;
     const pn = id => (ps.find(x => x.id === id) || {}).titulo || "";
-    el.innerHTML = `<div class="bar"><span style="flex:1"></span><button class="b" data-k="nuevo">+ Guió tècnic</button></div><div class="hl">` +
+    el.innerHTML = `<div class="bar"><span style="flex:1"></span><button class="b2" data-k="importar">Importar PDF, Excel o Google Sheets</button><button class="b" data-k="nuevo">+ Guió tècnic</button></div><div class="hl">` +
       (gs.length ? gs.slice().sort((a, b) => (b.mod || 0) - (a.mod || 0)).map(g => { const pl = g.escenas.flatMap(e => e.planos); return `<div class="r" data-k="abre" data-id="${g.id}"><i class="dot" style="background:#3b4a5a"></i><div class="g"><b>${E(g.titulo || "Sense títol")}</b><small>${E([pn(g.proyecto), g.escenas.length + (g.escenas.length === 1 ? " escena" : " escenes"), pl.length + (pl.length === 1 ? " pla" : " plans"), minTot(pl) ? Math.round(minTot(pl) / 6) / 10 + " h de rodatge" : ""].filter(Boolean).join(" · "))}</small></div></div>` }).join("")
         : `<p class="em">Encara no hi ha guions tècnics. Crea'n un de nou o enganxa'n un des de Google Sheets.</p>`) + `</div>`;
   }
@@ -79,6 +79,7 @@
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k, ei = +b.dataset.e, pi = +b.dataset.p;
     if (k === "nuevo") { const d = { id: H.uid("gt"), titulo: "", escenas: [{ id: uid(), num: "1", intext: "INT", lugar: "", planos: [] }] }; d.escenas[0].planos.push(nuevoPlano(d.escenas[0])); await perDefecte(d); await H.put(d, 1); doc = d; pintar(); el.querySelector(".tt").focus(); return }
     if (k === "abre") return abrir(b.dataset.id);
+    if (k === "importar") return IMP.dialeg("gt", async escenes => { const d = { id: H.uid("gt"), titulo: "Guió importat", escenas: escenes }; await perDefecte(d); if (escenes.some(e => e.planos.some(p => p.dur))) d.ocultas = d.ocultas.filter(x => x !== "dur"); await H.put(d, 1); doc = d; pintar(); H.toast(escenes.reduce((a, e) => a + e.planos.length, 0) + " plans importats"); const t = el.querySelector(".tt"); t && (t.focus(), t.select()) });
     if (!doc) return;
     if (k === "volver") return lista();
     if (k === "addp") { doc.escenas[ei].planos.push(nuevoPlano(doc.escenas[ei])); save(); pintar(); const t = el.querySelectorAll(`tr.pr[data-e="${ei}"] textarea`); t.length && t[t.length - (vis().length - 2)]?.focus() }

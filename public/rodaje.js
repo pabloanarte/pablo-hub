@@ -34,16 +34,21 @@ window.R = (() => {
     desc: ["description", "descripción", "descripcio", "descripció", "acció", "acción", "action", "accio"], dialogo: ["diálogo", "dialogo", "dialeg", "diàleg", "dialogue"],
     notas: ["notes", "notas", "anotaciones", "anotacions", "fx/notes", "observaciones"], dur: ["duración", "durada", "duration", "dur", "min. rodatge", "min. rodaje", "durada (min)", "dur. (min)", "shooting min."], fps: ["fps"], intext: ["int./ext.", "int/ext", "int.ext", "int-ext"], set: ["set", "localización", "localitzacio", "location"]
   };
+  // Relaciona cada columna de la capçalera amb un camp (primer coincidències exactes, després per prefix)
+  function mapa(cab) {
+    const m = {}, usada = new Set();
+    cab.forEach((c, i) => { for (const [k, ls] of Object.entries(CAB)) if (!(k in m) && ls.includes(c)) { m[k] = i; usada.add(i); break } });
+    cab.forEach((c, i) => { if (usada.has(i)) return; for (const [k, ls] of Object.entries(CAB)) if (!(k in m) && ls.some(x => x.length > 3 && c.startsWith(x + " "))) { m[k] = i; usada.add(i); break } });
+    // si "acció" i "descripció" van en columnes diferents, la segona va a acció
+    const ia = cab.findIndex(c => /^acci/.test(c)); if (ia >= 0 && m.desc !== ia) m.accion = ia;
+    return m;
+  }
+  const compta = cab => Object.keys(mapa(cab)).length;
   function pegar(texto) {
     const filas = texto.replace(/\r/g, "").split("\n").map(l => l.split("\t"));
     if (filas.length < 2) return [];
-    const cab = filas[0].map(c => c.trim().toLowerCase()), mapa = {};
-    const usada = new Set();
-    cab.forEach((c, i) => { for (const [k, ls] of Object.entries(CAB)) if (!(k in mapa) && ls.includes(c)) { mapa[k] = i; usada.add(i); break } });
-    cab.forEach((c, i) => { if (usada.has(i)) return; for (const [k, ls] of Object.entries(CAB)) if (!(k in mapa) && ls.some(x => x.length > 3 && c.startsWith(x + " "))) { mapa[k] = i; usada.add(i); break } });
-    // si "acción" y "descripción" van en columnas distintas, la segunda va a acción
-    const ia = cab.findIndex(c => /^acci/.test(c)); if (ia >= 0 && mapa.desc !== ia) mapa.accion = ia;
-    return filas.slice(1).filter(f => f.some(c => c.trim())).map(f => { const o = { id: uid() }; for (const [k, i] of Object.entries(mapa)) if (k !== "img") o[k] = (f[i] || "").trim(); return o });
+    const m = mapa(filas[0].map(c => c.trim().toLowerCase()));
+    return filas.slice(1).filter(f => f.some(c => c.trim())).map(f => { const o = { id: uid() }; for (const [k, i] of Object.entries(m)) if (k !== "img") o[k] = (f[i] || "").trim(); return o });
   }
 
   // ---------- exportar a PDF (imprimir) ----------
@@ -131,5 +136,5 @@ window.R = (() => {
   const selLang = () => `<select class="lang" title="Idioma dels PDF i Excel">${[["ca", "Exportar en català"], ["es", "Exportar en castellà"], ["en", "Exportar en anglès"]].map(([v, l]) => `<option value="${v}" ${v === lang() ? "selected" : ""}>${l}</option>`).join("")}</select>`;
   document.addEventListener("change", e => { if (e.target.matches("select.lang")) { try { localStorage.setItem("hub-lang-exp", e.target.value) } catch (x) { } document.querySelectorAll("select.lang").forEach(s => s.value = e.target.value) } });
 
-  return { t, tv, loc, escX, selLang, lang, E, ESC, escNorm, escColor, ORDEN_ESC, BANDA, FILA, aMin, aHora, uid, subirImagen, imgUrl, pegar, pdf, excel, ajusta };
+  return { mapa, compta, t, tv, loc, escX, selLang, lang, E, ESC, escNorm, escColor, ORDEN_ESC, BANDA, FILA, aMin, aHora, uid, subirImagen, imgUrl, pegar, pdf, excel, ajusta };
 })();

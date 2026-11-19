@@ -33,6 +33,7 @@ export async function onRequest({ request, env, params }) {
     }
     if (p === "web" || p.startsWith("web/")) return web(p, m, request, env, j);
     if (p === "archivo" || p.startsWith("archivo/")) return archivo(p, m, request, env, j);
+    if (p === "importar" && m === "GET") return importar(request);
     return j({ error: "not found" }, 404);
   } catch (e) { return j({ error: String(e.message || e) }, 500) }
 }
@@ -95,4 +96,14 @@ async function archivo(p, m, request, env, j) {
     return new Response(value, { headers: { ...h, "content-length": String(n) } });
   }
   return j({ error: "not found" }, 404);
+}
+
+// ---------- Importar un full de Google Sheets (compartit amb enllaç) com a CSV ----------
+async function importar(request) {
+  const u = new URL(request.url).searchParams.get("url") || "", id = (u.match(/\/spreadsheets\/d\/([\w-]+)/) || [])[1], gid = (u.match(/[#&?]gid=(\d+)/) || [])[1] || "0";
+  if (!id) return new Response("Aquest enllaç no és d'un full de Google Sheets", { status: 400 });
+  const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`, { redirect: "follow" });
+  const t = await r.text();
+  if (!r.ok || /^\s*<!DOCTYPE html|<html/i.test(t)) return new Response("No puc llegir el full. Comparteix-lo com a «Qualsevol persona amb l'enllaç» (lector).", { status: 400 });
+  return new Response(t, { headers: { "content-type": "text/csv; charset=utf-8" } });
 }

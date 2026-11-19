@@ -82,7 +82,7 @@
     doc = null; const v = ++ver;
     const ls = await H.col("pdr");
     if (v !== ver) return;
-    el.innerHTML = `<div class="bar"><span style="flex:1"></span><button class="b2" data-k="vacio">+ Pla buit</button><button class="b" data-k="desdegt">+ Crear des d'un guió tècnic</button></div><div class="hl">` +
+    el.innerHTML = `<div class="bar"><span style="flex:1"></span><button class="b2" data-k="importar">Importar PDF, Excel o Google Sheets</button><button class="b2" data-k="vacio">+ Pla buit</button><button class="b" data-k="desdegt">+ Crear des d'un guió tècnic</button></div><div class="hl">` +
       (ls.length ? ls.slice().sort((a, b) => (b.dias[0]?.fecha || "").localeCompare(a.dias[0]?.fecha || "")).map(p => { const pl = p.dias.flatMap(d => d.filas.filter(f => f.tipo === "plano")); return `<div class="r" data-k="abre" data-id="${p.id}"><i class="dot" style="background:${BANDA.set}"></i><div class="g"><b>${E(p.titulo || "Sense títol")}</b><small>${E([p.dias.length + (p.dias.length > 1 ? " jornades" : " jornada"), p.dias[0]?.fecha && H.fecha(p.dias[0].fecha), pl.length + (pl.length === 1 ? " pla" : " plans"), pl.filter(f => f.rodado).length + (pl.filter(f => f.rodado).length === 1 ? " rodat" : " rodats")].filter(Boolean).join(" · "))}</small></div></div>` }).join("")
         : `<p class="em">Encara no hi ha plans de rodatge. Crea'l des d'un guió tècnic i s'ordena sol.</p>`) + `</div>`;
   }
@@ -126,6 +126,7 @@
     if (k === "desdegt") return generar((await H.col("gt"))[0]?.id);
     if (k === "vacio") { const d = { id: H.uid("pdr"), titulo: "", dias: [{ id: uid(), fecha: H.today(), ready: "09:00", calls: "08:00 Crew call", filas: [{ id: uid(), tipo: "set", texto: "" }, { id: uid(), tipo: "plano", dur: 30 }, { id: uid(), tipo: "wrap", texto: "WRAP" }] }] }; await H.put(d, 1); doc = d; dia = 0; return pintar() }
     if (k === "abre") return abrir(b.dataset.id);
+    if (k === "importar") return IMP.dialeg("pdr", async dias => { const d = { id: H.uid("pdr"), titulo: "Pla importat", dias }; await H.put(d, 1); doc = d; dia = 0; pintar(); H.toast(dias.length + (dias.length === 1 ? " jornada importada" : " jornades importades")) });
     if (!doc) return;
     if (k === "volver") return lista();
     if (k === "dia") { dia = i; pintar() }
