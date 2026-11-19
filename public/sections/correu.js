@@ -79,7 +79,7 @@
       el.dataset.resp = resp; el.dataset.ass = f.assumpte || "";
     } catch (e) { if (v === ver) el.querySelector(".em").textContent = errText(e) }
   }
-  const envBar = k => `<div class="ls" style="margin-top:10px"><button class="b" data-k="env-${k}">Enviar ara</button><span style="flex:1"></span><input type="datetime-local" id="cr-q-${k}" style="width:auto"><button class="b2" data-k="prog-${k}">Programar</button></div>`;
+  const envBar = k => `<div class="ls envb" style="margin-top:10px"><button class="b" data-k="env-${k}">Enviar ara</button><span style="flex:1"></span><input type="datetime-local" id="cr-q-${k}" style="width:auto"><button class="b2" data-k="prog-${k}">Programar</button></div>`;
 
   // ---------- escriure ----------
   async function nou(a = "", ass = "", cos = "") {
@@ -118,7 +118,7 @@
       const st = document.getElementById("cg-st"); st.textContent = "Comprovant…";
       try { await api("PUT", "config", { url: document.getElementById("cg-u").value.trim(), clau: document.getElementById("cg-c").value.trim() }); connectat = true; H.toast("Correu connectat"); pintar() } catch (er) { st.textContent = errText(er) }
     }
-    if (k === "vis") { vis = b.dataset.v; pintar() }
+    if (k === "vis") { vis = b.dataset.v; q = ""; pintar() } // canviar de pestanya treu la cerca
     if (k === "refresca") pintar();
     if (k === "mes") { b.disabled = true; mes(ver) }
     if (k === "obre") fil(b.dataset.id);
