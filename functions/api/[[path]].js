@@ -18,12 +18,12 @@ export async function onRequest({ request, env, params }) {
       return j(out);
     }
     if (p.startsWith("col/") && m === "GET") { // Colección de una sección: /api/col/reunion
-      const t = decodeURIComponent(p.slice(4));
+      const t = decodeURIComponent(p.slice(4)); if (t === "secret") return j({ error: "no" }, 403);
       const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE ?1").bind(t + ":%").all();
       return j(results.map(r => ({ ...JSON.parse(r.data), id: r.id })));
     }
     if (p.startsWith("doc/")) {
-      const id = decodeURIComponent(p.slice(4));
+      const id = decodeURIComponent(p.slice(4)); if (id.startsWith("secret:")) return j({ error: "no" }, 403);
       if (m === "PUT") {
         const b = await request.text(); JSON.parse(b);
         await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, b, Date.now()).run();
@@ -34,6 +34,7 @@ export async function onRequest({ request, env, params }) {
     if (p === "web" || p.startsWith("web/")) return web(p, m, request, env, j);
     if (p === "archivo" || p.startsWith("archivo/")) return archivo(p, m, request, env, j);
     if (p === "importar" && m === "GET") return importar(request);
+    if (p.startsWith("correu/")) return correu(p.slice(7), m, request, db, j);
     if (p.startsWith("public/")) return publica(p, request, env, db, j);
     return j({ error: "not found" }, 404);
   } catch (e) { return j({ error: String(e.message || e) }, 500) }
@@ -125,4 +126,31 @@ async function publica(p, request, env, db, j) {
     return new Response(r.body, { status: r.status, headers: h });
   }
   return j({ error: "no" }, 404);
+}
+
+// ---------- Correu (Gmail, a través del pont d'Apps Script de pablo.anarte.film@gmail.com) ----------
+// L'adreça del pont i la clau es guarden a D1 (id "secret:correu"), que mai surt cap al navegador.
+async function correu(accio, m, request, db, j) {
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:correu'").first(), cfg = r ? JSON.parse(r.data) : null;
+  if (accio === "config") {
+    if (m === "GET") return j({ connectat: !!(cfg && cfg.url && cfg.clau) });
+    if (m === "DELETE") { await db.prepare("DELETE FROM docs WHERE id='secret:correu'").run(); return j({ ok: 1 }) }
+    const { url, clau } = await request.json();
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url || "")) return j({ error: "L'adreça ha de ser la de l'aplicació web d'Apps Script (acaba en /exec)." }, 400);
+    const prova = await pont({ url, clau }, { accio: "programats" });
+    if (prova.error) return j({ error: prova.error === "clau" ? "La clau no coincideix amb la del pont." : "El pont no respon: " + prova.error }, 400);
+    await db.prepare("INSERT INTO docs(id,data,updated) VALUES('secret:correu',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify({ url, clau }), Date.now()).run();
+    return j({ ok: 1 });
+  }
+  if (!cfg) return j({ error: "config" }, 503);
+  const q = m === "GET" ? Object.fromEntries(new URL(request.url).searchParams) : await request.json();
+  const o = await pont(cfg, { ...q, accio });
+  return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200); // 401 faria tornar a demanar la contrasenya del hub
+}
+async function pont(cfg, q) {
+  try {
+    const r = await fetch(cfg.url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...q, clau: cfg.clau }), redirect: "follow" });
+    const t = await r.text();
+    try { return JSON.parse(t) } catch (e) { return { error: /<html|<!DOCTYPE/i.test(t) ? "Google ha tornat una pàgina en lloc de dades: revisa que el pont estigui implementat per a «Qualsevol usuari»." : "resposta estranya" } }
+  } catch (e) { return { error: "no puc connectar amb Google" } }
 }

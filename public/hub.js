@@ -12,12 +12,14 @@ const I = {
  planes: "M3 7h18v13H3z M3 7l3-4h4l-3 4 M10 7l3-4h4l-3 4 M17 7l3-4",
  postproduccion: "M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M9 15l2 2 4-4",
  decks: "M3 5h14v10H3z M7 19h14V9 M6 12l3-3 3 3",
+ correu: "M3 6h18v12H3z M3 7l9 6 9-6",
  web: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 3c3.5 3.5 3.5 14.5 0 18 M12 3c-3.5 3.5-3.5 14.5 0 18"
 };
 const SECTIONS = [
  {id:"inicio",label:"Inici",desc:"El més important d'avui",src:"sections/inicio.js"},
  {id:"tareas",label:"Tasques",desc:"Pendents i calendari",src:"sections/tareas.js"},
  {id:"contactos",label:"Contactes",desc:"Productores, artistes i mànagers",src:"sections/contactos.js"},
+ {id:"correu",label:"Correu",desc:"pablo.anarte.film@gmail.com",src:"sections/correu.js"},
  {id:"reuniones",label:"Reunions",desc:"Apunts i propers passos",src:"sections/reuniones.js"},
  {id:"proyectos",label:"Projectes",desc:"Llargs, curts, videoclips i publicitat",src:"sections/proyectos.js"},
  {id:"preproduccion",label:"Preproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/preproduccion.js"},

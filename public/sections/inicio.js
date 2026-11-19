@@ -27,11 +27,28 @@
       card("Dates límit", "festivales", lim.length ? lim.slice(0, 8).map(x => { const n = Math.round((new Date(x.limite) - new Date(hoy)) / 864e5); return `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 7 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;${n <= 7 ? "color:#ff3b30" : ""}">${n === 0 ? "avui" : n === 1 ? "demà" : "en " + n + " dies"}</small></div>` }).join("") : vacio("No hi ha convocatòries obertes amb data.")) +
       card("Contactes", "contactos", `<div class="st" style="grid-template-columns:repeat(4,1fr)">${[["Per contactar", porC], ["Contactats", c.filter(x => M(x).length > 0 || ["Contactat", "Ha respost", "Reunió"].includes(x.estado)).length], ["Han respost", c.filter(x => x.estado === "Ha respost").length], ["Reunió", c.filter(x => x.estado === "Reunió").length]].map(([l, n]) => `<div><b>${n}</b><small>${l}</small></div>`).join("")}</div>` +
         (seg.length ? `<h2>Toca fer seguiment</h2>` + seg.slice(0, 6).map(x => `<div class="r" data-go="contactos"><i class="dot" style="background:#0a84ff"></i><div class="g"><b>${E(x.nombre)}</b><small>Últim missatge fa ${dias(M(x).at(-1).d)} dies</small></div></div>`).join("") : "")) +
+      `<div id="icor" hidden></div>` +
       card("Projectes en marxa", "proyectos", vivos.length ? vivos.map(x => `<div class="r" data-k="proyecto" data-id="${x.id}"><i class="dot" style="background:${PE[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.categoria, x.estado].filter(Boolean).join(" · "))}</small></div><small>${(n => n ? n + (n > 1 ? " tasques" : " tasca") : "")(pend.filter(y => y.proyecto === x.id).length)}</small></div>`).join("") : vacio("Afegeix els teus projectes a la secció Projectes.")) +
       card("Últimes idees", "brainstorm", i.length ? i.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")).slice(0, 5).map(x => `<div class="r" data-k="idea" data-id="${x.id}"><i class="dot" style="background:#ffcc00"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E((x.texto || "").split("\n")[0].slice(0, 90))}</small></div></div>`).join("") : vacio("Apunta aquí qualsevol idea solta.")) +
       `</div>`;
+    correu(c);
+  }
+  // Correu: qui t'ha respost (correus de contactes posteriors a l'últim enviament) i no llegits
+  let cache = null;
+  async function correu(c) {
+    const box = document.getElementById("icor"); if (!box || !window.CORREU || !await CORREU.connectat()) return;
+    const sp = v => String(v || "").split(/[,;\n]+/).map(x => x.trim().toLowerCase()).filter(Boolean), ems = [...new Set(c.flatMap(x => sp(x.email)))];
+    try {
+      if (!cache || Date.now() - cache.t > 5 * 6e4) { const [r, p] = await Promise.all([H.api("POST", "correu/resum", { correus: ems }), H.api("GET", "correu/programats")]); cache = { t: Date.now(), r, p: p.llista.length } }
+      const { r, p } = cache, M = x => x.msgs || [];
+      const resp = c.map(x => { const d = sp(x.email).map(e => r.de[e]).filter(Boolean).sort().pop(), ult = M(x).length ? M(x).at(-1).d : ""; return { x, d, ult } }).filter(o => o.d && o.d.slice(0, 10) >= (o.ult || "0") && !["Ha respost", "Reunió", "Descartat"].includes(o.x.estado)).sort((a, b) => b.d.localeCompare(a.d));
+      box.outerHTML = card("Correu", "correu", `<div class="st" style="grid-template-columns:repeat(3,1fr)">${[["No llegits", r.nollegits], ["T'han respost", resp.length], ["Programats", p]].map(([l, n]) => `<div><b>${n}</b><small>${l}</small></div>`).join("")}</div>` +
+        (resp.length ? `<h2>T'han escrit i encara no ho has marcat</h2>` + resp.slice(0, 6).map(o => `<div class="r"><i class="dot" style="background:#30b27a"></i><div class="g" data-ct="${o.x.id}"><b>${E(o.x.nombre)}</b><small>${E(o.x.estado || "Pendent")} · correu del ${fecha(o.d.slice(0, 10))}</small></div><button class="b2" data-hr="${o.x.id}">Ha respost</button></div>`).join("") : ""));
+    } catch (e) { box.remove() }
   }
   el.addEventListener("click", e => {
+    const hr = e.target.closest("[data-hr]"); if (hr) { window.CONT && CONT.estat(hr.dataset.hr, "Ha respost"); hr.closest(".r").remove(); H.toast("Marcat com a «Ha respost»"); return }
+    const ct = e.target.closest("[data-ct]"); if (ct) return window.CONT && CONT.obre(ct.dataset.ct);
     const g = e.target.closest("[data-go]"); if (g) return hubShow(g.dataset.go);
     const b = e.target.closest("[data-k]"); if (!b) return;
     b.dataset.k === "tarea" ? H.abrirTarea && H.abrirTarea(b.dataset.id) : H.abrir(b.dataset.k, b.dataset.id);
