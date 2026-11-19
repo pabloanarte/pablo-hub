@@ -5,8 +5,8 @@
   const WEB = "https://pabloanarte.com";
   let W = null, sha = "", sucio = false, tab = "ficcion", abierto = null;
   const CP = {
-    ficcion: [["titulo", "Título"], ["tipo", "Tipo (cortometraje, largometraje…)"], ["rol", "Rol (guion, dirección…)"], ["nota", "Nota (en distribución, en desarrollo…)"], ["vimeo", "Enlace de Vimeo"], ["poster", "Póster (si no hay vídeo)", "img"]],
-    videoclips: [["titulo", "Título"], ["artista", "Artista"], ["vimeo", "Enlace de Vimeo"], ["poster", "Póster (si no hay vídeo)", "img"]]
+    ficcion: [["titulo", "Título"], ["tipo", "Tipo (cortometraje, largometraje…)"], ["rol", "Rol (guion, dirección…)"], ["nota", "Nota (en distribución, en desarrollo…)"], ["video", "Vídeo: enlace de Vimeo, YouTube o Google Drive, o sube el archivo", "vid"], ["poster", "Póster (imagen si no hay vídeo, o portada del vídeo)", "img"]],
+    videoclips: [["titulo", "Título"], ["artista", "Artista"], ["video", "Vídeo: enlace de Vimeo, YouTube o Google Drive, o sube el archivo", "vid"], ["poster", "Póster (imagen si no hay vídeo, o portada del vídeo)", "img"]]
   };
   const TABS = [["ficcion", "Ficción"], ["videoclips", "Videoclips"], ["textos", "Textos"], ["media", "Vídeo y foto"], ["redes", "Redes"]];
 
@@ -20,7 +20,7 @@
   function marca() { sucio = true; el.querySelector("#wpub").hidden = false }
 
   function pintar() {
-    const lista = k => (W[k] || []).map((p, i) => `<div class="r"><div class="g" data-k="ed" data-i="${i}"><b>${E(p.titulo || "Sin título")}</b><small>${E(k === "videoclips" ? p.artista || "" : [p.tipo, p.nota].filter(Boolean).join(" · "))}${p.vimeo ? "" : p.poster ? " · póster" : " · sin vídeo"}</small></div><button class="t" data-k="sube" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="t" data-k="baja" data-i="${i}" ${i < W[k].length - 1 ? "" : "disabled"}>↓</button></div>`).join("") + `<div class="bar" style="margin-top:14px"><button class="b" data-k="add">+ Añadir proyecto</button></div>`;
+    const lista = k => (W[k] || []).map((p, i) => `<div class="r"><div class="g" data-k="ed" data-i="${i}"><b>${E(p.titulo || "Sin título")}</b><small>${E(k === "videoclips" ? p.artista || "" : [p.tipo, p.nota].filter(Boolean).join(" · "))}${p.video || p.vimeo ? "" : p.poster ? " · póster" : " · sin vídeo"}</small></div><button class="t" data-k="sube" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="t" data-k="baja" data-i="${i}" ${i < W[k].length - 1 ? "" : "disabled"}>↓</button></div>`).join("") + `<div class="bar" style="margin-top:14px"><button class="b" data-k="add">+ Añadir proyecto</button></div>`;
     const inp = (ruta, v, ph = "") => `<input data-w="${ruta}" value="${E(v)}" placeholder="${E(ph)}">`;
     const arch = (ruta, v, acc, carp, nota) => `<div class="r" style="cursor:default"><div class="g"><b>${E(v || "—")}</b>${nota ? `<small>${E(nota)}</small>` : ""}</div>${v ? `<a class="ln" target="_blank" rel="noopener" href="${WEB}/${E(v)}">Ver</a>` : ""}<label class="b" style="margin:0;color:#fff;font-size:14px">Cambiar<input type="file" accept="${acc}" data-up="${ruta}" data-c="${carp}" hidden></label></div>`;
     let h = "";
@@ -40,7 +40,7 @@
 
   function editar(i) {
     const k = tab, p = W[k][i]; abierto = { k, i };
-    H.sheet(CP[k].map(([f, l, up]) => `<label>${l}</label>` + (up ? `<div class="row"><input data-p="${f}" value="${E(p[f] || "")}" placeholder="Sin póster"><label class="t" style="margin:0">Subir<input type="file" accept="image/*" data-pup="${f}" hidden></label></div>` : `<input data-p="${f}" value="${E(p[f] || "")}">`)).join("") +
+    H.sheet(CP[k].map(([f, l, up]) => `<label>${l}</label>` + (up ? `<div class="row"><input data-p="${f}" value="${E(p[f] || (f === "video" ? p.vimeo || "" : ""))}" placeholder="${up === "vid" ? "https://vimeo.com/… · https://youtu.be/…" : "Sin póster"}"><label class="t" style="margin:0">Subir<input type="file" accept="${up === "vid" ? "video/mp4,video/quicktime,video/webm" : "image/*"}" data-pup="${f}" data-c="${up === "vid" ? "assets" : "img"}" hidden></label></div>${up === "vid" ? "<small>Archivos de vídeo: máximo 25 MB. Para cortos completos, mejor un enlace de Vimeo, YouTube o Drive.</small>" : ""}` : `<input data-p="${f}" value="${E(p[f] || "")}">`)).join("") +
       `<button class="del" data-k="wdel">Quitar de la web</button>`, () => { abierto = null; pintar() });
   }
 
@@ -59,7 +59,7 @@
     if (k === "tab") { tab = b.dataset.v; pintar() }
     if (k === "ed") editar(i);
     if (k === "sube" || k === "baja") { const j = k === "sube" ? i - 1 : i + 1;[L[i], L[j]] = [L[j], L[i]]; marca(); pintar() }
-    if (k === "add") { L.push(tab === "videoclips" ? { titulo: "", artista: "", vimeo: "", poster: "" } : { titulo: "", tipo: "cortometraje", rol: "guion, dirección", vimeo: "", poster: "", nota: "" }); marca(); editar(L.length - 1) }
+    if (k === "add") { L.push(tab === "videoclips" ? { titulo: "", artista: "", video: "", poster: "" } : { titulo: "", tipo: "cortometraje", rol: "guion, dirección", video: "", poster: "", nota: "" }); marca(); editar(L.length - 1) }
     if (k === "pub") {
       b.disabled = true; b.textContent = "Publicando…";
       try { const r = await H.api("PUT", "web", { data: W, sha }); sha = r.sha; sucio = false; pintar(); toast("Publicado. La web se actualiza en 1–2 minutos.") }
@@ -75,10 +75,10 @@
     const ruta = await subir(t.files[0], t.dataset.c); if (ruta) { setRuta(W, t.dataset.up, ruta); marca(); pintar() }
   });
   const sh = document.getElementById("hsh");
-  sh.addEventListener("input", e => { const t = e.target; if (!abierto || !t.dataset.p) return; W[abierto.k][abierto.i][t.dataset.p] = t.value.trim(); marca() });
+  sh.addEventListener("input", e => { const t = e.target; if (!abierto || !t.dataset.p) return; const p = W[abierto.k][abierto.i]; p[t.dataset.p] = t.value.trim(); if (t.dataset.p === "video") delete p.vimeo; marca() });
   sh.addEventListener("change", async e => {
     const t = e.target; if (!abierto || !t.dataset.pup || !t.files[0]) return;
-    const ruta = await subir(t.files[0], "img"); if (ruta) { W[abierto.k][abierto.i][t.dataset.pup] = ruta; t.closest(".row").querySelector("input[data-p]").value = ruta; marca() }
+    const ruta = await subir(t.files[0], t.dataset.c || "img"); if (ruta) { W[abierto.k][abierto.i][t.dataset.pup] = ruta; t.closest(".row").querySelector("input[data-p]").value = ruta; marca() }
   });
   sh.addEventListener("click", e => {
     if (!abierto || !e.target.closest('[data-k="wdel"]') || !confirm("¿Quitar este proyecto de la web?")) return;
