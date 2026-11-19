@@ -35,6 +35,12 @@ window.H = (() => {
   let cT = 0, cC = [];
   async function contactos() { if (Date.now() - cT > 30000) { try { cC = (await api("GET", "all")).contacts; cT = Date.now() } catch (e) { } } return cC }
 
+  // ---------- llistes editables (p. ex. tipus de projecte) ----------
+  let LL = null;
+  async function llistes() { if (!LL) { const a = await col("ajust"); LL = a.find(x => x.id === "ajust:llistes") || { id: "ajust:llistes" } } return LL }
+  const opsDe = c => (c.llista && LL && LL[c.llista]) || c.op;
+  function desaLlista(k, l) { LL[k] = l; put(LL, 1) }
+
   // ---------- interfaz ----------
   const ov = document.createElement("div"); ov.id = "hsh"; ov.hidden = true; ov.innerHTML = '<div class="sheet" id="hshc"></div>'; document.body.appendChild(ov);
   const tst = document.createElement("div"); tst.id = "htoast"; tst.hidden = true; document.body.appendChild(tst);
@@ -52,11 +58,12 @@ window.H = (() => {
   async function editar(campos, doc, opt = {}) {
     const cs = campos.some(c => c.tipo === "contactos") ? await contactos() : [];
     const ps = campos.some(c => c.tipo === "proyecto") ? await col("proyecto") : [];
-    ed = { campos, doc, opt };
+    await llistes();
+    ed = { campos, doc, opt, editL: ed && ed.doc === doc ? ed.editL : null, nouL: ed && ed.doc === doc ? ed.nouL : null };
     const h = campos.map(c => campo(c, doc, cs, ps)).join("") +
       (opt.acciones || []).map((a, i) => `<button class="b" style="margin-top:18px" data-k="acc" data-i="${i}">${E(a.l)}</button> `).join("") +
       (opt.extra ? `<div id="hextra">${await opt.extra(doc)}</div>` : "") +
-      `<button class="del" data-k="borrar">Eliminar</button>`;
+      `<div class="sfoot"><button class="del" data-k="borrar">Eliminar</button><button class="b" data-k="desar">Desar</button></div>`;
     sheet(h, opt.alCerrar);
   }
   function campo(c, d, cs, ps) {
@@ -65,7 +72,11 @@ window.H = (() => {
       case "titulo": return `<input class="big" data-f="${c.f}" value="${E(v)}" placeholder="${E(c.ph || "Títol")}">`;
       case "textarea": return lb + `<textarea data-f="${c.f}" rows="${c.rows || 5}" placeholder="${E(c.ph || "")}">${E(v)}</textarea>`;
       case "check": return `<label class="ck"><input type="checkbox" data-f="${c.f}" ${v ? "checked" : ""}> ${E(c.l)}</label>`;
-      case "pills": return lb + `<div class="seg">${c.op.map(o => `<button class="t ${v === o ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] ? ` style="${v === o ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}</div>`;
+      case "pills": {
+        const ops = opsDe(c), edita = c.llista && ed && ed.editL === c.llista;
+        if (edita) return lb + `<div class="seg">${ops.map((o, i) => `<span class="chip">${E(o)} <button data-k="lldel" data-l="${c.llista}" data-i="${i}" title="Eliminar de la llista">×</button></span>`).join("")}</div><div class="row"><input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nou tipus… (Retorn)"><button class="b2" data-k="llfet">Fet</button></div><small>Treure un tipus de la llista no canvia els projectes que ja el tenen.</small>`;
+        return lb + `<div class="seg">${ops.concat(v && !ops.includes(v) ? [v] : []).map(o => `<button class="t ${v === o ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] ? ` style="${v === o ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nom del nou tipus (p. ex. Fashion film) i Retorn" autofocus>` : ""}`;
+      }
       case "url": return lb + `<div class="row"><input data-f="${c.f}" value="${E(v)}" placeholder="https://"><a class="ln" target="_blank" rel="noopener" href="${E(url(v))}" ${v ? "" : "hidden"}>Obrir</a></div>`;
       case "links": return lb + `<textarea data-f="${c.f}" rows="2" placeholder="Un enllaç per línia">${E(v)}</textarea><div class="ls">${String(v).split("\n").filter(x => x.trim()).map(x => `<a class="ln" target="_blank" rel="noopener" href="${E(url(x.trim()))}">${E(x.trim().replace(/^https?:\/\/(www\.)?/, "").slice(0, 40))}</a>`).join("")}</div>`;
       case "proyecto": return lb + `<select data-f="${c.f}"><option value="">—</option>${ps.slice().sort((a, b) => (a.titulo || "").localeCompare(b.titulo || "")).map(p => `<option value="${p.id}" ${v === p.id ? "selected" : ""}>${E(p.titulo || "Sense títol")}</option>`).join("")}</select>`;
@@ -107,8 +118,19 @@ window.H = (() => {
     const cs = await contactos(), c = cs.find(x => (x.nombre + (x.persona ? " · " + x.persona : "")) === t.value || x.nombre === t.value); if (!c) return;
     const l = ed.doc[t.dataset.f] = (ed.doc[t.dataset.f] || []).filter(x => x !== c.id).concat(c.id); put(ed.doc); editar(ed.campos, ed.doc, ed.opt);
   });
+  ov.addEventListener("keydown", e => {
+    const t = e.target; if (!ed || !t.classList.contains("pnou") || e.key !== "Enter" || !t.value.trim()) return;
+    const c = ed.campos.find(x => x.llista === t.dataset.l), v = t.value.trim(), l = opsDe(c).slice();
+    if (!l.includes(v)) l.push(v); desaLlista(t.dataset.l, l);
+    if (!ed.editL) ed.doc[t.dataset.f] = v; ed.nouL = null; put(ed.doc); changed(); editar(ed.campos, ed.doc, ed.opt);
+  });
   ov.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b || !ed) return; const k = b.dataset.k, d = ed.doc;
+    if (k === "llnou") { ed.nouL = b.dataset.l; ed.editL = null; await editar(ed.campos, d, ed.opt); const i = box().querySelector(".pnou"); i && i.focus(); return }
+    if (k === "lled") { ed.editL = b.dataset.l; ed.nouL = null; return editar(ed.campos, d, ed.opt) }
+    if (k === "llfet") { ed.editL = null; return editar(ed.campos, d, ed.opt) }
+    if (k === "lldel") { const c = ed.campos.find(x => x.llista === b.dataset.l), l = opsDe(c).slice(); l.splice(+b.dataset.i, 1); desaLlista(b.dataset.l, l); changed(); return editar(ed.campos, d, ed.opt) }
+    if (k === "desar") { await put(d, 1); cerrar(); toast("Desat"); return }
     if (k === "pill") { d[b.dataset.f] = d[b.dataset.f] === b.dataset.v ? "" : b.dataset.v; put(d); editar(ed.campos, d, ed.opt) }
     if (k === "qarch" && confirm("Treure aquest arxiu?")) { api("DELETE", "archivo/" + b.dataset.v).catch(() => {}); d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x.id !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
     if (k === "quita") { d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
@@ -127,14 +149,16 @@ window.H = (() => {
       const l = await col(cfg.tipo);
       const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!tab2 || d[cfg.tabs2.f] === tab2) && (!q || JSON.stringify(d).toLowerCase().includes(q))).sort(cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
       const lista = cfg.grupos ? cfg.grupos(vis) : [["", vis]];
+      await llistes();
+      if (cfg.tabs) { const ops = opsDe(cfg.tabs); el.querySelector(".tabsw").innerHTML = `<div class="tabs"><button class="t ${tab ? "" : "on"}" data-k="tab" data-v="">Tot<small></small></button>${ops.map(o => `<button class="t ${tab === o ? "on" : ""}" data-k="tab" data-v="${E(o)}">${E(o)}<small></small></button>`).join("")}</div>` }
       el.querySelectorAll('[data-k="tab"] small').forEach(x => { const v = x.parentNode.dataset.v, n = v ? l.filter(d => d[cfg.tabs.f] === v).length : l.length; x.textContent = n ? " " + n : "" });
       el.querySelector(".hl").innerHTML = vis.length ? lista.filter(g => g[1].length).map(([g, ds]) => (g ? `<h2>${E(g)} <span>${ds.length}</span></h2>` : "") + ds.map(d => { const r = cfg.fila(d); return `<div class="r" data-k="abre" data-id="${d.id}"><i class="dot" style="background:${r.c || "#c7c7cc"}"></i><div class="g"><b>${E(r.t || "Sense títol")}</b><small>${E(r.s || "")}</small></div></div>` }).join("")).join("") : `<p class="em">Encara no hi ha res. Prem «+ ${E(cfg.nuevo)}» per començar.</p>`;
     }
-    el.innerHTML = (cfg.tabs ? `<div class="tabs"><button class="t on" data-k="tab" data-v="">Tot<small></small></button>${cfg.tabs.op.map(o => `<button class="t" data-k="tab" data-v="${E(o)}">${E(o)}<small></small></button>`).join("")}</div>` : "") +
+    el.innerHTML = `<div class="tabsw"></div>` +
       `${cfg.tabs2 ? `<div class="seg" style="margin:0 0 12px"><button class="t on" data-k="tab2" data-v="">Tots</button>${cfg.tabs2.op.map(o => `<button class="t" data-k="tab2" data-v="${E(o)}">${E(o)}</button>`).join("")}</div>` : ""}<div class="bar"><input class="hq" placeholder="Cerca…"><span style="flex:1"></span><button class="b" data-k="nuevo">+ ${E(cfg.nuevo)}</button></div><div class="hl"><p class="em">Carregant…</p></div>`;
     el.addEventListener("click", async e => {
       const b = e.target.closest("[data-k]"); if (!b) return;
-      if (b.dataset.k === "tab") { tab = b.dataset.v; el.querySelectorAll('[data-k="tab"]').forEach(x => x.classList.toggle("on", x === b)); pintar() }
+      if (b.dataset.k === "tab") { tab = b.dataset.v; pintar() }
       if (b.dataset.k === "tab2") { tab2 = b.dataset.v; el.querySelectorAll('[data-k="tab2"]').forEach(x => x.classList.toggle("on", x === b)); pintar() }
       if (b.dataset.k === "abre") { const d = (await col(cfg.tipo)).find(x => x.id === b.dataset.id); editar(cfg.campos, d, opt(d)) }
       if (b.dataset.k === "nuevo") { const d = Object.assign({ id: uid(cfg.tipo) }, cfg.defecto ? cfg.defecto() : {}, cfg.tabs && tab ? { [cfg.tabs.f]: tab } : {}, cfg.tabs2 && tab2 ? { [cfg.tabs2.f]: tab2 } : {}); put(d, 1); editar(cfg.campos, d, opt(d)); setTimeout(() => { const i = box().querySelector("input.big"); i && i.focus() }, 50) }
@@ -156,5 +180,5 @@ window.H = (() => {
       sec("Festivals i convocatòries", f.filter(x => x.proyecto === pid), x => `${E(x.titulo || "")}${x.estado ? " · " + E(x.estado) : ""}`);
   }
 
-  return { MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
+  return { llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
 })();

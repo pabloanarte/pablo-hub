@@ -1,17 +1,24 @@
 // Guiones técnicos: tabla editable por escenas, con colores por escala, imágenes, pegar desde Sheets y exportar a PDF/Excel.
 (() => {
   const { E, escColor, escNorm, ESC, FILA, BANDA, uid } = R, el = document.getElementById("s-guiones");
-  // Columnas del guion técnico. Para añadir una: una línea aquí.
-  const COLS = [
+  // Columnes base del guió tècnic (l'ordre, les visibles i les columnes pròpies es configuren a "Columnes").
+  const BASE = [
     { k: "num", l: "Pl.", w: 46 }, { k: "sujeto", l: "Subjecte", w: 120 }, { k: "escala", l: "Escala", w: 74, t: "escala" },
-    { k: "angulo", l: "Angulació", w: 96 }, { k: "posicion", l: "Posició càmera", w: 96 }, { k: "mov", l: "Moviment", w: 104 },
+    { k: "angulo", l: "Ang. vertical", w: 104, dl: "dl-av" }, { k: "posicion", l: "Ang. horitzontal", w: 110, dl: "dl-ah" }, { k: "mov", l: "Moviment", w: 104 },
     { k: "soporte", l: "Suport", w: 90 }, { k: "lente", l: "Òptica", w: 64 }, { k: "sonido", l: "So", w: 74 }, { k: "fps", l: "FPS", w: 50 },
     { k: "desc", l: "Descripció", w: 230 }, { k: "accion", l: "Acció / diàleg", w: 210 }, { k: "notas", l: "Notes", w: 160 },
     { k: "set", l: "Set", w: 110 }, { k: "dur", l: "Min. rodatge", w: 64 }, { k: "img", l: "Imatge", w: 140, t: "img" }
   ];
-  const OCULTAS = ["posicion", "fps"];
+  const AMB_MIN = ["Videoclip", "Publicitat"]; // tipus de projecte que mostren "Min. rodatge" per defecte
   let doc = null;
-  const vis = () => COLS.filter(c => !(doc.ocultas || OCULTAS).includes(c.k));
+  const totes = () => { const o = (doc.cols || []).filter(k => BASE.some(c => c.k === k) || (doc.custom || {})[k]); BASE.forEach(c => { if (!o.includes(c.k)) o.push(c.k) }); Object.keys(doc.custom || {}).forEach(k => { if (!o.includes(k)) o.push(k) }); return o.map(k => BASE.find(c => c.k === k) || { k, l: doc.custom[k], w: 150 }) };
+  const vis = () => totes().filter(c => !(doc.ocultas || []).includes(c.k));
+  // Columnes per defecte: les desades com a predeterminades o, si no, totes menys FPS (i Min. rodatge si el projecte no és videoclip ni publicitat)
+  async function perDefecte(d) {
+    const aj = (await H.col("ajust")).find(x => x.id === "ajust:gt"), p = (await H.col("proyecto")).find(x => x.id === d.proyecto);
+    if (aj) { d.cols = aj.cols.slice(); d.custom = { ...(aj.custom || {}) }; d.ocultas = aj.ocultas.slice(); d.colsAuto = false; return }
+    d.cols = BASE.map(c => c.k); d.custom = d.custom || {}; d.ocultas = ["fps"].concat(p && AMB_MIN.includes(p.categoria) ? [] : ["dur"]); d.colsAuto = true;
+  }
   const save = () => H.put(doc);
   const planos = () => doc.escenas.flatMap(e => e.planos);
   const minTot = l => l.reduce((a, p) => a + (+p.dur || 0), 0);
@@ -27,24 +34,25 @@
   }
 
   // ---------- editor ----------
-  async function abrir(id) { doc = (await H.col("gt")).find(x => x.id === id); if (doc) pintar() }
+  async function abrir(id) { doc = (await H.col("gt")).find(x => x.id === id); if (!doc) return; if (!doc.ocultas || !doc.cols) { await perDefecte(doc); save() } pintar() }
   function celda(c, p, ei, pi) {
     const d = `data-e="${ei}" data-p="${pi}" data-f="${c.k}"`;
     if (c.t === "img") return `<td class="ci" ${d}>${p.img ? `<div class="thumb"><img src="${R.imgUrl(p.img)}" data-k="ver" alt=""><button data-k="qimg" ${d} title="Treure">×</button></div>` : `<label class="addimg">＋ imagen<input type="file" accept="image/*" data-k="img" ${d} hidden></label>`}</td>`;
     if (c.t === "escala") return `<td style="background:${p.escala ? escColor(p.escala) + "33" : ""}"><input class="cel esc" list="dl-esc" value="${E(p.escala || "")}" ${d} style="border-left:4px solid ${p.escala ? escColor(p.escala) : "transparent"}"></td>`;
-    return `<td><textarea class="cel" rows="1" ${d} ${c.k === "set" ? 'list="dl-set"' : ""}>${E(p[c.k] || "")}</textarea></td>`;
+    if (c.dl) return `<td><input class="cel" list="${c.dl}" ${d} value="${E(p[c.k] || "")}"></td>`;
+    return `<td><textarea class="cel" rows="1" ${d}>${E(p[c.k] || "")}</textarea></td>`;
   }
   function pintar() {
     const cs = vis(), sets = [...new Set(doc.escenas.map(e => e.lugar).concat(planos().map(p => p.set)).filter(Boolean))];
     H.col("proyecto").then(ps => { const s = el.querySelector("#gt-proy"); if (s) s.innerHTML = `<option value="">Sense projecte</option>` + ps.map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("") });
     const pl = planos();
     el.innerHTML = `<div class="bar" style="flex-wrap:wrap;gap:8px"><button class="b2" data-k="volver">← Guions</button><input class="tt" data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol" style="max-width:280px;font-weight:700">
-      <select id="gt-proy" data-d="proyecto" style="width:auto"></select><input data-d="version" value="${E(doc.version || "")}" placeholder="Versión" style="width:110px">
+      <select id="gt-proy" data-d="proyecto" style="width:auto"></select><input data-d="version" value="${E(doc.version || "")}" placeholder="Versió" style="width:110px">
       <span style="flex:1"></span><small>${doc.escenas.length} esc · ${pl.length} plans · ${Math.round(minTot(pl) / 6) / 10} h</small>
       <button class="b2" data-k="pegar">Enganxar des de Sheets</button><button class="b2" data-k="cols">Columnes</button><button class="b2" data-k="renum">Renumerar</button>
       ${R.selLang()}<button class="b2" data-k="pdf">PDF</button><button class="b2" data-k="xls">Excel</button><button class="b" data-k="plan">Crear pla de rodatge →</button></div>
       <div class="lg">${ESC.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}<span style="margin-left:auto">Arrossega ⋮⋮ per reordenar · deixa anar una imatge sobre una fila per afegir-la</span></div>
-      <div class="shw"><table class="gt"><thead><tr><th style="width:44px"></th>${cs.map(c => `<th style="min-width:${c.w}px">${c.l}</th>`).join("")}<th style="width:60px"></th></tr></thead><tbody>` +
+      <div class="shw"><table class="gt"><tbody>` +
       doc.escenas.map((e, ei) => `<tr class="eh" data-e="${ei}" style="--c:${e.color || BANDA.escena}"><td colspan="${cs.length + 2}"><div class="ehd">
         <span class="hd" draggable="true" data-dragesc="${ei}">⋮⋮</span><b>ESC</b><input data-se="${ei}" data-f="num" value="${E(e.num || "")}" style="width:46px">
         <select data-se="${ei}" data-f="intext">${["", "INT", "EXT", "INT/EXT"].map(o => `<option ${o === (e.intext || "") ? "selected" : ""}>${o}</option>`).join("")}</select>
@@ -52,13 +60,13 @@
         <input data-se="${ei}" data-f="paginas" value="${E(e.paginas || "")}" placeholder="Pàg." style="width:64px"><input data-se="${ei}" data-f="sinopsis" value="${E(e.sinopsis || "")}" placeholder="Sinopsi de l'escena" style="flex:1;min-width:160px">
         <small>${e.planos.length} pl · ${minTot(e.planos)} min</small>
         <span class="sw">${["#3b4a5a", "#7a1f2b", "#1f4e79", "#2e6b3a", "#6b3fa0", "#b35c00", "#555"].map(c => `<i data-k="cesc" data-e="${ei}" data-c="${c}" style="background:${c}"></i>`).join("")}</span>
-        <button class="x" data-k="delesc" data-e="${ei}" title="Esborrar escena">×</button></div></td></tr>` +
+        <button class="x" data-k="delesc" data-e="${ei}" title="Esborrar escena">×</button></div></td></tr><tr class="ch"><th style="width:44px"></th>${cs.map(c => `<th style="min-width:${c.w}px">${E(c.l)}</th>`).join("")}<th style="width:60px"></th></tr>` +
         e.planos.map((p, pi) => `<tr class="pr" draggable="false" data-e="${ei}" data-p="${pi}" style="${p.color ? "background:" + FILA[p.color] : ""}${p.ok ? ";opacity:.55" : ""}">
           <td class="hdc"><span class="hd" draggable="true" data-drag="${ei},${pi}">⋮⋮</span><input type="checkbox" data-k="ok" data-e="${ei}" data-p="${pi}" ${p.ok ? "checked" : ""} title="Fet"><i class="cdot" data-k="color" data-e="${ei}" data-p="${pi}" style="background:${FILA[p.color] || "#fff"}" title="Color de fila"></i></td>` +
           cs.map(c => celda(c, p, ei, pi)).join("") + `<td class="acc"><button data-k="dup" data-e="${ei}" data-p="${pi}" title="Duplicar">⧉</button><button data-k="del" data-e="${ei}" data-p="${pi}" title="Esborrar">×</button></td></tr>`).join("") +
         `<tr><td></td><td colspan="${cs.length + 1}"><button class="addrow" data-k="addp" data-e="${ei}">+ pla</button></td></tr>`).join("") +
       `</tbody></table></div><button class="b2" style="margin-top:12px" data-k="addesc">+ Escena</button>
-      <datalist id="dl-esc">${ESC.map(x => `<option value="${x[0]}">`).join("")}</datalist><datalist id="dl-set">${sets.map(s => `<option value="${E(s)}">`).join("")}</datalist>
+      <datalist id="dl-av">${["Normal", "Picat", "Contrapicat", "Zenital", "Nadir", "Holandès"].map(x => `<option value="${x}">`).join("")}</datalist><datalist id="dl-ah">${["Frontal", "3/4", "Perfil", "Dorsal", "POV"].map(x => `<option value="${x}">`).join("")}</datalist><datalist id="dl-esc">${ESC.map(x => `<option value="${x[0]}">`).join("")}</datalist><datalist id="dl-set">${sets.map(s => `<option value="${E(s)}">`).join("")}</datalist>
       <datalist id="dl-mom">${["DIA", "NIT", "MATINADA", "CAPVESPRE", "HORA MÀGICA"].map(x => `<option value="${x}">`).join("")}</datalist>`;
     R.ajusta(el);
   }
@@ -67,7 +75,7 @@
   // ---------- eventos ----------
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k, ei = +b.dataset.e, pi = +b.dataset.p;
-    if (k === "nuevo") { const d = { id: H.uid("gt"), titulo: "", escenas: [{ id: uid(), num: "1", intext: "INT", lugar: "", planos: [] }] }; d.escenas[0].planos.push(nuevoPlano(d.escenas[0])); await H.put(d, 1); doc = d; pintar(); el.querySelector(".tt").focus(); return }
+    if (k === "nuevo") { const d = { id: H.uid("gt"), titulo: "", escenas: [{ id: uid(), num: "1", intext: "INT", lugar: "", planos: [] }] }; d.escenas[0].planos.push(nuevoPlano(d.escenas[0])); await perDefecte(d); await H.put(d, 1); doc = d; pintar(); el.querySelector(".tt").focus(); return }
     if (k === "abre") return abrir(b.dataset.id);
     if (!doc) return;
     if (k === "volver") return lista();
@@ -82,15 +90,34 @@
     if (k === "qimg") { const p = doc.escenas[ei].planos[pi]; H.api("DELETE", "archivo/" + p.img).catch(() => { }); delete p.img; save(); pintar() }
     if (k === "ver") window.open(b.src, "_blank");
     if (k === "renum") { doc.escenas.forEach((s, i) => { s.num = String(i + 1); s.planos.forEach((p, j) => p.num = String(j + 1)) }); save(); pintar(); H.toast("Escenes i plans renumerats") }
-    if (k === "cols") H.sheet(`<h2 style="margin-top:0">Columnes visibles</h2>` + COLS.map(c => `<label class="ck"><input type="checkbox" data-col="${c.k}" ${(doc.ocultas || OCULTAS).includes(c.k) ? "" : "checked"}> ${c.l}</label>`).join(""), pintar);
+    if (k === "cols") panell();
     if (k === "pegar") H.sheet(`<h2 style="margin-top:0">Enganxar des de Google Sheets o Excel</h2><p class="em" style="margin-top:0">Selecciona al full les files <b>inclosa la fila de capçalera</b> (Esc, Pla, Subjecte, Escala…), copia (Cmd+C) i enganxa-ho aquí. Reconec les columnes pel nom en català, castellà o anglès.</p><textarea id="gt-paste" rows="12" placeholder="Enganxa aquí…"></textarea><button class="b" data-k="gtimport" style="margin-top:10px">Importar</button>`);
     if (k === "pdf") exportarPDF();
     if (k === "xls") exportarExcel();
     if (k === "plan") { if (!planos().length) return H.toast("Afegeix plans primer"); hubShow("planes"); window.P && P.generar(doc.id) }
   });
-  document.getElementById("hsh").addEventListener("change", e => {
-    const c = e.target.dataset.col; if (!c || !doc) return; const o = new Set(doc.ocultas || OCULTAS); e.target.checked ? o.delete(c) : o.add(c); doc.ocultas = [...o]; save();
+  // ---------- panell de columnes: mostrar/amagar, ordenar, afegir i eliminar columnes pròpies ----------
+  function panell() {
+    const cs = totes();
+    H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Columnes del guió</h2><p class="em" style="margin-top:0">Marca les que vols veure, ordena-les amb les fletxes o afegeix-ne de noves.</p>` +
+      cs.map((c, i) => `<div class="colr"><input type="checkbox" data-gk="vis" data-c="${c.k}" ${(doc.ocultas || []).includes(c.k) ? "" : "checked"}>${BASE.some(b => b.k === c.k) ? `<span>${E(c.l)}</span>` : `<input class="cn" data-gk="nom" data-c="${c.k}" value="${E(c.l)}">`}<button data-gk="up" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button data-gk="down" data-i="${i}" ${i < cs.length - 1 ? "" : "disabled"}>↓</button>${BASE.some(b => b.k === c.k) ? "<i></i>" : `<button data-gk="del" data-c="${c.k}" title="Eliminar columna">×</button>`}</div>`).join("") +
+      `<label>Nova columna</label><div class="row"><input id="gt-ncol" placeholder="P. ex. Atrezzo, Vestuari, Música… (Retorn)"><button class="b2" data-gk="add">Afegir</button></div>
+      <div class="sfoot"><button class="b2" data-gk="def">Fer servir com a columnes per defecte</button><button class="b" data-gk="ok">Fet</button></div><small>Les columnes per defecte s'apliquen als guions tècnics nous.</small>`, pintar);
+  }
+  const hsh = document.getElementById("hsh");
+  hsh.addEventListener("change", e => { const t = e.target; if (!doc || t.dataset.gk !== "vis") return; const o = new Set(doc.ocultas || []); t.checked ? o.delete(t.dataset.c) : o.add(t.dataset.c); doc.ocultas = [...o]; doc.colsAuto = false; save() });
+  hsh.addEventListener("input", e => { const t = e.target; if (!doc || t.dataset.gk !== "nom") return; doc.custom[t.dataset.c] = t.value; save() });
+  const afegeix = () => { const i = document.getElementById("gt-ncol"), v = i.value.trim(); if (!v) return; const k = "x_" + uid(); doc.custom = { ...(doc.custom || {}), [k]: v }; doc.cols = totes().map(c => c.k); doc.colsAuto = false; save(); panell(); setTimeout(() => document.getElementById("gt-ncol").focus(), 30) };
+  hsh.addEventListener("keydown", e => { if (doc && e.target.id === "gt-ncol" && e.key === "Enter") afegeix() });
+  hsh.addEventListener("click", async e => {
+    const b = e.target.closest("[data-gk]"); if (!b || !doc || b.dataset.gk === "vis" || b.dataset.gk === "nom") return; const g = b.dataset.gk, ks = totes().map(c => c.k), i = +b.dataset.i;
+    if (g === "up" || g === "down") { const j = g === "up" ? i - 1 : i + 1;[ks[i], ks[j]] = [ks[j], ks[i]]; doc.cols = ks; doc.colsAuto = false; save(); panell() }
+    if (g === "del" && confirm("Eliminar aquesta columna i el que hi has escrit?")) { delete doc.custom[b.dataset.c]; doc.cols = ks.filter(k => k !== b.dataset.c); planos().forEach(p => delete p[b.dataset.c]); save(); panell() }
+    if (g === "add") afegeix();
+    if (g === "def") { await H.put({ id: "ajust:gt", cols: ks, ocultas: doc.ocultas || [], custom: doc.custom || {} }, 1); H.toast("Desades com a columnes per defecte") }
+    if (g === "ok") H.cerrar();
   });
+
   document.getElementById("hsh").addEventListener("click", e => {
     if (!e.target.closest('[data-k="gtimport"]') || !doc) return;
     const fs = R.pegar(document.getElementById("gt-paste").value); if (!fs.length) return H.toast("No he reconegut cap fila. Has copiat també la capçalera?");
@@ -115,7 +142,7 @@
   });
   el.addEventListener("change", async e => {
     const t = e.target; if (!doc) return;
-    if (t.dataset.d === "proyecto") { doc.proyecto = t.value; save() }
+    if (t.dataset.d === "proyecto") { doc.proyecto = t.value; if (doc.colsAuto !== false) await perDefecte(doc); save(); pintar() }
     if (t.dataset.se != null && t.tagName === "SELECT") { doc.escenas[+t.dataset.se][t.dataset.f] = t.value; save() }
     if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { doc.escenas[+t.dataset.e].planos[+t.dataset.p].img = id; save(); pintar() } }
   });
@@ -136,11 +163,11 @@
   el.addEventListener("dragend", () => { drag = null; el.querySelectorAll(".dropb").forEach(x => x.classList.remove("dropb")) });
 
   // ---------- exportar ----------
-  const lb = c => R.t("c_" + c.k, c.l), banda = e => `${R.t("esc")} ${e.num || ""} · ${[e.intext, e.lugar, R.tv(e.momento)].filter(Boolean).join(" · ")}${e.paginas ? " · " + e.paginas + " " + R.t("pags") : ""}${e.sinopsis ? " — " + e.sinopsis : ""}`;
+  const lb = c => c.k.startsWith("x_") ? c.l : R.t("c_" + c.k, c.l), banda = e => `${R.t("esc")} ${e.num || ""} · ${[e.intext, e.lugar, R.tv(e.momento)].filter(Boolean).join(" · ")}${e.paginas ? " · " + e.paginas + " " + R.t("pags") : ""}${e.sinopsis ? " — " + e.sinopsis : ""}`;
   function exportarPDF() {
     const cs = vis();
-    R.pdf(`<div class="pz"><h1>${E(doc.titulo || R.t("gt"))}</h1><p>${E([R.t("gt"), doc.version].filter(Boolean).join(" · "))}</p><table><thead><tr>${cs.map(c => `<th>${E(lb(c))}</th>`).join("")}</tr></thead><tbody>` +
-      doc.escenas.map(e => `<tr><td colspan="${cs.length}" class="band" style="background:${e.color || BANDA.escena};color:#fff">${E(banda(e))}</td></tr>` +
+    R.pdf(`<div class="pz"><h1>${E(doc.titulo || R.t("gt"))}</h1><p>${E([R.t("gt"), doc.version].filter(Boolean).join(" · "))}</p><table><tbody>` +
+      doc.escenas.map(e => `<tr><td colspan="${cs.length}" class="band" style="background:${e.color || BANDA.escena};color:#fff">${E(banda(e))}</td></tr><tr>${cs.map(c => `<th>${E(lb(c))}</th>`).join("")}</tr>` +
         e.planos.map(p => `<tr style="${p.color ? "background:" + FILA[p.color] : ""}">${cs.map(c => c.t === "img" ? `<td>${p.img ? `<img src="${R.imgUrl(p.img)}">` : ""}</td>` : c.t === "escala" ? `<td style="background:${p.escala ? escColor(p.escala) : ""};color:${p.escala ? "#fff" : ""};font-weight:700">${E(R.escX(p.escala))}</td>` : `<td>${E(p[c.k] || "")}</td>`).join("")}</tr>`).join("")).join("") + `</tbody></table></div>`);
   }
   function exportarExcel() {
@@ -148,7 +175,7 @@
     R.excel(R.t("gt") + " " + (doc.titulo || ""), [{
       nombre: R.t("gt"), titulo: R.t("gt") + " · " + (doc.titulo || "").toUpperCase(), sub: doc.version ? [doc.version] : [],
       cols: cs.map(c => ({ l: lb(c), w: c.t === "img" ? 18 : Math.round(c.w / 7), izq: ["desc", "accion", "notas"].includes(c.k) })),
-      filas: doc.escenas.flatMap(e => [{ banda: banda(e), color: e.color || BANDA.escena, blanco: 1 }]
+      sinCab: 1, filas: doc.escenas.flatMap(e => [{ banda: banda(e), color: e.color || BANDA.escena, blanco: 1 }, { cab: 1 }]
         .concat(e.planos.map(p => ({ celdas: cs.map(c => c.t === "img" ? "" : c.t === "escala" ? R.escX(p.escala) : p[c.k] || ""), color: FILA[p.color] || "", colores: ie >= 0 && p.escala ? { [ie]: escColor(p.escala) } : {}, img: ii >= 0 ? p.img : null, imgCol: ii }))))
     }]);
   }

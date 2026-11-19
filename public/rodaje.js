@@ -2,11 +2,11 @@
 window.R = (() => {
   const E = H.E;
   // ---------- escalas de plano y sus colores ----------
-  const ESC = [["GPG", "#5856d6"], ["PG", "#0a84ff"], ["PE", "#32ade6"], ["PA", "#00b8a9"], ["PM", "#30b27a"], ["PMC", "#8bc34a"], ["PP", "#ff9f0a"], ["PPP", "#ff6b35"], ["PD", "#ff375f"], ["INS", "#af52de"]];
-  const SINON = { LS: "PG", WS: "PG", ELS: "GPG", EWS: "GPG", FS: "PE", MLS: "PA", MS: "PM", MCU: "PMC", CU: "PP", ECU: "PPP", DETAIL: "PD", DETALLE: "PD", INSERT: "INS", "PLANO DETALLE": "PD", "PRIMER PLANO": "PP", "PLANO MEDIO": "PM", "PLANO GENERAL": "PG" };
+  const ESC = [["GPG", "#5856d6"], ["PG", "#0a84ff"], ["PS", "#32ade6"], ["PA", "#00b8a9"], ["PM", "#30b27a"], ["PMC", "#8bc34a"], ["PP", "#ff9f0a"], ["PPP", "#ff6b35"], ["PD", "#ff375f"]];
+  const SINON = { LS: "PG", WS: "PG", ELS: "GPG", EWS: "GPG", FS: "PS", PE: "PS", MLS: "PA", MS: "PM", MCU: "PMC", CU: "PP", ECU: "PPP", DETAIL: "PD", DETALLE: "PD", INSERT: "PD", INS: "PD", "PLA DETALL": "PD", "PLA SENCER": "PS", "PLANO ENTERO": "PS", "PLANO DETALLE": "PD", "PRIMER PLANO": "PP", "PLANO MEDIO": "PM", "PLANO GENERAL": "PG" };
   const escNorm = v => { const s = String(v || "").toUpperCase().trim(); if (!s) return ""; const f = s.split(/[\s/,+]|TO/)[0]; return SINON[s] || SINON[f] || (ESC.find(x => x[0] === f) || [])[0] || f };
   const escColor = v => (ESC.find(x => x[0] === escNorm(v)) || [])[1] || "#c7c7cc";
-  const ORDEN_ESC = ["GPG", "PG", "PE", "PA", "PM", "PMC", "PP", "PPP", "PD", "INS"];
+  const ORDEN_ESC = ["GPG", "PG", "PS", "PA", "PM", "PMC", "PP", "PPP", "PD"];
   // Colores de bandas y filas (como en tus planes de rodaje)
   const BANDA = { set: "#f8c8cc", proceso: "#fff3b0", comida: "#a9c7f5", wrap: "#4a86e8", call: "#34c759", ready: "#7fe3f0", escena: "#3b4a5a" };
   const FILA = ["", "#ffe5e5", "#fff4cc", "#e3f6e3", "#e1efff", "#efe5ff", "#eeeeee"];
@@ -28,8 +28,8 @@ window.R = (() => {
   // Reconoce las cabeceras habituales (castellano, catalán, inglés) y las convierte a campos del guion técnico.
   const CAB = {
     esc: ["esc", "escena", "scene", "sc", "seq"], num: ["pla", "plano", "shot", "pl", "nº", "n", "#"], sujeto: ["sujeto", "subjecte", "subject", "personajes", "personatges"],
-    escala: ["valor de pl", "valor de plano", "escala", "shot size", "tamaño", "valor"], posicion: ["camera position", "posición", "posicio", "ang. horiz.", "angulo horizontal"],
-    angulo: ["angle", "angulación", "angulacio", "ang. vert.", "angulo", "ángulo"], mov: ["movement", "movimiento", "moviment", "mov. de càmera", "mov. de camara", "mov"],
+    escala: ["valor de pl", "valor de plano", "escala", "shot size", "tamaño", "valor"], posicion: ["camera position", "posición", "posicio", "posició", "ang. horiz.", "ang. horitz.", "angulo horizontal", "ángulo horizontal", "angulación horizontal", "angulació horitzontal", "horizontal angle"],
+    angulo: ["angle", "angulación", "angulacio", "angulació", "ang. vert.", "angulo", "ángulo", "angulación vertical", "angulació vertical", "vertical angle"], mov: ["movement", "movimiento", "moviment", "mov. de càmera", "mov. de camara", "mov"],
     soporte: ["equipment", "soporte", "suport", "equipo"], lente: ["lens", "lente", "òptica", "optica", "objetivo"], sonido: ["sound", "sonido", "so"],
     desc: ["description", "descripción", "descripcio", "descripció", "acció", "acción", "action", "accio"], dialogo: ["diálogo", "dialogo", "dialeg", "diàleg", "dialogue"],
     notas: ["notes", "notas", "anotaciones", "anotacions", "fx/notes", "observaciones"], dur: ["duración", "durada", "duration", "dur"], fps: ["fps"], intext: ["int./ext.", "int/ext", "int.ext", "int-ext"], set: ["set", "localización", "localitzacio", "location"]
@@ -70,8 +70,10 @@ window.R = (() => {
       const banda = (txt, color, opts = {}) => { const r = ws.addRow([txt]); ws.mergeCells(r.number, 1, r.number, n); const c = r.getCell(1); c.alignment = { horizontal: "center", vertical: "middle", wrapText: true }; c.font = { bold: true, size: opts.size || 10, color: { argb: opts.blanco ? "FFFFFFFF" : "FF000000" } }; if (color) c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(color) } }; r.height = opts.alto || 18; return r };
       if (h.titulo) banda(h.titulo, "#000000", { blanco: 1, size: 14, alto: 26 });
       (h.sub || []).forEach(s => banda(s.t || s, s.color || null, { blanco: s.blanco }));
-      const cab = ws.addRow(h.cols.map(c => c.l)); cab.eachCell(c => { c.font = { bold: true, size: 9 }; c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(h.colorCab || "#cfe2f3") } }; c.alignment = { horizontal: "center", vertical: "middle", wrapText: true }; c.border = borde }); cab.height = 22;
+      const capcal = () => { const cab = ws.addRow(h.cols.map(c => c.l)); cab.eachCell(c => { c.font = { bold: true, size: 9 }; c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(h.colorCab || "#cfe2f3") } }; c.alignment = { horizontal: "center", vertical: "middle", wrapText: true }; c.border = borde }); cab.height = 22 };
+      if (!h.sinCab) capcal();
       for (const f of h.filas) {
+        if (f.cab) { capcal(); continue }
         if (f.banda != null) { banda(f.banda, f.color, { blanco: f.blanco }); continue }
         const r = ws.addRow(f.celdas);
         r.eachCell({ includeEmpty: true }, (c, i) => {
@@ -100,15 +102,15 @@ window.R = (() => {
 
   // ---------- idioma de les exportacions (PDF i Excel): ca / es / en ----------
   const L = {
-    ca: { c_num: "Pl.", c_sujeto: "Subjecte", c_escala: "Escala", c_angulo: "Angulació", c_posicion: "Posició càmera", c_mov: "Moviment", c_soporte: "Suport", c_lente: "Òptica", c_sonido: "So", c_fps: "FPS", c_desc: "Descripció", c_accion: "Acció / diàleg", c_notas: "Notes", c_set: "Set", c_dur: "Min. rodatge", c_img: "Imatge",
+    ca: { c_num: "Pl.", c_sujeto: "Subjecte", c_escala: "Escala", c_angulo: "Angulació vertical", c_posicion: "Angulació horitzontal", c_mov: "Moviment", c_soporte: "Suport", c_lente: "Òptica", c_sonido: "So", c_fps: "FPS", c_desc: "Descripció", c_accion: "Acció / diàleg", c_notas: "Notes", c_set: "Set", c_dur: "Min. rodatge", c_img: "Imatge",
       p_esc: "Esc.", p_mov: "Mov. càmera", p_personajes: "Personatges", p_vestuario: "Vestuari", p_notas: "FX / notes", p_dur: "Durada (min)", p_img: "Ref.", p_angulo: "Angulació", horario: "Horari", hora: "Hora",
       gt: "GUIÓ TÈCNIC", pdr: "PLA DE RODATGE", jornada: "JORNADA", set: "SET", proceso: "PROCÉS", comida: "DINAR", wrap: "WRAP", ready: "READY TO SHOOT", esc: "ESC", pags: "pàg.", ad: "AD",
       t_tarea: "Tasca", t_dep: "Departament", t_ini: "Inici", t_fin: "Fi", t_dias: "Dies", t_estado: "Estat", t_resp: "Responsable", t_proy: "Projecte", sin_dep: "Sense departament", pre: "Calendari de preproducció", post: "Calendari de postproducció" },
-    es: { c_num: "Pl.", c_sujeto: "Sujeto", c_escala: "Escala", c_angulo: "Angulación", c_posicion: "Posición cámara", c_mov: "Movimiento", c_soporte: "Soporte", c_lente: "Lente", c_sonido: "Sonido", c_fps: "FPS", c_desc: "Descripción", c_accion: "Acción / diálogo", c_notas: "Notas", c_set: "Set", c_dur: "Min. rodaje", c_img: "Imagen",
+    es: { c_num: "Pl.", c_sujeto: "Sujeto", c_escala: "Escala", c_angulo: "Angulación vertical", c_posicion: "Angulación horizontal", c_mov: "Movimiento", c_soporte: "Soporte", c_lente: "Lente", c_sonido: "Sonido", c_fps: "FPS", c_desc: "Descripción", c_accion: "Acción / diálogo", c_notas: "Notas", c_set: "Set", c_dur: "Min. rodaje", c_img: "Imagen",
       p_esc: "Esc.", p_mov: "Mov. cámara", p_personajes: "Personajes", p_vestuario: "Vestuario", p_notas: "FX / notas", p_dur: "Duración (min)", p_img: "Ref.", p_angulo: "Angulación", horario: "Horario", hora: "Hora",
       gt: "GUION TÉCNICO", pdr: "PLAN DE RODAJE", jornada: "JORNADA", set: "SET", proceso: "PROCESO", comida: "COMIDA", wrap: "WRAP", ready: "READY TO SHOOT", esc: "ESC", pags: "págs.", ad: "AD",
       t_tarea: "Tarea", t_dep: "Departamento", t_ini: "Inicio", t_fin: "Fin", t_dias: "Días", t_estado: "Estado", t_resp: "Responsable", t_proy: "Proyecto", sin_dep: "Sin departamento", pre: "Calendario de preproducción", post: "Calendario de postproducción" },
-    en: { c_num: "Shot", c_sujeto: "Subject", c_escala: "Shot size", c_angulo: "Angle", c_posicion: "Camera position", c_mov: "Movement", c_soporte: "Equipment", c_lente: "Lens", c_sonido: "Sound", c_fps: "FPS", c_desc: "Description", c_accion: "Action / dialogue", c_notas: "Notes", c_set: "Set", c_dur: "Shooting min.", c_img: "Image",
+    en: { c_num: "Shot", c_sujeto: "Subject", c_escala: "Shot size", c_angulo: "Vertical angle", c_posicion: "Horizontal angle", c_mov: "Movement", c_soporte: "Equipment", c_lente: "Lens", c_sonido: "Sound", c_fps: "FPS", c_desc: "Description", c_accion: "Action / dialogue", c_notas: "Notes", c_set: "Set", c_dur: "Shooting min.", c_img: "Image",
       p_esc: "Sc.", p_mov: "Camera move", p_personajes: "Characters", p_vestuario: "Wardrobe", p_notas: "FX / notes", p_dur: "Duration (min)", p_img: "Ref.", p_angulo: "Angle", horario: "Block", hora: "Time",
       gt: "SHOT LIST", pdr: "SHOOTING SCHEDULE", jornada: "DAY", set: "SET", proceso: "PROCESS", comida: "LUNCH", wrap: "WRAP", ready: "READY TO SHOOT", esc: "SC", pags: "pp.", ad: "AD",
       t_tarea: "Task", t_dep: "Department", t_ini: "Start", t_fin: "End", t_dias: "Days", t_estado: "Status", t_resp: "Owner", t_proy: "Project", sin_dep: "No department", pre: "Pre-production schedule", post: "Post-production schedule" }
@@ -118,12 +120,12 @@ window.R = (() => {
     es: { "Guió": "Guion", "Producció": "Producción", "Càsting": "Casting", "Localitzacions": "Localizaciones", "Art": "Arte", "Vestuari i maquillatge": "Vestuario y maquillaje", "Fotografia": "Fotografía", "So": "Sonido", "Muntatge": "Montaje", "Grafisme": "Grafismo", "Lliuraments": "Entregas", "Distribució": "Distribución", "Pendent": "Pendiente", "En curs": "En curso", "Fet": "Hecho", "DIA": "DÍA", "NIT": "NOCHE", "MATINADA": "AMANECER", "CAPVESPRE": "ATARDECER" },
     en: { "Guió": "Script", "Producció": "Production", "Càsting": "Casting", "Localitzacions": "Locations", "Art": "Art", "Vestuari i maquillatge": "Wardrobe & make-up", "Fotografia": "Camera", "So": "Sound", "Muntatge": "Editing", "Música": "Music", "Color": "Colour", "Grafisme": "Graphics", "Lliuraments": "Deliverables", "Distribució": "Distribution", "Pendent": "To do", "En curs": "In progress", "Fet": "Done", "DIA": "DAY", "DÍA": "DAY", "NIT": "NIGHT", "NOCHE": "NIGHT" }
   };
-  const ESC_EN = { GPG: "EWS", PG: "WS", PE: "FS", PA: "MLS", PM: "MS", PMC: "MCU", PP: "CU", PPP: "ECU", PD: "DETAIL", INS: "INSERT" };
+  const ESC_EN = { GPG: "EWS", PG: "WS", PS: "FS", PA: "MLS", PM: "MS", PMC: "MCU", PP: "CU", PPP: "ECU", PD: "INSERT" };
   const lang = () => { try { return localStorage.getItem("hub-lang-exp") || "ca" } catch (e) { return "ca" } };
   const t = (k, def) => (L[lang()] || L.ca)[k] || L.ca[k] || def || k;
   const tv = v => (V[lang()] || {})[v] || v;
   const loc = () => ({ ca: "ca-ES", es: "es-ES", en: "en-GB" })[lang()];
-  const escX = v => lang() === "en" && v ? String(v).replace(/\b(GPG|PG|PE|PA|PMC|PM|PPP|PP|PD|INS)\b/g, m => ESC_EN[m] || m) : v || "";
+  const escX = v => lang() === "en" && v ? String(v).replace(/\b(GPG|PG|PS|PA|PMC|PM|PPP|PP|PD)\b/g, m => ESC_EN[m] || m) : v || "";
   const selLang = () => `<select class="lang" title="Idioma dels PDF i Excel">${[["ca", "Exportar en català"], ["es", "Exportar en castellà"], ["en", "Exportar en anglès"]].map(([v, l]) => `<option value="${v}" ${v === lang() ? "selected" : ""}>${l}</option>`).join("")}</select>`;
   document.addEventListener("change", e => { if (e.target.matches("select.lang")) { try { localStorage.setItem("hub-lang-exp", e.target.value) } catch (x) { } document.querySelectorAll("select.lang").forEach(s => s.value = e.target.value) } });
 

@@ -8,7 +8,7 @@
     { k: "notas", l: "FX / notes", w: 170 }, { k: "dur", l: "Dur. (min)", w: 54, t: "dur" }, { k: "img", l: "Ref.", w: 120, t: "img" }
   ];
   const BANDAS = { set: "SET", proceso: "PROCESO", comida: "COMIDA", wrap: "WRAP" };
-  const DEF_ESC = "GPG 45, PG 40, PE 35, PA 30, PM 30, PMC 25, PP 20, PPP 15, PD 15, INS 10";
+  const DEF_ESC = "GPG 45, PG 40, PS 35, PA 30, PM 30, PMC 25, PP 20, PPP 15, PD 15";
   let doc = null, dia = 0;
   const save = () => H.put(doc);
   const D = () => doc.dias[dia];
@@ -102,7 +102,7 @@
         const acc = `<td class="acc"><select data-k="mover" data-i="${i}" title="Moure a una altra jornada"><option>→</option>${doc.dias.map((x, j) => j === dia ? "" : `<option value="${j}">J${j + 1}</option>`).join("")}</select><button data-k="del" data-i="${i}" title="Esborrar">×</button></td>`;
         if (f.tipo !== "plano") {
           const c = BANDA[f.tipo] || "#eee", dur = ["proceso", "comida"].includes(f.tipo);
-          return `<tr class="pr band" data-i="${i}" style="background:${c};${f.tipo === "wrap" ? "color:#fff" : ""}">${mano}<td colspan="2" class="hora">${f.tipo === "set" ? "" : aHora(h.ini) + (dur ? " – " + aHora(h.fin) : "")}</td><td colspan="${COLS.length - 2}"><input class="cel bt" data-i="${i}" data-f="texto" value="${E(f.texto || "")}" placeholder="${BANDAS[f.tipo]}" style="${f.tipo === "set" ? "text-align:center;font-weight:700" : "font-weight:600"}"></td><td>${dur ? `<input class="cel" data-i="${i}" data-f="dur" value="${E(f.dur || "")}" style="text-align:center">` : ""}</td><td><input class="cel" data-i="${i}" data-f="fija" value="${E(f.fija || "")}" placeholder="hora fija" title="Hora fixa (opcional)" style="font-size:11px"></td>${acc}</tr>`;
+          return `<tr class="pr band" data-i="${i}" style="background:${c};${f.tipo === "wrap" ? "color:#fff" : ""}">${mano}<td colspan="2" class="hora">${f.tipo === "set" ? "" : aHora(h.ini) + (dur ? " – " + aHora(h.fin) : "")}</td><td colspan="${COLS.length - 2}"><input class="cel bt" data-i="${i}" data-f="texto" value="${E(f.texto || "")}" placeholder="${BANDAS[f.tipo]}" style="${f.tipo === "set" ? "text-align:center;font-weight:700" : "font-weight:600"}"></td><td>${dur ? `<input class="cel" data-i="${i}" data-f="dur" value="${E(f.dur || "")}" style="text-align:center">` : ""}</td><td><input class="cel" data-i="${i}" data-f="fija" value="${E(f.fija || "")}" placeholder="hora fixa" title="Hora fixa (opcional)" style="font-size:11px"></td>${acc}</tr>`;
         }
         const b = bl[i];
         return `<tr class="pr" data-i="${i}" style="${f.color ? "background:" + FILA[f.color] : ""}${f.rodado ? ";opacity:.45" : ""}">${mano}${b ? `<td class="blk" rowspan="${b.n}">${aHora(b.ini)} – ${aHora(b.fin)}</td>` : ""}<td class="hora">${aHora(h.ini)}<br><small>${aHora(h.fin)}</small></td>` +
@@ -152,7 +152,7 @@
       const o = { fecha: v("g-fecha").value, call: v("g-call").value, ready: v("g-ready").value, horas: +v("g-horas").value || 10, comida: v("g-comida").value, comdur: +v("g-comdur").value || 0, cambio: +v("g-cambio").value || 0, orden: v("g-orden").value, min: v("g-min").value, hechos: v("g-hechos").checked };
       const dias = construir(gt, o);
       if (regenerando) { doc = regenerando; doc.dias = dias; regenerando = null } else doc = { id: H.uid("pdr"), titulo: gt.titulo || "", proyecto: gt.proyecto || "", gt: gt.id, ad: "", dias };
-      await H.put(doc, 1); dia = 0; H.cerrar(); pintar(); H.toast(`Pla creat: ${dias.length} ${dias.length > 1 ? "jornadas" : "jornada"}`);
+      await H.put(doc, 1); dia = 0; H.cerrar(); pintar(); H.toast(`Pla creat: ${dias.length} ${dias.length > 1 ? "jornades" : "jornada"}`);
     }
     if (b.dataset.k === "addpend" && doc) {
       const g = (await H.col("gt")).find(x => x.id === doc.gt), e2 = g.escenas.find(e => e.planos.some(p => p.id === b.dataset.ref)), p = e2.planos.find(p => p.id === b.dataset.ref);

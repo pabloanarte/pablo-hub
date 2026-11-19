@@ -5,10 +5,10 @@
   H.coleccion({
     sec: "proyectos", tipo: "proyecto", nuevo: "Projecte",
     tabs2: { f: "rol", op: ["Direcció", "Ajudant de direcció", "Script"] },
-    tabs: { f: "categoria", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
+    tabs: { f: "categoria", llista: "proj_cat", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
     campos: [
       { f: "titulo", tipo: "titulo" },
-      { f: "categoria", l: "Categoria", tipo: "pills", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
+      { f: "categoria", l: "Tipus de projecte", tipo: "pills", llista: "proj_cat", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
       { f: "rol", l: "El meu rol", tipo: "pills", op: ["Direcció", "Ajudant de direcció", "Script"], col: { "Direcció": "#000", "Ajudant de direcció": "#0a84ff", "Script": "#af52de" } },
       { f: "estado", l: "Estat", tipo: "pills", op: EST, col: CE },
       { f: "anio", l: "Any", tipo: "number" },

@@ -1,6 +1,6 @@
 // Postproducción: cronograma por departamentos (ver crono.js). Departamentos y plantilla editables aquí.
 Crono({
-  sec: "postproduccion", tipo: "post", nombre: "postproducción", titulo: "Calendari de postproducció",
+  sec: "postproduccion", tipo: "post", nombre: "postproducció", titulo: "Calendari de postproducció",
   cats: [["Muntatge", "#0a84ff"], ["So", "#a2845e"], ["Música", "#ff375f"], ["Color", "#ff9f0a"], ["VFX", "#af52de"], ["Grafisme", "#32ade6"], ["Lliuraments", "#30b27a"], ["Distribució", "#5856d6"]],
   plantilla: [
     ["Bolcat, còpia de seguretat i sincronització", "Muntatge", 2], ["Primer muntatge", "Muntatge", 10], ["Música", "Música", 15, 0, 1], ["Muntatge fi", "Muntatge", 7],

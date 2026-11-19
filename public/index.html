@@ -92,10 +92,13 @@ small{color:var(--mut);font-size:12px}.em{color:var(--mut);font-size:14px;margin
 .split{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:24px;align-items:start}@media(max-width:1000px){.split{grid-template-columns:1fr}}
 .pub{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));margin-top:20px;background:#000;color:#fff;border-radius:14px;padding:10px 10px 10px 16px;display:flex;justify-content:space-between;align-items:center;font-size:14px;max-width:760px}
 .form{max-width:760px}
+.colr{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f2}.colr>input[type=checkbox]{width:18px;height:18px;margin:0;flex:none}.colr span,.colr .cn{flex:1}.colr .cn{margin:0;padding:6px 8px}.colr button{border:1px solid var(--bd);background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;flex:none}.colr i{width:30px;flex:none}
+.sfoot{display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:12px;border-top:1px solid var(--bd)}.sfoot .del{margin:0}.sfoot .b{min-width:110px}
 /* tablas tipo hoja (guiones técnicos y planes de rodaje) */
 .shw{overflow:auto;border:1px solid var(--bd);border-radius:12px;max-height:calc(100vh - 230px)}
 table.gt{border-collapse:separate;border-spacing:0;font-size:13px;width:max-content;min-width:100%}
 table.gt th{position:sticky;top:0;z-index:2;background:#cfe2f3;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:8px 6px;border-bottom:1px solid #b9cfe3;text-align:center;white-space:nowrap}
+table.gt tr.ch th{position:static;background:#e3edf7;border-bottom:1px solid #c9d9e8}
 table.gt td{border-bottom:1px solid #ececf0;border-right:1px solid #f2f2f5;padding:0;vertical-align:top}
 .cel{width:100%;border:0!important;border-radius:0!important;margin:0!important;padding:7px 8px!important;font-size:13px!important;background:transparent!important;resize:none;min-height:34px;overflow:hidden;line-height:1.35;display:block}
 .cel:focus{outline:2px solid #000!important;outline-offset:-2px;background:#fff!important}
