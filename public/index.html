@@ -37,17 +37,30 @@ label{display:block;font-size:12px;color:#8e8e93;margin:16px 0 2px}
 #lock input{max-width:260px;text-align:center}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#000;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:20}
 
-#hubnav{margin-bottom:10px}</style></head><body>
+#hubnav{margin-bottom:10px}
+#hsh{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;z-index:9}
+#htoast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#000;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:20;white-space:nowrap}
+.row{display:flex;gap:8px;align-items:center}.row input{flex:1}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#f2f2f7;border-radius:999px;padding:4px 6px 4px 12px;font-size:14px;margin:4px 0}.chip button{border:0;background:none;font-size:16px;cursor:pointer;color:#8e8e93}
+.ck{display:flex;align-items:center;gap:8px;font-size:15px;color:#000}.ck input{width:auto;margin:0}
+.r input[type=checkbox]{width:22px;height:22px;margin:0;flex:none;accent-color:#000}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}.cal>small{text-align:center}
+.cd{min-height:78px;border:1px solid #eee;border-radius:10px;padding:4px;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;gap:2px}.cd b{font-size:12px;font-weight:400}
+.cd.hoy{border:2px solid #000;padding:3px}.cd.hoy b{font-weight:700}
+.cd span{display:block;color:#fff;font-size:10px;border-radius:4px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:600px){.cd{min-height:58px}.cd span{font-size:0;height:6px;padding:0}}
+.pub{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));margin-top:20px;background:#000;color:#fff;border-radius:16px;padding:10px 10px 10px 16px;display:flex;justify-content:space-between;align-items:center;font-size:14px}
+button:disabled{opacity:.3;cursor:default}</style></head><body>
 <div class="w">
 <h1>PABLO</h1>
 <nav id="hubnav" hidden></nav>
-<section id="s-contactos">
+<section id="s-contactos" hidden>
 <div id="app"><nav id="nav"><button class="t" data-a="nav" data-v="hoy">Seguimiento</button><button class="t" data-a="nav" data-v="contactos">Contactos</button><button class="t" data-a="nav" data-v="plantillas">Plantillas</button><button class="t" data-a="nav" data-v="datos">Datos</button></nav>
 <main id="v"></main></div>
 </section>
-<!-- Nueva sección: añade aquí <section id="s-NOMBRE" hidden></section>, crea sections/NOMBRE.js y registra una línea en hub.js -->
 </div>
 <div id="sh" hidden><div class="sheet" id="shc"></div></div>
 <datalist id="dl"></datalist><div id="toast" hidden></div>
+<script src="lib.js"></script>
 <script src="hub.js"></script>
 </body></html>
