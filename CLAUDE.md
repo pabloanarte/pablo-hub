@@ -12,7 +12,8 @@ Hub personal de Pablo Anarte. Cloudflare Pages (proyecto pablo-hub, carpeta de s
 
 ## Variables en Cloudflare (pablo-hub → Settings → Variables and Secrets)
 - `HUB_PASSWORD`: contraseña de entrada.
+- `ARCHIVOS` (enlace KV, en Bindings): almacén de los archivos que se suben a Proyectos y Brainstorm (máx. 25 MB cada uno).
 - `GITHUB_TOKEN`: token de GitHub con permiso Contents (lectura y escritura) solo en `pabloanarte-web`.
 
 ## Probar en local
-`npx wrangler pages dev public --d1 DB=local --binding HUB_PASSWORD=prueba GITHUB_TOKEN=x`
+`npx wrangler pages dev public --d1 DB=local --kv ARCHIVOS --binding HUB_PASSWORD=prueba GITHUB_TOKEN=x`

@@ -2,7 +2,7 @@
 // Una sección nueva normalmente solo necesita H.coleccion({...}) con su lista de campos.
 window.H = (() => {
   const E = s => String(s ?? "").replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
-  const api = (m, p, b) => fetch("/api/" + p, { method: m, headers: { "content-type": "application/json" }, body: b === undefined ? undefined : JSON.stringify(b) })
+  const api = (m, p, b) => fetch("/api/" + p, { method: m, headers: { "content-type": b instanceof Blob ? (b.type || "application/octet-stream") : "application/json" }, body: b === undefined ? undefined : b instanceof Blob ? b : JSON.stringify(b) })
     .then(async r => { if (r.status === 401) { location.reload(); throw 0 } const d = await r.json().catch(() => ({})); if (!r.ok) throw d; return d });
   const iso = d => new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
   const today = () => iso(new Date());
@@ -71,6 +71,14 @@ window.H = (() => {
         return lb + `<div class="ls">${sel.map(id => `<span class="chip">${E(nom(id))} <button data-k="quita" data-f="${c.f}" data-v="${id}">×</button></span>`).join("")}</div>
         <input data-k="pon" data-f="${c.f}" list="hdl-c" placeholder="Añadir contacto…"><datalist id="hdl-c">${cs.map(x => `<option value="${E(x.nombre + (x.persona ? " · " + x.persona : ""))}">`).join("")}</datalist>`;
       }
+      case "archivos": {
+        const fs = Array.isArray(v) ? v : [], src = a => "/api/archivo/" + a.id;
+        const ver = a => /^image\//.test(a.tipo) ? `<a href="${src(a)}" target="_blank"><img src="${src(a)}" alt="" style="max-width:100%;max-height:220px;border-radius:8px;display:block"></a>`
+          : /^audio\//.test(a.tipo) ? `<audio controls preload="none" src="${src(a)}" style="width:100%"></audio>`
+          : /^video\//.test(a.tipo) ? `<video controls preload="metadata" src="${src(a)}" style="width:100%;max-height:300px;border-radius:8px;background:#000"></video>` : "";
+        return lb + fs.map(a => `<div class="arch">${ver(a)}<div class="row"><a class="g" href="${src(a)}" target="_blank" style="text-decoration:none"><b style="font-size:14px">${E(a.nombre)}</b><small>${a.size < 1048576 ? Math.max(1, Math.round(a.size / 1024)) + " KB" : (a.size / 1048576).toFixed(1) + " MB"}</small></a><button class="t" data-k="qarch" data-f="${c.f}" data-v="${a.id}">Quitar</button></div></div>`).join("") +
+          `<label class="b2" style="display:inline-block;margin-top:6px;color:#000;font-size:14px;cursor:pointer">+ Subir archivos<input type="file" multiple accept="${E(c.accept || "image/*,audio/*,video/*,.pdf")}" data-k="sarch" data-f="${c.f}" hidden></label><small style="display:block;margin-top:4px">Audio, vídeo, imagen o PDF. Máximo 25 MB cada uno; para vídeos más grandes, pega el enlace en Enlaces.</small>`;
+      }
       default: return lb + `<input type="${c.tipo || "text"}" data-f="${c.f}" value="${E(v)}" placeholder="${E(c.ph || "")}">`;
     }
   }
@@ -82,16 +90,27 @@ window.H = (() => {
     put(ed.doc); ed.opt.cambio && ed.opt.cambio();
   });
   ov.addEventListener("change", async e => {
-    const t = e.target; if (!ed || t.dataset.k !== "pon") return;
+    const t = e.target;
+    if (ed && t.dataset.k === "sarch" && t.files.length) {
+      const d = ed.doc, f = t.dataset.f;
+      for (const file of t.files) {
+        if (file.size > 25 * 1024 * 1024) { toast(file.name + " pasa de 25 MB"); continue }
+        toast("Subiendo " + file.name + "…");
+        try { const a = await api("POST", "archivo?nombre=" + encodeURIComponent(file.name), file); d[f] = (d[f] || []).concat(a) } catch (e) { toast(e && e.error === "sin-archivos" ? "Falta activar el almacén de archivos en Cloudflare" : "No se pudo subir " + file.name) }
+      }
+      put(d, 1); if (ed && ed.doc === d) editar(ed.campos, d, ed.opt); toast("Subido"); return;
+    }
+    if (!ed || t.dataset.k !== "pon") return;
     const cs = await contactos(), c = cs.find(x => (x.nombre + (x.persona ? " · " + x.persona : "")) === t.value || x.nombre === t.value); if (!c) return;
     const l = ed.doc[t.dataset.f] = (ed.doc[t.dataset.f] || []).filter(x => x !== c.id).concat(c.id); put(ed.doc); editar(ed.campos, ed.doc, ed.opt);
   });
   ov.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b || !ed) return; const k = b.dataset.k, d = ed.doc;
     if (k === "pill") { d[b.dataset.f] = d[b.dataset.f] === b.dataset.v ? "" : b.dataset.v; put(d); editar(ed.campos, d, ed.opt) }
+    if (k === "qarch" && confirm("¿Quitar este archivo?")) { api("DELETE", "archivo/" + b.dataset.v).catch(() => {}); d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x.id !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
     if (k === "quita") { d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
     if (k === "acc") { await ed.opt.acciones[+b.dataset.i].fn(d); }
-    if (k === "borrar" && confirm("¿Eliminar?")) { await del(d); cerrar(); toast("Eliminado") }
+    if (k === "borrar" && confirm("¿Eliminar?")) { ed.campos.filter(c => c.tipo === "archivos").forEach(c => (d[c.f] || []).forEach(x => api("DELETE", "archivo/" + x.id).catch(() => {}))); await del(d); cerrar(); toast("Eliminado") }
   });
 
   // ---------- sección tipo lista (proyectos, reuniones, festivales, brainstorm…) ----------

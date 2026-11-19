@@ -1,6 +1,7 @@
 // API del hub.
 //  - Datos del hub: tabla docs de D1 (variable DB). Cada documento es un JSON con un id.
 //    Contactos: ids "c_..." y "cfg". Resto de secciones: ids "tipo:xxxx" (p. ej. "reunion:abc").
+//  - Archivos (audios, vídeos, imágenes de Proyectos…): Cloudflare KV (variable ARCHIVOS), máx. 25 MB cada uno.
 //  - Web (pabloanarte.com): lee y escribe public/contenido.json en GitHub (variable GITHUB_TOKEN).
 const REPO = "pabloanarte/pabloanarte-web", RAMA = "main";
 
@@ -31,6 +32,7 @@ export async function onRequest({ request, env, params }) {
       if (m === "DELETE") { await db.prepare("DELETE FROM docs WHERE id=?1").bind(id).run(); return j({ ok: 1 }) }
     }
     if (p === "web" || p.startsWith("web/")) return web(p, m, request, env, j);
+    if (p === "archivo" || p.startsWith("archivo/")) return archivo(p, m, request, env, j);
     return j({ error: "not found" }, 404);
   } catch (e) { return j({ error: String(e.message || e) }, 500) }
 }
@@ -70,3 +72,27 @@ async function web(p, m, request, env, j) {
 }
 function b64(bytes) { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s) }
 function deB64(t) { const s = atob(t.replace(/\s/g, "")); return new TextDecoder().decode(Uint8Array.from(s, c => c.charCodeAt(0))) }
+
+// ---------- Archivos ----------
+async function archivo(p, m, request, env, j) {
+  const kv = env.ARCHIVOS; if (!kv) return j({ error: "sin-archivos" }, 503);
+  if (p === "archivo" && m === "POST") { // ?nombre=cancion.mp3 (cuerpo = el archivo)
+    const u = new URL(request.url), nombre = (u.searchParams.get("nombre") || "archivo").slice(0, 120);
+    const tipo = request.headers.get("content-type") || "application/octet-stream", buf = await request.arrayBuffer();
+    if (buf.byteLength > 25 * 1024 * 1024) return j({ error: "El archivo pasa de 25 MB" }, 413);
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    await kv.put("f:" + id, buf, { metadata: { nombre, tipo, size: buf.byteLength } });
+    return j({ id, nombre, tipo, size: buf.byteLength });
+  }
+  const id = p.slice(8);
+  if (m === "DELETE") { await kv.delete("f:" + id); return j({ ok: 1 }) }
+  if (m === "GET") {
+    const { value, metadata } = await kv.getWithMetadata("f:" + id, "arrayBuffer");
+    if (!value) return new Response("No encontrado", { status: 404 });
+    const h = { "content-type": metadata.tipo, "accept-ranges": "bytes", "cache-control": "private, max-age=31536000", "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(metadata.nombre)}` };
+    const r = (request.headers.get("range") || "").match(/bytes=(\d*)-(\d*)/), n = value.byteLength;
+    if (r) { const a = r[1] ? +r[1] : n - +r[2], b = r[1] && r[2] ? Math.min(+r[2], n - 1) : n - 1; return new Response(value.slice(a, b + 1), { status: 206, headers: { ...h, "content-range": `bytes ${a}-${b}/${n}`, "content-length": String(b - a + 1) } }) }
+    return new Response(value, { headers: { ...h, "content-length": String(n) } });
+  }
+  return j({ error: "not found" }, 404);
+}

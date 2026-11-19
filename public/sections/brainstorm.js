@@ -8,6 +8,7 @@
       { f: "texto", l: "Desarrollo", tipo: "textarea", rows: 12 },
       { f: "etiqueta", l: "Etiqueta", tipo: "pills", op: ["Historia", "Escena", "Personaje", "Imagen", "Videoclip", "Negocio", "Otra"] },
       { f: "proyecto", l: "Proyecto", tipo: "proyecto" },
+      { f: "archivos", l: "Archivos", tipo: "archivos" },
       { f: "enlaces", l: "Referencias", tipo: "links" }
     ],
     orden: (a, b) => (b.fecha || "").localeCompare(a.fecha || ""),

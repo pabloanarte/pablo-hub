@@ -12,10 +12,11 @@
       { f: "anio", l: "Año", tipo: "number" },
       { f: "logline", l: "Logline", tipo: "textarea", rows: 2 },
       { f: "notas", l: "Notas", tipo: "textarea", rows: 8 },
+      { f: "archivos", l: "Archivos (canción, referencias, guion, fotos…)", tipo: "archivos" },
       { f: "enlaces", l: "Enlaces (guion, carpeta, Vimeo…)", tipo: "links" }
     ],
     orden: (a, b) => EST.indexOf(a.estado) - EST.indexOf(b.estado) || (a.titulo || "").localeCompare(b.titulo || ""),
-    fila: d => ({ t: d.titulo, s: [d.categoria, d.estado, d.anio].filter(Boolean).join(" · "), c: CE[d.estado] }),
+    fila: d => ({ t: d.titulo, s: [d.categoria, d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " archivos" : " archivo")].filter(Boolean).join(" · "), c: CE[d.estado] }),
     extra: d => H.relacionados(d.id)
   });
 })();
