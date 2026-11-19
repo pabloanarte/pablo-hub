@@ -36,13 +36,13 @@
   // Correu: qui t'ha respost (correus de contactes posteriors a l'últim enviament) i no llegits
   let cache = null;
   async function correu(c) {
-    const box = document.getElementById("icor"); if (!box || !window.CORREU || !await CORREU.connectat()) return;
+    const box = document.getElementById("icor"); if (!box) return; try { if (!(await H.api("GET", "correu/config")).connectat) return } catch (e) { return }
     const sp = v => String(v || "").split(/[,;\n]+/).map(x => x.trim().toLowerCase()).filter(Boolean), ems = [...new Set(c.flatMap(x => sp(x.email)))];
     try {
       if (!cache || Date.now() - cache.t > 5 * 6e4) { const [r, p] = await Promise.all([H.api("POST", "correu/resum", { correus: ems }), H.api("GET", "correu/programats")]); cache = { t: Date.now(), r, p: p.llista.length } }
       const { r, p } = cache, M = x => x.msgs || [];
       const resp = c.map(x => { const d = sp(x.email).map(e => r.de[e]).filter(Boolean).sort().pop(), ult = M(x).length ? M(x).at(-1).d : ""; return { x, d, ult } }).filter(o => o.d && o.d.slice(0, 10) >= (o.ult || "0") && !["Ha respost", "Reunió", "Descartat"].includes(o.x.estado)).sort((a, b) => b.d.localeCompare(a.d));
-      box.outerHTML = card("Correu", "correu", `<div class="st" style="grid-template-columns:repeat(3,1fr)">${[["No llegits", r.nollegits], ["T'han respost", resp.length], ["Programats", p]].map(([l, n]) => `<div><b>${n}</b><small>${l}</small></div>`).join("")}</div>` +
+      box.outerHTML = card("Correu", "correu", `<div class="st s3">${[["No llegits", r.nollegits], ["T'han respost", resp.length], ["Programats", p]].map(([l, n]) => `<div><b>${n}</b><small>${l}</small></div>`).join("")}</div>` +
         (resp.length ? `<h2>T'han escrit i encara no ho has marcat</h2>` + resp.slice(0, 6).map(o => `<div class="r"><i class="dot" style="background:#30b27a"></i><div class="g" data-ct="${o.x.id}"><b>${E(o.x.nombre)}</b><small>${E(o.x.estado || "Pendent")} · correu del ${fecha(o.d.slice(0, 10))}</small></div><button class="b2" data-hr="${o.x.id}">Ha respost</button></div>`).join("") : ""));
     } catch (e) { box.remove() }
   }

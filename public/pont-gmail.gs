@@ -60,8 +60,9 @@ const ACCIONS = {
   // enviar ara o programar (quan = data ISO)
   envia(q) {
     if (q.quan && new Date(q.quan) > new Date(Date.now() + 60000)) {
-      const id = "P_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      PropertiesService.getScriptProperties().setProperty(id, JSON.stringify({ a: q.a, cc: q.cc || "", assumpte: q.assumpte || "", cos: q.cos || "", fil: q.fil || "", quan: q.quan }));
+      // es desa com a esborrany de Gmail (sense límit de llargada) i només l'hora va a les propietats
+      const dr = esborrany(q), id = "P_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      PropertiesService.getScriptProperties().setProperty(id, JSON.stringify({ d: dr.getId(), a: q.a, assumpte: (q.assumpte || "").slice(0, 200), resum: String(q.cos || "").replace(/\s+/g, " ").slice(0, 200), quan: q.quan, intents: 0 }));
       return { ok: 1, programat: id };
     }
     enviaAra(q); return { ok: 1 };
@@ -70,7 +71,11 @@ const ACCIONS = {
     const p = PropertiesService.getScriptProperties().getProperties();
     return { llista: Object.keys(p).filter(k => k.indexOf("P_") === 0).map(k => Object.assign({ id: k }, JSON.parse(p[k]))).sort((a, b) => a.quan < b.quan ? -1 : 1) };
   },
-  cancela(q) { if (String(q.id).indexOf("P_") === 0) PropertiesService.getScriptProperties().deleteProperty(q.id); return { ok: 1 } },
+  cancela(q) {
+    const ps = PropertiesService.getScriptProperties(), v = String(q.id).indexOf("P_") === 0 && ps.getProperty(q.id);
+    if (v) { try { GmailApp.getDraft(JSON.parse(v).d).deleteDraft() } catch (e) { } ps.deleteProperty(q.id) }
+    return { ok: 1 };
+  },
   // per a Inici: últim correu rebut de cada contacte i últim enviat a cada un
   resum(q) {
     const cs = (q.correus || []).map(x => String(x).toLowerCase()).filter(x => /@/.test(x)).slice(0, 150), de = {}, a = {};
@@ -83,22 +88,32 @@ const ACCIONS = {
   }
 };
 
+// a qui es respon dins d'un fil: l'últim missatge de l'altra persona (si l'últim és meu, reply aniria cap a mi)
+function aQui(q) {
+  const t = q.fil && GmailApp.getThreadById(q.fil); if (!t) return null;
+  const jo = Session.getEffectiveUser().getEmail().toLowerCase(), ms = t.getMessages().filter(m => adreça(m.getFrom()) !== jo);
+  return ms.length ? ms[ms.length - 1] : null;
+}
+function esborrany(q) {
+  const m = aQui(q), o = { name: "Pablo Anarte", cc: q.cc || undefined };
+  return m ? m.createDraftReply(q.cos || "", o) : GmailApp.createDraft(q.a, q.assumpte || "", q.cos || "", o);
+}
 function enviaAra(q) {
-  if (q.fil) {
-    const t = GmailApp.getThreadById(q.fil);
-    // es respon a l'últim missatge de l'altra persona (si l'últim és meu, reply aniria cap a mi)
-    const jo = Session.getEffectiveUser().getEmail().toLowerCase();
-    const ms = t ? t.getMessages().filter(m => adreça(m.getFrom()) !== jo) : [];
-    if (ms.length) { ms[ms.length - 1].reply(q.cos, { name: "Pablo Anarte", cc: q.cc || undefined }); return }
-  }
+  const m = aQui(q);
+  if (m) { m.reply(q.cos, { name: "Pablo Anarte", cc: q.cc || undefined }); return }
   GmailApp.sendEmail(q.a, q.assumpte || "", q.cos || "", { name: "Pablo Anarte", cc: q.cc || undefined });
 }
 
-// Cada 5 minuts: envia el que toca
+// Cada 5 minuts: envia el que toca. Si un enviament falla 3 cops, es queda aturat amb l'error a la llista.
 function enviaProgramats() {
-  const ps = PropertiesService.getScriptProperties(), p = ps.getProperties(), ara = new Date();
-  Object.keys(p).filter(k => k.indexOf("P_") === 0).forEach(k => {
-    const q = JSON.parse(p[k]);
-    if (new Date(q.quan) <= ara) { try { enviaAra(q); ps.deleteProperty(k) } catch (e) { q.error = String(e.message || e); ps.setProperty(k, JSON.stringify(q)) } }
-  });
+  const lock = LockService.getScriptLock(); if (!lock.tryLock(20000)) return;
+  try {
+    const ps = PropertiesService.getScriptProperties(), p = ps.getProperties(), ara = new Date();
+    Object.keys(p).filter(k => k.indexOf("P_") === 0).forEach(k => {
+      const q = JSON.parse(p[k]);
+      if (new Date(q.quan) > ara || q.intents >= 3) return;
+      try { GmailApp.getDraft(q.d).send(); ps.deleteProperty(k) }
+      catch (e) { q.intents = (q.intents || 0) + 1; q.error = String(e.message || e); ps.setProperty(k, JSON.stringify(q)) }
+    });
+  } finally { lock.releaseLock() }
 }

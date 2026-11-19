@@ -80,7 +80,7 @@ function side(c){
  const mg=C.find(x=>x.id===c.manId);
  $("#mg").innerHTML=(mg?`<a class="ln" href="#" data-a="o" data-id="${mg.id}">Fitxa de ${E(mg.nombre)}</a>`:"")+(c.tipo==="Mànager"?"<small>Representa</small> "+C.filter(x=>x.manId===c.id).map(x=>`<a class="ln" href="#" data-a="o" data-id="${x.id}">${E(x.nombre)}</a>`).join(" "):"");
  $("#dl").innerHTML=C.filter(x=>x.id!==c.id).map(x=>`<option value="${E(x.nombre)}">`).join("");
- $("#ms").innerHTML=M(c).map((m,i)=>`<details class="m"><summary>${D(m.d)} · ${E(m.v)}</summary><pre>${E(m.t)}</pre><label>Data de l'enviament</label><input type="date" data-md="${i}" value="${E(m.d)}"><button class="del" style="margin:0 0 6px" data-a="um" data-i="${i}">Desfer aquest enviament</button></details>`).reverse().join("")||"<small>Encara no hi ha enviaments.</small>"}
+ $("#ms").innerHTML=M(c).map((m,i)=>`<details class="m"><summary>${D(m.d)} · ${E(m.v)}${m.prog?" · programat":""}</summary><pre>${E(m.t)}</pre><label>Data de l'enviament</label><input type="date" data-md="${i}" value="${E(m.d)}"><button class="del" style="margin:0 0 6px" data-a="um" data-i="${i}">Desfer aquest enviament</button></details>`).reverse().join("")||"<small>Encara no hi ha enviaments.</small>"}
 function sheet(id){
  const c=C.find(x=>x.id===id);if(!c)return;open=id;const y=$("#shc").scrollTop,cm=c.motivos||[];
  const inp=(f,p)=>`<input data-f="${f}" placeholder="${p}" value="${E(c[f])}">`;
@@ -100,22 +100,27 @@ let corOk=null;
 async function correuOk(){if(corOk===null){try{corOk=(await H.api("GET","correu/config")).connectat}catch(e){corOk=false}}return corOk}
 async function correus(c){const em=sp(c.email);if(!em.length||!await correuOk()||open!==c.id)return;const el=$("#crr");if(!el)return;el.innerHTML=`<label>Correus</label><small>Carregant…</small>`;
  try{const r=await H.api("GET","correu/llista?max=8&q="+encodeURIComponent(em.map(x=>`from:${x} OR to:${x}`).join(" OR ")));if(open!==c.id||!$("#crr"))return;
-  $("#crr").innerHTML=`<label>Correus</label>`+(r.fils.length?r.fils.map(f=>`<div class="r" data-a="fil" data-id="${f.id}"><i class="dot" style="background:${f.nollegit?"#0a84ff":"#d1d1d6"}"></i><div class="g"><b>${E(f.assumpte||"(sense assumpte)")}</b><small>${E(f.de)} · ${new Date(f.data).toLocaleDateString("ca-ES",{day:"numeric",month:"short"})} · ${E(f.resum.slice(0,90))}</small></div></div>`).join(""):`<small>Encara no hi ha correus amb aquest contacte.</small>`)}catch(e){$("#crr").innerHTML=""}}
+  $("#crr").innerHTML=`<label>Correus</label>`+(r.fils.length?r.fils.map(f=>`<div class="r" data-a="fil" data-id="${f.id}"><i class="dot" style="background:${f.nollegit?"#000":"transparent"}"></i><div class="g"><b>${E(f.assumpte||"(sense assumpte)")}</b><small>${E(f.de)} · ${new Date(f.data).toLocaleDateString("ca-ES",{day:"numeric",month:"short"})} · ${E(f.resum.slice(0,90))}</small></div></div>`).join(""):`<small>Encara no hi ha correus amb aquest contacte.</small>`)}catch(e){$("#crr").innerHTML=""}}
 async function envia(c,quan){const t=$("#tx").value,m=t.match(/^(?:Asunto|Subject): (.*)\n+([\s\S]*)$/),a=sp(c.email)[0];if(!a)return toast("Aquest contacte no té email");
  const b=$("#cmp [data-a=envia]");if(b){b.disabled=true;b.textContent="Enviant…"}
- try{await H.api("POST","correu/envia",{a,assumpte:m?m[1]:"",cos:m?m[2]:t,quan:quan||""});const id=c.id;c.msgs=M(c).concat({d:quan?quan.slice(0,10):today(),v:"Email",t,prog:quan||undefined});if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);sheet(id);toast(quan?"Programat per al "+new Date(quan).toLocaleString("ca-ES",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Enviat")}
+ try{const r=await H.api("POST","correu/envia",{a,assumpte:m?m[1]:"",cos:m?m[2]:t,quan:quan||""});const id=c.id;c.msgs=M(c).concat(Object.assign({d:quan?quan.slice(0,10):today(),v:"Email",t},r.programat?{prog:r.programat}:{}));if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);sheet(id);toast(quan?"Programat per al "+new Date(quan).toLocaleString("ca-ES",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Enviat")}
  catch(e){toast("No s'ha pogut enviar");if(b){b.disabled=false;b.textContent="Enviar ara"}}}
 // Perquè altres seccions (Correu, Inici) puguin obrir i actualitzar contactes
 window.CONT={
  obre:id=>{hubShow("contactos");setTimeout(()=>sheet(id),60)},
- registra:(em,t,d)=>{em=String(em||"").toLowerCase();const c=C.find(x=>sp(x.email).some(y=>y.toLowerCase()===em));if(!c)return;c.msgs=M(c).concat({d:d||today(),v:"Email",t});if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);render()},
+ registra:(em,t,d,pid)=>{em=String(em||"").toLowerCase();const c=C.find(x=>sp(x.email).some(y=>y.toLowerCase()===em));if(!c)return;c.msgs=M(c).concat(Object.assign({d:d||today(),v:"Email",t},pid?{prog:pid}:{}));if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);render()},
+ desprograma:pid=>{C.forEach(c=>{if(!M(c).some(m=>m.prog===pid))return;c.msgs=M(c).filter(m=>m.prog!==pid);if(!c.msgs.length&&c.estado==="Contactat")c.estado="Pendent";save(c)});render()},
  estat:(id,e)=>{const c=C.find(x=>x.id===id);if(!c)return;c.estado=e;save(c);render()},
- tots:()=>C
+ tots:()=>C,
+ color:e=>EC[e||"Pendent"]||"#c7c7cc"
 };
 function cmp(c,via){via=via||({"Productora":"Email","Artista":"Instagram"})[c.tipo]||(c.email?"Email":c.ig?"Instagram":"Telèfon");cv=via;
  $("#cmp").innerHTML=`<div class="seg">${VIAS.map(v=>`<button class="t ${v===via?"on":""}" data-a="via" data-v="${v}">${v}</button>`).join("")}<span style="flex:1"></span>${[["es","Castellà"],["en","Anglès"]].map(([v,l])=>`<button class="t ${v===ml?"on":""}" data-a="ml" data-v="${v}">${l}</button>`).join("")}</div><textarea id="tx" rows="9">${E(tplFor(c,via))}</textarea><label>Data de l'enviament</label><input type="date" id="fd" value="${today()}"><div class="ls"><button class="b" data-a="cp">Copiar</button><a class="ln" id="op" target="_blank" rel="noopener">Obrir</a><button class="b" data-a="sent">Marcar com a enviat</button></div><div id="envh"></div>`;ol(c);envH(c)}
 async function envH(c){if(cv!=="Email"||!sp(c.email).length||!await correuOk()||!$("#envh"))return;
- $("#envh").innerHTML=`<label>Des del hub (Gmail)</label><div class="ls"><button class="b" data-a="envia">Enviar ara</button><input type="datetime-local" id="fq" style="width:auto"><button class="b2" data-a="prog">Programar</button></div><small>Envia des de pablo.anarte.film@gmail.com i ho apunta com a enviament.</small>`}
+ $("#envh").innerHTML=`<label>Des del hub (Gmail)</label><div class="ls"><button class="b" data-a="envia">Enviar ara</button><input type="datetime-local" id="fq" style="width:auto"><button class="b2" data-a="prog">Programar</button></div><small>Envia des de pablo.anarte.film@gmail.com i ho apunta com a enviament.</small>`;
+ // amb Gmail connectat, el botó principal és "Enviar ara"; la resta queden en segon pla
+ $("#cmp").querySelectorAll('[data-a=cp],[data-a=sent]').forEach(b=>b.className="b2");const o=$("#op");if(o)o.className="b2";
+ const nb=$('#shc [data-a=cmp]');if(nb)nb.hidden=true}
 function ol(c){const t=$("#tx").value;$("#op").href=(cv==="Instagram"?ig(c.ig):cv==="Email"&&sp(c.email).length?"mailto:"+sp(c.email)[0]+"?"+sb(t):cv==="Telèfon"?wa(sp(c.tel)[0]):"")||"#"}
 async function copy(t){try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}toast("Copiat")}
 function csv(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';return ["nombre","persona","tipo","estado","motivos","email","instagram","telefono","web","direccion","gestionado_por","notas","envios","ultimo_envio"].join(",")+"\n"+C.map(c=>[c.nombre,c.persona,c.tipo,c.estado,(c.motivos||[]).join("; "),c.email,c.ig,c.tel,c.web,(c.dir||"").replace(/\n/g," | "),c.man,c.notas,M(c).length,M(c).length?M(c).at(-1).d:""].map(q).join(",")).join("\n")}
