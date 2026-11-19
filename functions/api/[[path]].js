@@ -118,7 +118,7 @@ async function publica(p, request, env, db, j) {
   if (!c || !c.actiu || c.token !== token) return j({ error: "no" }, 404);
   if (c.pw && c.pw !== pw) { await new Promise(r => setTimeout(r, 1200)); return j({ error: "pw" }, 401) } // frena els intents a l'engròs
   const vis = (d.slides || []).filter(s => !s.amaga); // les diapositives amagades no surten mai a l'enllaç públic
-  if (tipus === "deck") { const { dades, compartir, ...o } = d; return j({ ...o, slides: vis, baixar: c.baixar !== false }) }
+  if (tipus === "deck") { const { dades, compartir, proyecto, plantilla, titolMa, mod, ...o } = d; return j({ ...o, slides: vis, baixar: c.baixar !== false }) }
   if (tipus === "arxiu" && fid && JSON.stringify(vis).includes('"' + fid + '"')) {
     const r = await archivo("archivo/" + fid, "GET", request, env, j), h = new Headers(r.headers);
     h.set("cache-control", "private, max-age=600"); // si es desactiva l'enllaç, deixa de veure's aviat

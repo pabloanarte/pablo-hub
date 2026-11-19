@@ -354,7 +354,7 @@
     if (el.hidden || !doc) return; onIk(e);
     const a = e.target.closest("[data-ak]");
     if (a && a.dataset.ak === "ves") { e.preventDefault(); const c = document.getElementById("cat-" + a.dataset.v); c && c.scrollIntoView({ behavior: "smooth", block: "start" }) }
-    if (a && a.dataset.ak === "pl") { const ve = doc.plantilla === "director", nu = a.dataset.v === "director"; doc.plantilla = a.dataset.v; if (ve !== nu && doc.dades.projecte) { delete doc.dades.projecte.titol; delete doc.dades.projecte.format } await preomple(doc); save(); assistent() }
+    if (a && a.dataset.ak === "pl") { const ve = doc.plantilla === "director", nu = a.dataset.v === "director"; doc.plantilla = a.dataset.v; if (ve !== nu) { const pj = doc.dades.projecte = doc.dades.projecte || {}; delete pj.titol; delete pj.format; if (nu) { pj.titol = "pablo anarte"; pj.format = "director de cine" } if (!doc.titolMa) doc.titulo = nu ? "pablo anarte" : "" } await preomple(doc); save(); assistent() }
     if (a && a.dataset.ak === "gen") { const pt = (doc.dades.projecte || {}).titol; if (pt && !doc.titolMa) doc.titulo = pt; doc.slides = genera(doc); tmp(doc, "_pal", null); sel = 0; doc.mod = Date.now(); await H.put(doc, 1); H.cerrar(); pintar(); H.toast("Dossier construït: " + doc.slides.length + " diapositives") }
     const r = e.target.closest("[data-rk]"); if (r && +r.dataset.rk) { sel = +r.dataset.rk - 1; H.cerrar(); pintar() }
     const x = e.target.closest("[data-xk]");

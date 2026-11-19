@@ -119,6 +119,7 @@ window.IMP = (() => {
         if (!Array.isArray(r)) continue;
         const o = { id: R.uid() }; for (const [k, i] of Object.entries(mapa)) if (k !== "img") o[k] = net(r[i]);
         if (!o.num && !o.desc && !o.sujeto && !o.dialogo) continue; // files buides de plantilla
+        if (o.num && !Object.entries(o).some(([k, v]) => !["id", "num", "esc"].includes(k) && v && v !== "-")) continue; // només el número: fila buida
         if (o.esc && !/\d/.test(o.esc)) { o.notas = [o.esc, o.notas].filter(Boolean).join(" "); delete o.esc }
         const n = o.esc ? nn(o.esc) : (cur ? cur.num : "1"); delete o.esc;
         if (!cur || cur.num !== n) nova(n, { intext: (o.intext || "").toUpperCase().replace(/\./g, ""), lugar: o.set || "" });
@@ -166,11 +167,14 @@ window.IMP = (() => {
       d.filas.push({ id: R.uid(), _ini: h && h[0], tipo: "plano", num: g("num"), esc: g("esc"), escala: esc(g("escala")), angulo: g("angulo"), posicion: g("posicion"), desc: g("desc"), mov: g("mov"), personajes: g("personajes"), vestuario: g("vestuario"), notas: [g("notas"), sg ? "Durada: " + g("dur") : ""].filter(Boolean).join(" · "), dur });
     }
     // durades que falten: fins a l'inici de la fila següent
-    d.filas.forEach((f, i) => { if (f.dur == null && ["plano", "proceso"].includes(f.tipo)) { const n = d.filas.slice(i + 1).find(x => x._ini != null); f.dur = f._ini != null && n ? Math.max(5, n._ini - f._ini) : f.tipo === "proceso" ? 30 : 20 } });
+    d.filas.forEach((f, i) => { if (f.dur == null && ["plano", "proceso"].includes(f.tipo)) { const n = d.filas.slice(i + 1).find(x => x._ini != null || (x.tipo === "comida" && x.fija)), ni = n && (n._ini != null ? n._ini : R.aMin(n.fija)); f.dur = f._ini != null && n ? Math.max(5, ni - f._ini) : f.tipo === "proceso" ? 30 : 20 } }); // fins a la fila següent o el dinar
+    // forat després del dinar fins al primer pla de la tarda (canvi de set, etc.)
+    d.filas.slice().forEach(f => { if (f.tipo !== "comida" || !f.fija) return; const i = d.filas.indexOf(f), n = d.filas.slice(i + 1).find(x => x._ini != null), forat = n ? n._ini - (R.aMin(f.fija) + (f.dur || 0)) : 0; if (forat > 0 && forat < 180) d.filas.splice(i + 1, 0, { id: R.uid(), tipo: "proceso", texto: "PREPARACIÓ", dur: forat }) });
     // si el primer element comença abans del "ready to shoot" (p. ex. muntatges), el pla comença a aquella hora
     if (t0 != null && (!d.ready || R.aMin(d.ready) > t0)) d.readyReal = d.ready;
     d.filas.forEach(f => delete f._ini);
-    if (t0 != null) d.ready = R.aHora(t0).padStart(5, "0");
+    if (t0 != null && (!d.ready || t0 < R.aMin(d.ready))) d.ready = R.aHora(t0).padStart(5, "0");
+    else if (t0 != null && t0 > R.aMin(d.ready)) { const i = d.filas.findIndex(f => f.tipo !== "set"); d.filas.splice(Math.max(0, i), 0, { id: R.uid(), tipo: "proceso", texto: "PREPARACIÓ", dur: t0 - R.aMin(d.ready) }) } // del ready to shoot al primer pla
     d.calls = calls.join("\n");
     if (!d.filas.some(f => f.tipo === "wrap")) d.filas.push({ id: R.uid(), tipo: "wrap", texto: "WRAP" });
     return d;
