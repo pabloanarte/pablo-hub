@@ -77,7 +77,7 @@ const ACCIONS = {
   // avisos de FilmFreeway i Festhome (inscripcions i decisions dels festivals)
   festivals(q) {
     const out = [];
-    GmailApp.search("from:(filmfreeway.com OR festhome.com) newer_than:" + Math.min(+q.dies || 365, 1500) + "d", 0, 150).forEach(t => t.getMessages().forEach(m => {
+    GmailApp.search("from:(filmfreeway.com OR festhome.com) -category:promotions -category:social newer_than:" + Math.min(+q.dies || 365, 1500) + "d", 0, 300).forEach(t => t.getMessages().forEach(m => {
       if (!/filmfreeway|festhome/i.test(m.getFrom())) return;
       out.push({ id: m.getId(), data: m.getDate().toISOString(), de: m.getFrom(), assumpte: m.getSubject(), cos: m.getPlainBody().replace(/\s+/g, " ").slice(0, 2500) });
     }));

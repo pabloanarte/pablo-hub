@@ -4,29 +4,46 @@
 // Sempre es proposa i Pablo revisa i accepta cada canvi; no es canvia res sol.
 window.FIMP = (() => {
   const { E } = H;
-  const EST = ["Presentat", "Seleccionat", "Rebutjat", "Per presentar"];
-  // paraules que delaten l'estat (anglès, castellà, català, francès, italià, portuguès)
-  const SEL = /official selection|has been selected|have been selected|been accepted|is selected|selected for|selecci[oó]n oficial|ha sido seleccionad|han sido seleccionad|seleccionad[ao]s? (en|para|por)|ha estat seleccionad|selecci[oó] oficial|award winner|winner|ganador|guanyador|finalist|finalista|semi-?finalist|semifinalista|nominat|congratulations|felicidades|enhorabuena|felicitats|s[ée]lection officielle|selezione ufficiale|sele[cç][aã]o oficial/i;
-  const REB = /not been selected|not selected|were not able to|unable to (include|select)|regret|unfortunately|no ha sido seleccionad|no ha resultado seleccionad|no ha estat seleccionad|lamentablemente|lamentamos|desafortunadamente|malauradament|no seleccionad|not accepted|declined/i;
-  const PRE = /submission (confirmation|received|complete|successful)|successfully submitted|thank you for (your )?submi|thanks for submitting|you submitted|has been submitted|new submission|inscripci[oó]n (realizada|completada|confirmada|recibida)|gracias por (tu|su) inscripci|tu pel[ií]cula ha sido inscrita|ha sido inscrit|inscrita en|has inscrit|pago (realizado|confirmado)|payment (received|confirmation)|receipt/i;
-  const estatDe = t => REB.test(t) ? "Rebutjat" : SEL.test(t) ? "Seleccionat" : PRE.test(t) ? "Presentat" : "";
-  const net = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\b(festival|film|films|international|internacional|de|del|la|el|of|the|cine|cinema|cinema|fest|\d{4})\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+  const EST = ["Presentat", "Seleccionat", "Rebutjat", "Per presentar", "Descartat"];
+  const RANG = { "Per presentar": 0, "Presentat": 1, "Descartat": 2, "Rebutjat": 3, "Seleccionat": 4 }; // mai es baixa d'un estat més avançat
+  // ----- estat a partir del text (anglès, castellà, català i alguna forma francesa/italiana) -----
+  const PROMO = /newsletter|butllet[ií]|bolet[ií]n|year in review|meet the (winners|festivals?)|recommended|recomendad|recomanat|tips|webinar|discount|descuento|descompte|% off|sale\b|deadline (is )?(approaching|extended|has passed|passed)|last chance|[uú]ltima oportunidad|new festivals|nuevos festivales|festivales (abiertos|recomendados)|open (for )?submissions|call for entries|convocatoria abierta|filmfreeway (awards|festival awards)|survey|encuesta/i;
+  const SEL_F = /official selection|has been (officially )?selected|have been selected|been accepted|selected for|selecci[oó]n oficial|selecci[oó] oficial|ha sido seleccionad|han sido seleccionad|ha resultado seleccionad|ha estat seleccionad|ha quedat seleccionad|s[ée]lection officielle|selezione ufficiale|sele[cç][aã]o oficial|award winner|has won|ha ganado|ha guanyat|finalist|finalista|honou?rable mention|menci[oó]n (de honor|especial)|menci[oó] (d'honor|especial)|nominated|nominad/i;
+  const REB_F = /not (been )?selected|not been accepted|were not able to (include|select)|unable to (include|select)|could not (include|select)|no ha sido seleccionad|no ha resultado seleccionad|no ha estat seleccionad|no ha quedat seleccionad|no seleccionad|n'a pas [ée]t[ée] s[ée]lectionn|non [èe] stat[oa] selezionat|not part of (our|the) (official )?selection|no forma parte de la selecci/i;
+  const PRE_F = /submission (confirmation|received|complete|completed|successful)|successfully submitted|thank you for (your )?submi|thanks for submitting|you (have )?submitted|has been submitted|was received|new submission|receipt|payment (received|confirmation)|inscripci[oó]n (realizada|completada|confirmada|recibida)|gracias por (tu|su) inscripci|ha sido inscrit|inscrita (en|correctamente)|pago (realizado|confirmado)|inscripci[oó] (realitzada|completada|confirmada|rebuda)|gr[àa]cies per (la teva|la vostra) inscripci|ha estat inscrit|pagament (realitzat|confirmat)/i;
+  const ACT = /(?:updated to|changed to|status:|estado:|ha cambiado a|ha canviat a|estat:)\s*:?\s*["«]?([a-záéíóúàèòç ]{4,30})/i;
+  const deParaula = w => /not selected|no seleccionad|rejected|rechazad|rebutjad|declined/i.test(w) ? "Rebutjat" : /withdrawn|retirad/i.test(w) ? "Descartat" : /selected|seleccionad|winner|ganador|guanyador|finalist|finalista|mention|menci/i.test(w) ? "Seleccionat" : /undecided|consideration|pending|pendent|pendiente|received|recibid|rebut|submitted|inscrit|in review|en revisi/i.test(w) ? "Presentat" : "";
+  function estatDe(t) {
+    t = String(t || ""); const a = t.match(ACT);
+    if (a) { const e = deParaula(a[1]); if (e) return e }
+    if (REB_F.test(t)) return "Rebutjat";
+    if (SEL_F.test(t)) return "Seleccionat";
+    if (PRE_F.test(t)) return "Presentat";
+    return "";
+  }
+  const premiDe = t => (String(t).match(/(honou?rable mention|menci[oó]n? (de honor|d'honor|especial)|award winner|best [a-z ]{3,30}|millor [a-zàèéíòóúç ]{3,30}|mejor [a-záéíóú ]{3,30}|(gran )?premi[oa]? [a-zàèéíòóúç ]{3,30})/i) || [])[0] || "";
+  const net = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\b(festival|film|films|international|internacional|de|del|la|el|of|the|cine|cinema|fest|\d{4})\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
   const semblant = (a, b) => { const x = net(a), y = net(b); return x && y && (x === y || (x.length > 4 && y.includes(x)) || (y.length > 4 && x.includes(y))) };
-  const dia = s => { const d = new Date(s); return isNaN(d) ? "" : new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+  // dates: "12/03/2026" és dia/mes (Europa); la resta, com les entengui el navegador
+  const dia = s => { s = String(s || "").trim(); const m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/); if (m) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` } const d = new Date(s); return isNaN(d) ? "" : new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
 
-  // nom del festival a partir de l'assumpte o del cos del correu
+  // ----- nom del festival -----
+  const neteja = f => String(f || "").replace(/\s+(was|has been|is|ha sido|ha estat|has|have|ha cambiado|ha canviat)\b.*$/i, "").replace(/\s*[|(].*$/, "").replace(/\s+[–—-]\s+.*$/, "").replace(/[.!¡¿?,:;]+$/, "").replace(/^(the|el|la|els|les)\s+/i, "").replace(/\s+(19|20)\d{2}$/, "").replace(/\s+/g, " ").trim();
   function festivalDe(assumpte, cos) {
-    const t = assumpte.replace(/^(re|fwd?|rv):\s*/i, "");
+    const t = String(assumpte || "").replace(/^((re|fwd?|rv|fw)\s*:\s*)+/i, "").trim(), c = String(cos || "");
+    const KW = "submission status update|submission confirmation|submission received|status update|submission|official selection|selecci[oó]n oficial|selecci[oó] oficial|notification|decision|status update|results?|resultado de la selecci[oó]n|resolució de la selecci[oó]|resoluci[oó]n|receipt|filmfreeway receipt|inscripci[oó]n realizada|inscripci[oó] realitzada|inscripci[oó]n|inscripci[oó]|selecci[oó]n|selecci[oó]|update";
     const pats = [
-      /(?:submission (?:confirmation|received)|submitted|submission)\s*(?:to|for|[-–:])\s*(?:the\s+)?(.+?)(?:\s*[-–|(]|$)/i,
-      /(?:official selection|selected)\s*(?:at|for|in|[-–:])\s*(?:the\s+)?(.+?)(?:\s*[-–|(]|$)/i,
-      /(?:notification|decision|update|results?)\s*(?:from|for|[-–:])\s*(?:the\s+)?(.+?)(?:\s*[-–|(]|$)/i,
-      /(?:inscripci[oó]n|selecci[oó]n|seleccionad[ao])\s*(?:en|a|para|al|[-–:])\s*(?:el\s+)?(.+?)(?:\s*[-–|(]|$)/i,
-      /^(.+?)\s*[-–|:]\s*(?:submission|official|notification|selection|inscripci|selecci|resultado|decision)/i
+      new RegExp(`^(?:${KW})\\s*(?:to|for|from|at|in|en|a|al|de|del|per|para)?\\s*[:–—-]\\s*(.+)$`, "i"),   // "Official Selection - X", "Receipt: X"
+      new RegExp(`^(?:${KW})\\s+(?:to|for|from|at|in|en|a|al|de|del|per|para)\\s+(.+)$`, "i"),           // "Notification from X"
+      /(?:submission|submitted)\s+to\s+(.+)$/i,                                                          // "Your submission to X was received"
+      /(?:selected|accepted)\s+(?:for|at|in|by)\s+(?:the\s+)?(.+)$/i,
+      /(?:seleccionad[ao]|inscrit[ao]|seleccionat|inscrita)\s+(?:en|a|al|para|per|por)\s+(?:el\s+|la\s+)?(.+)$/i,
+      /^(.+?)\s+[–—-]\s+(?:submission|official|notification|selection|inscripci|selecci|resultado|decision|status)/i
     ];
-    for (const p of pats) { const m = t.match(p); if (m && m[1] && m[1].length > 2 && m[1].length < 90) return m[1].replace(/[.!]+$/, "").trim() }
-    const c = cos.match(/(?:submitted to|selected (?:for|at)|official selection (?:of|at)|inscrita en|seleccionada (?:en|para)|submission to)\s+(?:the\s+)?([A-Z][^.,!\n]{3,80})/);
-    return c ? c[1].trim() : t.slice(0, 80);
+    const generic = f => /filmfreeway|festhome|^(your|tu|la teva|su|el estado|the status)\b|ha cambiado|has changed|ha canviat/i.test(f);
+    for (const p of pats) { const m = t.match(p); if (m && m[1]) { const f = neteja(m[1]); if (f.length > 2 && f.length < 90 && !generic(f)) return f } }
+    const b = c.match(/(?:submitted to|selected (?:for|at|by)|official selection (?:of|at)|submission to|inscrita en|inscripci[oó]n en|inscripci[oó] a|seleccionada (?:en|para|por)|seleccionat a|inscrit a)\s+(?:the\s+|el\s+|la\s+)?([A-ZÀ-Ý0-9][^.,!\n]{2,80})/);
+    return b ? neteja(b[1]) : neteja(t).slice(0, 80);
   }
   async function projecteDe(text) {
     const ps = await H.col("proyecto"), t = String(text).toLowerCase();
@@ -41,55 +58,95 @@ window.FIMP = (() => {
     const nous = r.missatges.filter(m => !aj.vistos.includes(m.id)).sort((a, b) => a.data.localeCompare(b.data));
     const out = [];
     for (const m of nous) {
-      const txt = m.assumpte + " " + m.cos, est = estatDe(m.assumpte) || estatDe(m.cos.slice(0, 900));
-      if (!est) continue; // butlletins, promocions i altres avisos que no són d'una inscripció
-      out.push({ mid: m.id, font: /festhome/i.test(m.de) ? "Festhome" : "FilmFreeway", festival: festivalDe(m.assumpte, m.cos), proyecto: await projecteDe(txt), estado: est || "Presentat", dubte: !est, data: dia(m.data), resum: m.assumpte });
+      if (PROMO.test(m.assumpte)) continue;
+      const est = estatDe(m.assumpte) || estatDe(m.cos.slice(0, 1200));
+      const dubte = !est;
+      if (dubte && !/submi|inscrip|selec|status|estado|estat|decision|resultado|resultat/i.test(m.assumpte)) continue;
+      out.push({ mid: m.id, font: /festhome/i.test(m.de) ? "Festhome" : "FilmFreeway", festival: festivalDe(m.assumpte, m.cos), proyecto: await projecteDe(m.assumpte + " " + m.cos), estado: est || "Presentat", premi: est === "Seleccionat" ? premiDe(m.assumpte + " " + m.cos.slice(0, 600)) : "", dubte, data: dia(m.data), resum: m.assumpte });
     }
     return { props: out, aj, total: nous.length };
   }
 
   // ---------- 2) enganxar la llista ----------
-  const ESTL = [[/award winner|winner|ganador|guanyador|premiad/i, "Seleccionat", "Premiat"], [/finalist|finalista|semi-?finalist|semifinalista|nominee|nominad/i, "Seleccionat", ""], [/not selected|no seleccionad|rejected|rechazad|declined/i, "Rebutjat", ""], [/^selected$|official selection|seleccionad[ao]$|selecci[oó]n oficial|selected/i, "Seleccionat", ""], [/undecided|in consideration|pending|pendiente|en revisi[oó]n|received|recibida|submitted|inscrita|en curso/i, "Presentat", ""]];
+  const COLS = { festival: /^(festival|event|evento|esdeveniment|convocatoria)$/i, proyecto: /^(project|proyecto|projecte|pel[ií]cula|film|obra|t[ií]tulo)$/i, data: /^(date|fecha|data|submitted|date submitted|fecha de inscripci[oó]n)$/i, estat: /^(status|estado|estat|submission status)$/i, jutjat: /^(judging status|judging|decision|decisi[oó]n|resultado|resultat|selecci[oó]n)$/i };
   async function deText(text) {
-    const ls = String(text).split(/\n/).map(x => x.trim()).filter(Boolean), ps = await H.col("proyecto"), out = [];
-    const esSoroll = l => /^(\$|€|usd|eur|\d+([.,]\d+)?\s*(€|\$|usd|eur)?$)/i.test(l) || /^(view|edit|withdraw|retirar|ver|details|detalles|judging status|status|estado|project|proyecto|festival|category|categor[ií]a|date|fecha|fee|tarifa|tracking|submitted on|deadline)s?:?$/i.test(l) || /^\w{3,9}\.? \d{1,2},? \d{4}$|^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$/.test(l);
-    const CAT = /^(short|shorts|short film|feature|feature film|documentary|animation|music video|student|experimental|horror|fantasy|corto|cortometraje|cortometrajes|largometraje|documental|animaci[oó]n|videoclip|ficci[oó]n|fiction|competition|competici[oó]n)\b/i;
-    const esEst = l => l.length < 40 && ESTL.some(([re]) => re.test(l));
-    let ini = 0;
-    ls.forEach((l, i) => {
-      const e = esEst(l) && ESTL.find(([re]) => re.test(l)); if (!e) return;
-      const bloc = ls.slice(Math.max(ini, i - 8), i); ini = i + 1; // de l'estat anterior fins a aquest
-      const p = ps.find(p => p.titulo && bloc.some(x => x.toLowerCase().includes(p.titulo.toLowerCase())));
-      const data = (bloc.find(x => /\d{4}/.test(x) && !isNaN(new Date(x))) || "");
-      const festi = bloc.find(x => !esSoroll(x) && !CAT.test(x) && !(p && x.toLowerCase().includes(p.titulo.toLowerCase())) && x.length > 3 && !/^my submissions|^mis inscripciones|^submissions$/i.test(x));
-      if (festi) out.push({ font: "Llista", festival: festi.replace(/\s*[-–|].*$/, "").trim(), proyecto: p ? p.id : "", estado: e[1], premi: e[2], data: data ? dia(data) : "", resum: l });
-    });
-    // sense duplicats dins la mateixa llista
-    return { props: out.filter((x, i) => out.findIndex(y => semblant(y.festival, x.festival) && y.proyecto === x.proyecto) === i) };
+    const ps = await H.col("proyecto"), out = [];
+    const prj = t => { t = String(t || "").toLowerCase(); const p = ps.filter(p => p.titulo && t.includes(p.titulo.toLowerCase())).sort((a, b) => b.titulo.length - a.titulo.length)[0]; return p ? p.id : "" };
+    const afegeix = (festival, projecte, data, ...estats) => {
+      const w = estats.filter(Boolean).join(" "), e = estats.map(x => deParaula(x || "")).filter(Boolean).sort((a, b) => RANG[b] - RANG[a])[0];
+      festival = neteja(festival); if (!festival || !e) return;
+      out.push({ font: "Llista", festival, proyecto: prj(projecte) || prj(festival), estado: e, premi: e === "Seleccionat" ? premiDe(w) || (/winner|ganador|guanyador/i.test(w) ? "Premiat" : "") : "", data: dia(data), resum: [festival, projecte, w].filter(Boolean).join(" · ") });
+    };
+    const ls = String(text).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    // a) taula amb tabuladors (el més habitual en copiar una taula d'una web)
+    if (ls.some(l => l.includes("\t"))) {
+      const fs = ls.map(l => l.split("\t").map(x => x.trim()));
+      const hi = fs.findIndex(f => f.some(c => COLS.festival.test(c)) && f.some(c => COLS.estat.test(c) || COLS.jutjat.test(c)));
+      const cap = hi >= 0 ? fs[hi] : ["Festival", "Project", "Category", "Date", "Status", "Judging Status"].slice(0, fs[0].length);
+      const ix = k => cap.findIndex(c => COLS[k].test(c));
+      fs.slice(hi + 1).forEach(f => { if (f.length < 2) return; const g = k => ix(k) >= 0 ? f[ix(k)] : ""; afegeix(g("festival") || f[0], g("proyecto"), g("data"), g("jutjat"), g("estat")) });
+    } else {
+      // b) una cel·la per línia: si hi ha capçalera, es tallen les files segons el nombre de columnes
+      const hi = ls.findIndex(l => COLS.festival.test(l));
+      let cap = [];
+      const esCap = l => Object.values(COLS).some(r => r.test(l)) || /^(category|categor[ií]a|categoria|fee|tarifa|preu|precio)$/i.test(l);
+      if (hi >= 0) for (let k = hi; k < ls.length && esCap(ls[k]); k++) cap.push(ls[k]);
+      if (cap.length >= 3) {
+        const ix = k => cap.findIndex(c => COLS[k].test(c)), cos = ls.slice(hi + cap.length);
+        for (let k = 0; k + cap.length <= cos.length; k += cap.length) { const f = cos.slice(k, k + cap.length), g = c => ix(c) >= 0 ? f[ix(c)] : ""; afegeix(g("festival") || f[0], g("proyecto"), g("data"), g("jutjat"), g("estat")) }
+      } else {
+        // c) sense capçalera: cada línia d'estat tanca un bloc; el festival és la primera línia útil del bloc
+        const esEst = l => l.length < 40 && !!deParaula(l) && !/festival|fest\b|film/i.test(l);
+        const SOROLL = /^(\$|€|usd|eur)|^\d+([.,]\d+)?\s*(€|\$|usd|eur)?$|^(view|edit|withdraw|retirar|ver|details|detalles|completed|completad[ao]|in consideration|my submissions|mis inscripciones|submissions)$/i;
+        const CAT = /^(short|shorts|short film|feature|feature film|documentary|animation|music video|student|experimental|horror|fantasy|corto|cortometraje|cortometrajes|largometraje|documental|animaci[oó]n|videoclip|ficci[oó]n|fiction|competition|competici[oó]n)\b/i;
+        let ini = 0;
+        ls.forEach((l, i) => {
+          if (!esEst(l)) return;
+          const bloc = ls.slice(Math.max(ini, i - 8), i); ini = i + 1;
+          const seg = ls[i + 1] && esEst(ls[i + 1]) ? ls[i + 1] : ""; if (seg) ini = i + 2; // "Status" + "Judging Status" seguits
+          const p = bloc.find(x => prj(x)), data = bloc.find(x => /\d{4}/.test(x) && dia(x)) || "";
+          const f = bloc.find(x => !SOROLL.test(x) && !CAT.test(x) && x !== p && x !== data && x.length > 2 && !esEst(x));
+          if (f) afegeix(f, p, data, seg, l);
+        });
+      }
+    }
+    return { props: out };
   }
 
+  const marcats = l => { const n = l.filter(p => p.on).length; return n === 1 ? "1 marcat" : n + " marcats" };
   // ---------- revisió ----------
   async function revisa(props, origen, aj) {
     const cs = await H.col("convocatoria"), ps = await H.col("proyecto");
-    props.forEach(p => { const c = cs.find(c => c.tipo !== "Lab / residència" && semblant(c.titulo, p.festival) && (!p.proyecto || !c.proyecto || c.proyecto === p.proyecto)); p.cid = c ? c.id : ""; p.on = !c || c.estado !== p.estado || (p.premi && !c.premi); p.ja = c });
-    const fila = (p, i) => `<div class="fip ${p.on ? "" : "fio"}"><label class="ck" style="margin:0"><input type="checkbox" data-fi="${i}" ${p.on ? "checked" : ""}></label>
-      <div class="g"><div class="ls"><input data-fv="festival" data-i="${i}" value="${E(p.festival)}" style="flex:2;min-width:160px;font-weight:700"><select data-fv="proyecto" data-i="${i}" style="flex:1;min-width:140px"><option value="">— Pel·lícula —</option>${ps.map(x => `<option value="${x.id}" ${x.id === p.proyecto ? "selected" : ""}>${E(x.titulo || "")}</option>`).join("")}</select><select data-fv="estado" data-i="${i}" style="width:auto">${EST.map(e => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select></div>
-      <small>${E(p.font)}${p.data ? " · " + H.fecha(p.data) : ""} · ${p.ja ? `ja hi és (${E(p.ja.estado || "")})${p.on ? " → s'actualitzarà" : ", sense canvis"}` : "es crearà nova"}${p.dubte ? ' · <b style="color:#ff9f0a">revisa l\'estat</b>' : ""} · <span class="mut">${E(p.resum.slice(0, 90))}</span></small></div></div>`;
+    // dins la mateixa tanda, el mateix festival i pel·lícula és una sola proposta (es queda l'estat més avançat)
+    const uni = [];
+    props.forEach(p => { const u = uni.find(x => semblant(x.festival, p.festival) && (!x.proyecto || !p.proyecto || x.proyecto === p.proyecto)); if (!u) return uni.push({ ...p, mids: p.mid ? [p.mid] : [] }); if (p.mid) u.mids.push(p.mid); if (RANG[p.estado] > RANG[u.estado]) { u.estado = p.estado; u.resum = p.resum; u.dubte = p.dubte } u.proyecto = u.proyecto || p.proyecto; u.premi = u.premi || p.premi; if ((p.data || "") > (u.data || "")) u.data = p.data });
+    props = uni;
+    props.forEach(p => {
+      const c = cs.find(c => c.tipo !== "Lab / residència" && semblant(c.titulo, p.festival) && (!p.proyecto || !c.proyecto || c.proyecto === p.proyecto));
+      p.cid = c ? c.id : ""; p.ja = c;
+      if (c && RANG[p.estado] < RANG[c.estado || "Per presentar"]) { p.estado = c.estado; p.baixa = 1 } // mai es rebaixa
+      p.canvis = !c || c.estado !== p.estado || (p.premi && !c.premi) || (p.proyecto && !c.proyecto);
+      p.on = p.canvis && !p.dubte;
+    });
+    const fila = (p, i) => `<div class="fip ${p.on ? "" : "fio"}" id="fip${i}"><label class="ck" style="margin:0"><input type="checkbox" data-fi="${i}" ${p.on ? "checked" : ""}></label>
+      <div class="g"><div class="ls"><input data-fv="festival" data-i="${i}" value="${E(p.festival)}" style="flex:2;min-width:160px;font-weight:700"><select data-fv="proyecto" data-i="${i}" style="flex:1;min-width:140px"><option value="">— Projecte —</option>${ps.map(x => `<option value="${x.id}" ${x.id === p.proyecto ? "selected" : ""}>${E(x.titulo || "")}</option>`).join("")}</select><select data-fv="estado" data-i="${i}" style="width:auto">${EST.map(e => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select></div>
+      <small>${E(p.font)}${p.data ? " · " + H.fecha(p.data) : ""} · ${p.ja ? `ja hi és (${E(p.ja.estado || "")})${p.canvis ? " → s'actualitzarà" : ", sense canvis"}${p.baixa ? " (un avís antic no rebaixa l'estat)" : ""}` : "es crearà nova"}${p.premi ? " · premi: " + E(p.premi) : ""}${p.dubte ? ' · <b style="color:#ff9f0a">no he entès l\'estat: revisa\'l</b>' : ""} · <span class="mut">${E(p.resum.slice(0, 90))}</span></small></div></div>`;
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Revisa abans d'importar</h2>
       <p class="em">${props.length ? "Marca el que vols importar. Pots corregir el nom del festival, la pel·lícula i l'estat." : origen === "correu" ? "No hi ha avisos nous de FilmFreeway ni de Festhome." : "No he trobat cap inscripció en el text enganxat. Prova de copiar tota la taula de «My Submissions»."}</p>
       <div id="fil">${props.map(fila).join("")}</div>
-      <div class="sfoot"><span class="em">${props.filter(p => p.on).length} marcats</span><button class="b" data-fk="ok" ${props.length ? "" : "disabled"}>Importar els marcats</button></div>`);
+      <div class="sfoot"><span class="em">${marcats(props)}</span><button class="b" data-fk="ok" ${props.length ? "" : "disabled"}>Importar els marcats</button></div>`);
     const box = document.getElementById("hshc");
-    box.oninput = box.onchange = e => { const t = e.target; if (t.dataset.fv) props[+t.dataset.i][t.dataset.fv] = t.value; if (t.dataset.fi) props[+t.dataset.fi].on = t.checked; const n = box.querySelector(".sfoot .em"); if (n) n.textContent = props.filter(p => p.on).length + " marcats" };
+    box.oninput = box.onchange = e => { const t = e.target; if (t.dataset.fv) props[+t.dataset.i][t.dataset.fv] = t.value; if (t.dataset.fi) { props[+t.dataset.fi].on = t.checked; const r = document.getElementById("fip" + t.dataset.fi); r && r.classList.toggle("fio", !t.checked) } const n = box.querySelector(".sfoot .em"); if (n) n.textContent = marcats(props) };
     box.onclick = async e => {
       if (!e.target.closest('[data-fk="ok"]')) return;
       let nous = 0, act = 0;
       for (const p of props.filter(p => p.on && p.festival.trim())) {
         const c = p.cid && cs.find(x => x.id === p.cid);
-        if (c) { Object.assign(c, { estado: p.estado }, p.proyecto ? { proyecto: p.proyecto } : {}, p.premi && !c.premi ? { premi: p.premi } : {}, !c.tasa ? { tasa: p.font === "Llista" ? "" : p.font } : {}); H.put(c); act++ }
+        if (c) { Object.assign(c, { estado: p.estado }, p.proyecto && !c.proyecto ? { proyecto: p.proyecto } : {}, p.premi && !c.premi ? { premi: p.premi } : {}, !c.tasa ? { tasa: p.font === "Llista" ? "" : p.font } : {}); H.put(c); act++ }
         else { H.put({ id: H.uid("convocatoria"), titulo: p.festival.trim(), tipo: "Festival", estado: p.estado, proyecto: p.proyecto, premi: p.premi || "", tasa: p.font === "Llista" ? "" : p.font, notas: "Importat de " + (p.font === "Llista" ? "la llista enganxada" : p.font) + (p.data ? " (" + p.data + ")" : "") }, 1); nous++ }
       }
-      if (aj) { aj.vistos = [...new Set(aj.vistos.concat(props.map(p => p.mid).filter(Boolean)))].slice(-3000); H.put(aj, 1) }
+      // es donen per vistos els avisos importats i els que no aportaven res; els desmarcats amb canvis tornaran a sortir
+      if (aj) { aj.vistos = [...new Set(aj.vistos.concat(props.filter(p => p.on || !p.canvis).flatMap(p => p.mids || [])))].slice(-3000); H.put(aj, 1) }
       H.cerrar(); H.toast(`${nous} noves, ${act} actualitzades`);
     };
   }
@@ -112,5 +169,5 @@ window.FIMP = (() => {
       if (b.dataset.fk === "txt") { const t = document.getElementById("fitx").value; if (!t.trim()) return H.toast("Enganxa la llista primer"); revisa((await deText(t)).props, "text") }
     };
   }
-  return { obre, _t: { estatDe, festivalDe, deText } };
+  return { obre, _t: { estatDe, festivalDe, deText, PROMO } };
 })();
