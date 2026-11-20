@@ -8,7 +8,7 @@ export async function onRequest({ request, env, next }) {
   const token = await hash(pw);
   const url = new URL(request.url);
   // pàgines i dades públiques dels dossiers compartits
-  if (/^\/d\/[a-z0-9]{8,24}$/.test(url.pathname) || url.pathname.startsWith("/api/public/") || url.pathname === "/deck.js") return next();
+  if (/^\/d\/[a-z0-9]{8,24}$/.test(url.pathname) || url.pathname.startsWith("/api/public/") || url.pathname.startsWith("/api/ical/") || url.pathname === "/api/pont/copia" || /^\/(manifest\.webmanifest|icona-\d+\.png)$/.test(url.pathname) || url.pathname === "/deck.js") return next();
 
   if (url.pathname === "/entrar" && request.method === "POST") {
     const f = await request.formData();

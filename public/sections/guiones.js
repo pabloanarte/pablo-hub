@@ -185,6 +185,11 @@
   }
 
   window.addEventListener("hub-sec", e => { if (e.detail === "guiones" && !doc) lista() });
-  window.GT = { abrir };
+  // Crea un guió tècnic nou a partir d'unes escenes (p. ex. des del Desglossament)
+  async function nou(escenas, titulo, proyecto) {
+    const d = { id: H.uid("gt"), titulo: titulo || "Guió tècnic", escenas: escenas.map(e => ({ ...e, sinopsis: e.sinopsis || e.notas || "" })), proyecto: proyecto || "" };
+    await perDefecte(d); await H.put(d, 1); hubShow("guiones"); doc = d; ++ver; pintar(); H.toast(escenas.length + " escenes passades al guió tècnic");
+  }
+  window.GT = { abrir, nou };
   lista();
 })();

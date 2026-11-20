@@ -127,6 +127,7 @@ async function copy(t){try{await navigator.clipboard.writeText(t)}catch(e){const
 function csv(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';return ["nombre","persona","tipo","estado","motivos","email","instagram","telefono","web","direccion","gestionado_por","notas","envios","ultimo_envio"].join(",")+"\n"+C.map(c=>[c.nombre,c.persona,c.tipo,c.estado,(c.motivos||[]).join("; "),c.email,c.ig,c.tel,c.web,(c.dir||"").replace(/\n/g," | "),c.man,c.notas,M(c).length,M(c).length?M(c).at(-1).d:""].map(q).join(",")).join("\n")}
 async function dl(name,data){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=name;document.body.appendChild(a);a.click();a.remove()}
 document.addEventListener("click",e=>{
+ if(!e.target.closest||!e.target.closest("#s-contactos,#sh"))return; // només dins de Contactes
  if(e.target.closest("a[target]"))return;
  const b=e.target.closest("[data-a]");if(!b)return;if(b.tagName==="A")e.preventDefault();
  const a=b.dataset.a,c=cur(),d=b.dataset;
@@ -159,6 +160,7 @@ document.addEventListener("click",e=>{
  else if(a==="im")$("#fi").click()
 });
 document.addEventListener("input",e=>{
+ if(!e.target.closest||!e.target.closest("#s-contactos,#sh"))return; // només dins de Contactes
  const t=e.target;
  if(t.id==="q"){q=t.value;fill()}
  else if(t.id==="tx")ol(cur());
@@ -167,6 +169,7 @@ document.addEventListener("input",e=>{
  else if(t.dataset.k){cfg.tpl[t.dataset.k]=t.value;clearTimeout(tm2);tm2=setTimeout(()=>store.set("cfg",cfg),400)}
 });
 document.addEventListener("keydown",e=>{
+ if(!e.target.closest||!e.target.closest("#s-contactos,#sh"))return; // només dins de Contactes
  if(e.target.id==="nt"&&e.key==="Enter"&&e.target.value.trim()){const c=cur(),v=e.target.value.trim();if(!tipos().includes(v))cfg.tipos=(cfg.tipos||[]).concat({n:v,c:PAL[(cfg.tipos||[]).length%PAL.length]});store.set("cfg",cfg);c.tipo=v;save(c);sheet(c.id)}
  if(e.target.id==="nm"&&e.key==="Enter"&&e.target.value.trim()){const c=cur(),v=e.target.value.trim();cfg.mo=(cfg.mo||[]).concat(v);store.set("cfg",cfg);c.motivos=(c.motivos||[]).concat(v);save(c);sheet(c.id)}
  

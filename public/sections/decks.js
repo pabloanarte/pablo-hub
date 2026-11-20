@@ -47,7 +47,7 @@
       ["contacte", "Contacte", [["text", "Dades de contacte", "area"]]]] },
     blanc: { nom: "En blanc", cats: [["projecte", "Portada", [["titol", "Títol", "text"], ["format", "Subtítol", "text"], ["portada", "Imatge", "img"]]]] }
   };
-  const ITEMS = { personatges: [["nom", "Nom"], ["text", "Descripció", "area"], ["img", "Imatge", "img"]], equip: [["nom", "Nom"], ["text", "Rol"], ["img", "Foto", "img"]], dades: [["nom", "Etiqueta"], ["text", "Valor"]], calendari: [["nom", "Fase"], ["a", "Inici", "date"], ["b", "Fi", "date"]] };
+  const ITEMS = { personatges: [["nom", "Nom"], ["text", "Descripció", "area"], ["img", "Imatge", "img"]], equip: [["nom", "Nom"], ["text", "Rol"], ["img", "Foto", "img"]], dades: [["nom", "Etiqueta"], ["text", "Valor"]], laurels: [["nom", "Festival"], ["text", "Secció o premi i any"]], calendari: [["nom", "Fase"], ["a", "Inici", "date"], ["b", "Fi", "date"]] };
 
   // Converteix les dades de l'assistent en diapositives
   function genera(d) {
@@ -60,7 +60,7 @@
     txt("sinopsi", "sinopsi"); txt("narrativa", "narrativa"); txt("bio", "bio"); txt("nota", "nota del director");
     if (ok("personatges") && (g("personatges", "items") || []).length) S.push({ tipus: "personatges", titol: "personatges", items: g("personatges", "items") });
     if (ok("filmografia") && (g("filmografia", "items") || []).length) S.push({ tipus: "personatges", titol: "filmografia", items: g("filmografia", "items") });
-    if (ok("festivals") && g("festivals", "text")) S.push({ tipus: "llista", titol: "festivals i premis", punts: g("festivals", "text") });
+    if (ok("festivals") && g("festivals", "text")) S.push({ tipus: "laurels", titol: "festivals i premis", items: g("festivals", "text").split("\n").filter(x => x.trim()).map(x => { const [n, ...r] = x.replace(/^[-•*]\s*/, "").split(/\s+[—–-]\s+/); return { nom: n.trim(), text: r.join(" · ").trim() } }) });
     if (ok("referencies") && (g("referencies", "imgs") || []).length) { const l = g("referencies", "imgs"); for (let i = 0; i < l.length; i += 6) S.push({ tipus: "moodboard", titol: i ? "" : "referències", imgs: l.slice(i, i + 6) }) }
     txt("to", "to i estètica");
     if (ok("paleta") && (g("paleta", "auto") || g("paleta", "colors"))) S.push({ tipus: "paleta", titol: "paleta", auto: !!g("paleta", "auto"), colors: g("paleta", "colors") || "" });
@@ -155,7 +155,7 @@
   function panSlide() {
     if (!doc.slides.length) return `<p class="em">Afegeix una diapositiva.</p>`;
     const s = S(), t = DK.TIPUS[s.tipus] || DK.TIPUS.text;
-    const tt = { personatges: "items:personatges", equip: "items:equip", dades: "items:dades", calendari: "items:calendari" };
+    const tt = { personatges: "items:personatges", equip: "items:equip", dades: "items:dades", calendari: "items:calendari", laurels: "items:laurels" };
     return `<label>Maqueta</label><select data-k="tipus">${Object.entries(DK.TIPUS).map(([k, x]) => `<option value="${k}" ${k === s.tipus ? "selected" : ""}>${E(x.nom)}</option>`).join("")}</select>` +
       t.camps.map(([k, l, ty]) => camp(k, l, ty === "items" ? tt[s.tipus] || "items:personatges" : ty, s[k], "s")).join("") +
       `<div class="sfoot"><button class="del" data-k="sdel">Esborrar</button><span><button class="b2" data-k="samaga">${s.amaga ? "Mostrar" : "Amagar"}</button> <button class="b2" data-k="sdup">Duplicar</button></span></div>`;

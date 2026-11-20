@@ -9,7 +9,7 @@
     { f: "proyecto", l: "Projecte", tipo: "proyecto" },
     { f: "notas", l: "Notes", tipo: "textarea" }
   ];
-  const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a" };
+  const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a", rodatge: "#ff375f", feina: "#af52de" };
   let vista = "lista", mes = today().slice(0, 7), verHechas = false;
 
   el.innerHTML = `<div class="tabs"><button class="t on" data-k="v" data-v="lista">Llista</button><button class="t" data-k="v" data-v="cal">Calendari</button></div>
@@ -18,14 +18,16 @@
   const fila = t => `<div class="r"><input type="checkbox" class="tck" data-id="${t.id}" ${t.hecha ? "checked" : ""}><div class="g" data-k="abre" data-id="${t.id}"><b style="${t.hecha ? "text-decoration:line-through;color:#8e8e93" : ""}">${E(t.titulo || "Sense títol")}</b><small>${[t.fecha && fecha(t.fecha), t.pn].filter(Boolean).map(E).join(" · ")}</small></div></div>`;
 
   async function datos() {
-    const [t, r, f, p] = await Promise.all([H.col("tarea"), H.col("reunion"), H.col("convocatoria"), H.col("proyecto")]);
+    const [t, r, f, p, pl, fe] = await Promise.all([H.col("tarea"), H.col("reunion"), H.col("convocatoria"), H.col("proyecto"), H.col("pdr"), H.col("feina")]);
     const pn = id => (p.find(x => x.id === id) || {}).titulo || "";
     t.forEach(x => x.pn = pn(x.proyecto));
     const ev = [].concat(
       t.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.tarea, t: x.titulo, id: x.id, tipo: "tarea", hecha: x.hecha })),
       r.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.reunion, t: (x.hora ? x.hora + " " : "") + (x.titulo || "Reunió"), id: x.id, tipo: "reunion" })),
       f.filter(x => x.limite).map(x => ({ d: x.limite, c: COL.limite, t: "Límit: " + (x.titulo || ""), id: x.id, tipo: "convocatoria" })),
-      f.filter(x => x.evento).map(x => ({ d: x.evento, c: COL.evento, t: x.titulo || "", id: x.id, tipo: "convocatoria" })));
+      f.filter(x => x.evento).map(x => ({ d: x.evento, c: COL.evento, t: x.titulo || "", id: x.id, tipo: "convocatoria" })),
+      pl.flatMap(x => (x.dias || []).map((d, i) => d.fecha ? { d: d.fecha, c: COL.rodatge, t: `Rodatge ${pn(x.proyecto) || x.titulo || ""} · J${i + 1}`, id: x.id, tipo: "pdr" } : null).filter(Boolean)),
+      fe.filter(x => x.ini).flatMap(x => { const o = [], fi = x.fin && x.fin >= x.ini ? x.fin : x.ini; for (let d = x.ini, n = 0; d <= fi && n < 60; d = H.addDays(d, 1), n++) o.push({ d, c: COL.feina, t: `${x.rol || "Feina"}: ${x.titulo || ""}`, id: x.id, tipo: "feina" }); return o }));
     return { t, ev };
   }
 
@@ -50,11 +52,12 @@
       }
       v.innerHTML = `<div class="bar" style="justify-content:space-between"><button class="t" data-k="mes" data-n="-1">‹</button><b>${pri.toLocaleDateString("ca-ES", { month: "long", year: "numeric" })}</b><button class="t" data-k="mes" data-n="1">›</button></div>
       <div class="cal">${["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"].map(x => `<small>${x}</small>`).join("")}${c}</div>
-      <div class="lg"><span><i style="background:${COL.tarea}"></i>Tasca</span><span><i style="background:${COL.reunion}"></i>Reunió</span><span><i style="background:${COL.limite}"></i>Data límit</span><span><i style="background:${COL.evento}"></i>Festival / resolució</span></div>`;
+      <div class="lg"><span><i style="background:${COL.tarea}"></i>Tasca</span><span><i style="background:${COL.reunion}"></i>Reunió</span><span><i style="background:${COL.limite}"></i>Data límit</span><span><i style="background:${COL.rodatge}"></i>Rodatge</span><span><i style="background:${COL.feina}"></i>Feina</span><span><i style="background:${COL.evento}"></i>Festival / resolució</span></div>`;
     }
   }
 
   async function abrir(tipo, id) {
+    if (tipo === "pdr") { hubShow("planes"); return window.P && P.abrir(id) }
     const t = (await H.col(tipo)).find(x => x.id === id); if (!t) return;
     if (tipo === "tarea") return H.editar(CAMPOS, t, { alCerrar: pintar });
     H.abrir(tipo, id);
@@ -73,7 +76,7 @@
     if (k === "mes") { const [y, m] = mes.split("-").map(Number), d = new Date(y, m - 1 + +b.dataset.n, 1); mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; pintar() }
     if (k === "dia") dia(b.dataset.d);
     if (k === "abre") abrir("tarea", b.dataset.id);
-    if (k === "evl") H.abrir(b.dataset.t, b.dataset.id);
+    if (k === "evl") { if (b.dataset.t === "pdr") { hubShow("planes"); return window.P && P.abrir(b.dataset.id) } H.abrir(b.dataset.t, b.dataset.id) }
     if (k === "hechas") { verHechas = !verHechas; pintar() }
   });
   el.addEventListener("change", async e => {

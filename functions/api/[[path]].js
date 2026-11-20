@@ -36,6 +36,10 @@ export async function onRequest({ request, env, params }) {
     if (p === "importar" && m === "GET") return importar(request);
     if (p.startsWith("correu/")) return correu(p.slice(7), m, request, db, j);
     if (p.startsWith("public/")) return publica(p, request, env, db, j);
+    if (p === "copia") return copia(m, request, db, j);
+    if (p === "pont/copia" && m === "POST") return pontCopia(request, db, j);
+    if (p.startsWith("ical/")) return ical(decodeURIComponent(p.slice(5)), db);
+    if (p === "calendari" ) return calCfg(m, request, db, j);
     return j({ error: "not found" }, 404);
   } catch (e) { return j({ error: String(e.message || e) }, 500) }
 }
@@ -143,9 +147,9 @@ async function correu(accio, m, request, db, j) {
     return j({ ok: 1 });
   }
   if (!cfg) return j({ error: "config" }, 503);
-  if (!["llista", "fil", "programats", "envia", "cancela", "resum"].includes(accio)) return j({ error: "no" }, 404);
+  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia"].includes(accio)) return j({ error: "no" }, 404);
   // el que envia o cancel·la només per POST amb JSON (un enllaç o un formulari d'una altra web no ho pot fer)
-  if (["envia", "cancela", "resum"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
+  if (["envia", "cancela", "resum", "copia"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
   const q = m === "GET" ? Object.fromEntries(new URL(request.url).searchParams) : await request.json();
   const { clau, ...o } = await pont(cfg, { ...q, accio }); // la clau no surt mai cap al navegador
   return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200); // 401 faria tornar a demanar la contrasenya del hub
@@ -156,4 +160,77 @@ async function pont(cfg, q) {
     const t = await r.text();
     try { return JSON.parse(t) } catch (e) { return { error: /<html|<!DOCTYPE/i.test(t) ? "Google ha tornat una pàgina en lloc de dades: revisa que el pont estigui implementat per a «Qualsevol usuari»." : "resposta estranya" } }
   } catch (e) { return { error: "no puc connectar amb Google" } }
+}
+
+// ---------- Còpia de seguretat ----------
+// GET: totes les dades (sense secrets) en un JSON. POST: restaura una còpia (afegeix o substitueix documents; no esborra res).
+async function totesDades(db) {
+  const { results } = await db.prepare("SELECT id,data,updated FROM docs WHERE id NOT LIKE 'secret:%'").all();
+  return { hub: "pablo-hub", versio: 1, data: new Date().toISOString(), docs: results.map(r => ({ id: r.id, data: JSON.parse(r.data), updated: r.updated })) };
+}
+async function marcaCopia(db, on) {
+  const r = await db.prepare("SELECT data FROM docs WHERE id='ajust:copia'").first(), o = r ? JSON.parse(r.data) : {};
+  o.ultima = new Date().toISOString(); o.on = on;
+  await db.prepare("INSERT INTO docs(id,data,updated) VALUES('ajust:copia',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify(o), Date.now()).run();
+}
+async function copia(m, request, db, j) {
+  if (m === "GET") { const c = await totesDades(db); await marcaCopia(db, "descarregada"); return new Response(JSON.stringify(c), { headers: { "content-type": "application/json", "content-disposition": `attachment; filename="pablo-hub-${c.data.slice(0, 10)}.json"` } }) }
+  if (m === "POST") {
+    if ((request.headers.get("content-type") || "").split(";")[0].trim() !== "application/json") return j({ error: "no" }, 405);
+    const c = await request.json();
+    if (c.hub !== "pablo-hub" || !Array.isArray(c.docs)) return j({ error: "Aquest arxiu no és una còpia del hub." }, 400);
+    const ok = c.docs.filter(d => d && typeof d.id === "string" && !d.id.toLowerCase().startsWith("secret:") && d.data && typeof d.data === "object");
+    for (let i = 0; i < ok.length; i += 50) await db.batch(ok.slice(i, i + 50).map(d => db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(d.id, JSON.stringify(d.data), Date.now())));
+    return j({ ok: 1, n: ok.length });
+  }
+  return j({ error: "no" }, 405);
+}
+// El pont de Google (el mateix del correu) demana la còpia cada setmana i la desa al Drive de Pablo.
+async function pontCopia(request, db, j) {
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:correu'").first(), cfg = r ? JSON.parse(r.data) : null;
+  const clau = request.headers.get("x-clau") || "";
+  if (!cfg || !cfg.clau || clau.length !== cfg.clau.length || !igual(clau, cfg.clau)) return j({ error: "no" }, 403);
+  const c = await totesDades(db); await marcaCopia(db, "drive"); return j(c);
+}
+function igual(a, b) { let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0 }
+
+// ---------- Calendari per subscriure's (iPhone, Google Calendar) ----------
+async function calCfg(m, request, db, j) {
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:ical'").first();
+  let tok = r ? JSON.parse(r.data).token : "";
+  if (!tok || m === "POST") { // POST = enllaç nou (l'antic deixa de funcionar)
+    tok = [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, "0")).join("");
+    await db.prepare("INSERT INTO docs(id,data,updated) VALUES('secret:ical',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify({ token: tok }), Date.now()).run();
+  }
+  return j({ url: new URL(request.url).origin + "/api/ical/" + tok + ".ics" });
+}
+async function ical(t, db) {
+  const no = () => new Response("not found", { status: 404 });
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:ical'").first(); if (!r) return no();
+  const tok = JSON.parse(r.data).token; t = t.replace(/\.ics$/, "");
+  if (!tok || t.length !== tok.length || !igual(t, tok)) return no();
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'convocatoria:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'proyecto:%'").all();
+  const D = results.map(x => ({ ...JSON.parse(x.data), id: x.id })), T = k => D.filter(x => x.id.startsWith(k + ":"));
+  const proj = Object.fromEntries(T("proyecto").map(p => [p.id, p.titulo || ""]));
+  const ev = [], dia = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "") ? s.replace(/-/g, "") : null;
+  const add = (uid, d, titol, o = {}) => { if (!dia(d)) return; ev.push({ uid, d: dia(d), titol, ...o }) };
+  T("tarea").filter(x => !x.hecha).forEach(x => add(x.id, x.fecha, "☐ " + (x.titulo || "Tasca"), { desc: x.notas }));
+  T("reunion").forEach(x => add(x.id, x.fecha, "Reunió: " + (x.titulo || ""), { hora: x.hora, durada: 60, lloc: x.lugar, desc: x.apuntes }));
+  T("convocatoria").forEach(x => { add(x.id + "-l", x.limite, "Límit: " + (x.titulo || ""), { desc: [x.web, x.notas].filter(Boolean).join("\n") }); if (x.evento) add(x.id + "-e", x.evento, (x.titulo || "Festival") + (x.lugar ? " (" + x.lugar + ")" : ""), {}) });
+  T("pdr").forEach(x => (x.dias || []).forEach((d, i) => add(x.id + "-" + i, d.fecha, `Rodatge ${proj[x.proyecto] || x.titulo || ""} · jornada ${i + 1}`, { desc: d.calls })));
+  T("feina").forEach(x => { add(x.id, x.ini, `${x.rol || "Feina"}: ${x.titulo || ""}`, { fi: x.fin, lloc: x.productora }) });
+  const esc = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, m => "\\" + m);
+  const ara = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+  const seg = d => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8) + 1)); return x.toISOString().slice(0, 10).replace(/-/g, "") };
+  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//pablo-hub//CA", "CALSCALE:GREGORIAN", "X-WR-CALNAME:PABLO hub", "X-WR-TIMEZONE:Europe/Madrid", "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H"];
+  for (const e of ev) {
+    L.push("BEGIN:VEVENT", "UID:" + e.uid + "@pablo-hub", "DTSTAMP:" + ara, "SUMMARY:" + esc(e.titol));
+    if (e.hora && /^\d{1,2}:\d{2}$/.test(e.hora)) { const [h, mi] = e.hora.split(":").map(Number), fi = h * 60 + mi + (e.durada || 60), p2 = n => String(n).padStart(2, "0"); L.push(`DTSTART;TZID=Europe/Madrid:${e.d}T${p2(h)}${p2(mi)}00`, `DTEND;TZID=Europe/Madrid:${e.d}T${p2(Math.floor(fi / 60) % 24)}${p2(fi % 60)}00`) }
+    else L.push("DTSTART;VALUE=DATE:" + e.d, "DTEND;VALUE=DATE:" + seg(dia(e.fi) && dia(e.fi) >= e.d ? dia(e.fi) : e.d));
+    if (e.lloc) L.push("LOCATION:" + esc(e.lloc)); if (e.desc) L.push("DESCRIPTION:" + esc(String(e.desc).slice(0, 1500)));
+    L.push("END:VEVENT");
+  }
+  L.push("END:VCALENDAR");
+  const plega = l => { const o = []; let x = l; while (new TextEncoder().encode(x).length > 74) { let n = 70; while (new TextEncoder().encode(x.slice(0, n)).length > 74) n--; o.push(x.slice(0, n)); x = " " + x.slice(n) } o.push(x); return o.join("\r\n") };
+  return new Response(L.map(plega).join("\r\n") + "\r\n", { headers: { "content-type": "text/calendar; charset=utf-8", "cache-control": "private, max-age=600" } });
 }

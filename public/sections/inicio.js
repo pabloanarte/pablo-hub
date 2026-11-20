@@ -27,11 +27,18 @@
       card("Dates límit", "festivales", lim.length ? lim.slice(0, 8).map(x => { const n = Math.round((new Date(x.limite) - new Date(hoy)) / 864e5); return `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 7 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;${n <= 7 ? "color:#ff3b30" : ""}">${n === 0 ? "avui" : n === 1 ? "demà" : "en " + n + " dies"}</small></div>` }).join("") : vacio("No hi ha convocatòries obertes amb data.")) +
       card("Contactes", "contactos", `<div class="st" style="grid-template-columns:repeat(4,1fr)">${[["Per contactar", porC], ["Contactats", c.filter(x => M(x).length > 0 || ["Contactat", "Ha respost", "Reunió"].includes(x.estado)).length], ["Han respost", c.filter(x => x.estado === "Ha respost").length], ["Reunió", c.filter(x => x.estado === "Reunió").length]].map(([l, n]) => `<div><b>${n}</b><small>${l}</small></div>`).join("")}</div>` +
         (seg.length ? `<h2>Toca fer seguiment</h2>` + seg.slice(0, 6).map(x => `<div class="r" data-go="contactos"><i class="dot" style="background:#0a84ff"></i><div class="g"><b>${E(x.nombre)}</b><small>Últim missatge fa ${dias(M(x).at(-1).d)} dies</small></div></div>`).join("") : "")) +
-      `<div id="icor" hidden></div>` +
+      `<div id="icop" hidden></div><div id="icor" hidden></div>` +
       card("Projectes en marxa", "proyectos", vivos.length ? vivos.map(x => `<div class="r" data-k="proyecto" data-id="${x.id}"><i class="dot" style="background:${PE[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.categoria, x.estado].filter(Boolean).join(" · "))}</small></div><small>${(n => n ? n + (n > 1 ? " tasques" : " tasca") : "")(pend.filter(y => y.proyecto === x.id).length)}</small></div>`).join("") : vacio("Afegeix els teus projectes a la secció Projectes.")) +
       card("Últimes idees", "brainstorm", i.length ? i.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")).slice(0, 5).map(x => `<div class="r" data-k="idea" data-id="${x.id}"><i class="dot" style="background:#ffcc00"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E((x.texto || "").split("\n")[0].slice(0, 90))}</small></div></div>`).join("") : vacio("Apunta aquí qualsevol idea solta.")) +
       `</div>`;
-    correu(c);
+    correu(c); copiaAvis();
+  }
+  // Avís si fa més de 10 dies que no hi ha còpia de seguretat
+  async function copiaAvis() {
+    const a = ((await H.col("ajust")).find(x => x.id === "ajust:copia") || {}), box = document.getElementById("icop"); if (!box) return;
+    const d = a.ultima ? Math.floor((Date.now() - new Date(a.ultima)) / 864e5) : null;
+    if (d !== null && d <= 10) return box.remove();
+    box.outerHTML = `<div class="card"><h3>Còpia de seguretat</h3><p class="em" style="margin:0 0 10px">${d === null ? "Encara no has fet cap còpia de les dades del hub." : `Fa ${d} dies de l'última còpia.`}</p><div class="ls"><a class="b" href="/api/copia" download data-cop="1">Descarregar-la ara</a><button class="b2" data-ves="ajustos">Ajustos</button></div></div>`;
   }
   // Correu: qui t'ha respost (correus de contactes posteriors a l'últim enviament) i no llegits
   let cache = null;
@@ -48,6 +55,8 @@
     } catch (e) { box.remove() }
   }
   el.addEventListener("click", e => {
+    if (e.target.closest("[data-cop]")) { setTimeout(() => H.col("ajust", true).then(() => { const b = document.querySelector("#s-inicio [data-cop]"); b && b.closest(".card").remove() }), 1500); return }
+    const vs = e.target.closest("[data-ves]"); if (vs) return hubShow(vs.dataset.ves);
     const hr = e.target.closest("[data-hr]"); if (hr) { window.CONT && CONT.estat(hr.dataset.hr, "Ha respost"); hr.closest(".r").remove(); H.toast("Marcat com a «Ha respost»"); return }
     const ct = e.target.closest("[data-ct]"); if (ct) return window.CONT && CONT.obre(ct.dataset.ct);
     const g = e.target.closest("[data-go]"); if (g) return hubShow(g.dataset.go);

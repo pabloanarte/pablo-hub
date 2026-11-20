@@ -35,6 +35,7 @@ window.DK = (() => {
     moodboard: { nom: "Moodboard", camps: [["titol", "Títol", "text"], ["imgs", "Imatges (2 a 9)", "imgs"]] },
     personatges: { nom: "Personatges", camps: [["titol", "Títol", "text"], ["items", "Personatges", "items"]] },
     equip: { nom: "Equip", camps: [["titol", "Títol", "text"], ["items", "Persones (nom, rol, foto)", "items"]] },
+    laurels: { nom: "Llorers (festivals i premis)", camps: [["titol", "Títol", "text"], ["items", "Festivals (nom i secció o premi)", "items"]] },
     llista: { nom: "Llista de punts", camps: [["titol", "Títol", "text"], ["punts", "Un punt per línia", "area"]] },
     dades: { nom: "Fitxa / xifres", camps: [["titol", "Títol", "text"], ["items", "Dades (etiqueta i valor)", "items"]] },
     paleta: { nom: "Paleta de color", camps: [["titol", "Títol", "text"], ["colors", "Colors (un per línia, #hex)", "area"], ["auto", "Treure-la de les imatges del dossier", "check"]] },
@@ -66,6 +67,7 @@ window.DK = (() => {
 .dk .it b{display:block;font-size:calc(30px*var(--fit,1))}.dk .it span{display:block;font-size:calc(24px*var(--fl));color:var(--mut);line-height:1.35;margin-top:6px}
 .dk .dad{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:calc(48px*var(--fit,1)) 64px}.dk .dad b{display:block;font-size:calc(52px*var(--fit,1));font-weight:var(--tw);letter-spacing:-.02em;overflow-wrap:normal;hyphens:auto}.dk .dad span{font-size:calc(20px*var(--fl));color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
 .dk .pal{display:flex;flex:1;gap:0}.dk .pal div{flex:1;display:flex;align-items:flex-end;padding:24px;font-size:20px;font-family:'IBM Plex Mono',monospace}
+.dk .lau{display:grid;gap:calc(40px*var(--fit,1)) 48px;align-content:center;flex:1}.dk .lau>div{display:flex;align-items:center;justify-content:center;gap:6px}.dk .lb{height:calc(200px*var(--fit,1));flex:none;color:var(--fg)}.dk .lr{transform:scaleX(-1)}.dk .lt{text-align:center;max-width:300px}.dk .lt b{display:block;font-size:calc(34px*var(--fl));line-height:1.15;text-transform:var(--tt)}.dk .lt span{display:block;font-size:calc(19px*var(--fl));color:var(--mut);margin-top:6px;text-transform:uppercase;letter-spacing:.08em}
 .dk .cal{display:flex;flex-direction:column;gap:calc(22px*var(--fit,1))}.dk .cal .fs{display:grid;grid-template-columns:34% 1fr;align-items:center;gap:24px;font-size:calc(26px*var(--fl))}.dk .cal .bb{height:calc(36px*var(--fit,1));background:var(--ac);border-radius:3px}
 /* variants per estil (també a l'interior, no només a la portada) */
 .dk.th-editorial h2{font-size:calc(96px*var(--fit,1));letter-spacing:-.05em;line-height:.9}.dk.th-editorial .num{top:84px;bottom:auto}
@@ -115,6 +117,16 @@ window.DK = (() => {
       case "personatges": case "equip": {
         const l = s.items || [], k = Math.max(1, l.length), cols = Math.min(vert ? 2 : 4, k);
         c = P(`<h2>${E(s.titol)}</h2><div class="items" style="grid-template-columns:repeat(${cols},1fr)">${l.map(x => `<div class="it">${s.tipus === "equip" || x.img ? im(x.img, "", s.tipus === "equip" ? "border-radius:50%;width:70%" : "") : ""}<b>${E(x.nom)}</b><span>${tx(x.text)}</span></div>`).join("")}</div>`); break;
+      }
+      case "laurels": {
+        // branca de llorer dibuixada (fulles en arc); la dreta és la mateixa girada
+        // branca de llorer: arc a l'esquerra (de baix a dalt) amb fulles alternes; la dreta és la mateixa girada
+        const N = 8, cx = 62, cy = 60, r = 46, pt = t => { const a = (250 - 135 * t) * Math.PI / 180; return [cx + r * Math.cos(a), cy - r * Math.sin(a), a] };
+        const fulles = Array.from({ length: N }, (_, i) => { const t = (i + .6) / N, [x, y, a] = pt(t), sgn = i % 2 ? 1 : -1, tang = -(a * 180 / Math.PI) + 180, rot = tang + sgn * 38, sz = 1 - t * .35; return `<ellipse cx="${(x + sgn * 4 * Math.cos(a)).toFixed(1)}" cy="${(y - sgn * 4 * Math.sin(a)).toFixed(1)}" rx="${(3.6 * sz).toFixed(1)}" ry="${(9 * sz).toFixed(1)}" transform="rotate(${rot.toFixed(0)} ${(x + sgn * 4 * Math.cos(a)).toFixed(1)} ${(y - sgn * 4 * Math.sin(a)).toFixed(1)})"/>` }).join("");
+        const [x0, y0] = pt(0), [x1, y1] = pt(1);
+        const br = `<svg viewBox="0 0 50 112" class="lb"><path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="currentColor" stroke-width="1.6"/><g fill="currentColor">${fulles}</g></svg>`;
+        const ls = s.items || [], cols = ls.length > 6 ? 4 : ls.length === 4 ? 2 : ls.length > 2 ? 3 : Math.max(ls.length, 1);
+        c = P(`${s.titol ? `<h2>${E(s.titol)}</h2>` : ""}<div class="lau" style="grid-template-columns:repeat(${cols},1fr)">${ls.map(x => `<div>${br}<div class="lt"><b>${E(x.nom)}</b><span>${E(x.text)}</span></div>${br.replace('class="lb"', 'class="lb lr"')}</div>`).join("")}</div>`); break;
       }
       case "llista": c = P(`<h2>${E(s.titol)}</h2><ul style="margin:0;padding-left:1.1em;max-width:1200px">${String(s.punts || "").split("\n").filter(x => x.trim()).map(x => `<li>${E(x.replace(/^[-•*]\s*/, ""))}</li>`).join("")}</ul>`); break;
       case "dades": c = P(`<h2>${E(s.titol)}</h2><div class="dad">${(s.items || []).map(x => `<div><span>${E(x.nom)}</span><b>${E(x.text)}</b></div>`).join("")}</div>`); break;

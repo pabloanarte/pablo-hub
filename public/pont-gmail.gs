@@ -1,4 +1,5 @@
-// Pont entre el hub PABLO i Gmail (pablo.anarte.film@gmail.com).
+// Pont entre el hub PABLO i Gmail (pablo.anarte.film@gmail.com). També desa cada dilluns una còpia del hub al Drive.
+const HUB = "https://pablo-hub.pages.dev";
 // S'enganxa a script.google.com amb aquest compte. Instruccions a la secció "Correu" del hub.
 // El hub hi parla des del servidor amb una clau; sense la clau no respon res.
 
@@ -7,6 +8,8 @@ function configurar() {
   if (!p.getProperty("CLAU")) p.setProperty("CLAU", Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, ""));
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("enviaProgramats").timeBased().everyMinutes(5).create(); // enviaments programats
+  ScriptApp.newTrigger("copiaDrive").timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(7).create(); // còpia del hub cada dilluns
+  DriveApp.getRootFolder();
   GmailApp.getInboxUnreadCount();
   Logger.log("Clau per enganxar al hub:\n" + p.getProperty("CLAU"));
 }
@@ -71,6 +74,7 @@ const ACCIONS = {
     const p = PropertiesService.getScriptProperties().getProperties();
     return { llista: Object.keys(p).filter(k => k.indexOf("P_") === 0).map(k => Object.assign({ id: k }, JSON.parse(p[k]))).sort((a, b) => a.quan < b.quan ? -1 : 1) };
   },
+  copia() { const f = copiaDrive(); return { ok: 1, url: f.getUrl(), nom: f.getName() } },
   cancela(q) {
     const ps = PropertiesService.getScriptProperties(), v = String(q.id).indexOf("P_") === 0 && ps.getProperty(q.id);
     if (v) { try { GmailApp.getDraft(JSON.parse(v).d).deleteDraft() } catch (e) { } ps.deleteProperty(q.id) }
@@ -94,14 +98,15 @@ function aQui(q) {
   const jo = Session.getEffectiveUser().getEmail().toLowerCase(), ms = t.getMessages().filter(m => adreça(m.getFrom()) !== jo);
   return ms.length ? ms[ms.length - 1] : null;
 }
+const opcions = q => { const o = { name: "Pablo Anarte" }; if (q.cc) o.cc = q.cc; if (q.bcc) o.bcc = q.bcc; if (q.html) o.htmlBody = q.html; return o };
 function esborrany(q) {
-  const m = aQui(q), o = { name: "Pablo Anarte", cc: q.cc || undefined };
+  const m = aQui(q), o = opcions(q);
   return m ? m.createDraftReply(q.cos || "", o) : GmailApp.createDraft(q.a, q.assumpte || "", q.cos || "", o);
 }
 function enviaAra(q) {
   const m = aQui(q);
-  if (m) { m.reply(q.cos, { name: "Pablo Anarte", cc: q.cc || undefined }); return }
-  GmailApp.sendEmail(q.a, q.assumpte || "", q.cos || "", { name: "Pablo Anarte", cc: q.cc || undefined });
+  if (m) { m.reply(q.cos, opcions(q)); return }
+  GmailApp.sendEmail(q.a, q.assumpte || "", q.cos || "", opcions(q));
 }
 
 // Cada 5 minuts: envia el que toca. Si un enviament falla 3 cops, es queda aturat amb l'error a la llista.
@@ -116,4 +121,17 @@ function enviaProgramats() {
       catch (e) { q.intents = (q.intents || 0) + 1; q.error = String(e.message || e); ps.setProperty(k, JSON.stringify(q)) }
     });
   } finally { lock.releaseLock() }
+}
+
+// Còpia de seguretat del hub a la carpeta "Còpies PABLO hub" del Drive (es guarden les 12 últimes)
+function copiaDrive() {
+  const clau = PropertiesService.getScriptProperties().getProperty("CLAU");
+  const r = UrlFetchApp.fetch(HUB + "/api/pont/copia", { method: "post", headers: { "x-clau": clau }, muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error("El hub no ha donat la còpia (" + r.getResponseCode() + ")");
+  const it = DriveApp.getFoldersByName("Còpies PABLO hub"), dir = it.hasNext() ? it.next() : DriveApp.createFolder("Còpies PABLO hub");
+  const nom = "pablo-hub-" + Utilities.formatDate(new Date(), "Europe/Madrid", "yyyy-MM-dd_HH-mm") + ".json";
+  const f = dir.createFile(nom, r.getContentText(), "application/json");
+  const fs = []; const all = dir.getFiles(); while (all.hasNext()) fs.push(all.next());
+  fs.sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(12).forEach(x => x.setTrashed(true));
+  return f;
 }
