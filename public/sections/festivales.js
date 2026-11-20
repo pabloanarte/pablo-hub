@@ -39,7 +39,7 @@
     const fs = cs.filter(d => d.tipo !== "Lab / residència" && d.proyecto), box = document.getElementById("frec");
     const grups = ps.map(p => [p, fs.filter(d => d.proyecto === p.id)]).filter(([, l]) => l.length).sort((a, b) => b[1].length - a[1].length);
     box.innerHTML = grups.length ? grups.map(([p, l]) => {
-      const n = e => l.filter(d => d.estado === e).length, sel = seleccions(l), cost = l.reduce((a, d) => a + (+d.cost || 0), 0);
+      const n = e => l.filter(d => d.estado === e).length, sel = seleccions(l), cost = l.filter(d => !["Per presentar", "Descartat"].includes(d.estado)).reduce((a, d) => a + (+d.cost || 0), 0);
       const NIV = ["Mundial", "Internacional", "Europea", "Estatal", "Catalana"], fetes = NIV.map(e => [e, l.find(d => d.estrena === e && (d.estado === "Seleccionat" || d.premi))]);
       // una estrena d'un nivell més ampli ja cobreix els de sota (una mundial també és estatal…)
       fetes.forEach((f, i) => { if (!f[1]) { const ant = fetes.slice(0, i).find(x => x[1]); if (ant) f[2] = ant[0] } });

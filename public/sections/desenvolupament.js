@@ -64,7 +64,7 @@
       save(); pinta();
     }
     if (k === "qcv" && confirm("Treure aquesta convocatòria i la seva llista?")) { d.convs.splice(i, 1); save(); pinta() }
-    if (k === "ndoc") { d.convs[+b.dataset.c].docs.push({ nom: "", fet: false }); save(); pinta(); const l = el.querySelectorAll(`[data-dc="${b.dataset.c}"]`); l.length && l[l.length - 1].focus() }
+    if (k === "ndoc") { d.convs[+b.dataset.c].docs.push({ nom: "", fet: false }); save(); await pinta(); const l = el.querySelectorAll(`[data-dc="${b.dataset.c}"]`); l.length && l[l.length - 1].focus() }
     if (k === "qdoc") { d.convs[+b.dataset.c].docs.splice(i, 1); save(); pinta() }
     if (k === "fet") { d.convs[+b.dataset.c].docs[i].fet = b.checked; save(); pinta() }
   });
