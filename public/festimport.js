@@ -7,12 +7,12 @@ window.FIMP = (() => {
   const EST = ["Presentat", "Seleccionat", "Rebutjat", "Per presentar", "Descartat"];
   const RANG = { "Per presentar": 0, "Presentat": 1, "Descartat": 2, "Rebutjat": 3, "Seleccionat": 4 }; // mai es baixa d'un estat més avançat
   // ----- estat a partir del text (anglès, castellà, català i alguna forma francesa/italiana) -----
-  const PROMO = /newsletter|butllet[ií]|bolet[ií]n|year in review|meet the (winners|festivals?)|recommended|recomendad|recomanat|tips|webinar|discount|descuento|descompte|% off|sale\b|deadline (is )?(approaching|extended|has passed|passed)|last chance|[uú]ltima oportunidad|new festivals|nuevos festivales|festivales (abiertos|recomendados)|open (for )?submissions|call for entries|convocatoria abierta|filmfreeway (awards|festival awards)|survey|encuesta/i;
+  const PROMO = /newsletter|butllet[ií]|bolet[ií]n|year in review|meet the (winners|festivals?)|recommended|recomendad|recomanat|\btips (for|to|on)\b|webinar|weekly|digest|monthly|mensual|setmanal|semanal|you should submit|submit to these|festivals (we think|you('ll| will) love|for you)|final deadline|deadline (tomorrow|today)|\bdeadline for\b|last call|el plazo|termina mañana|acaba demà|el termini|discount|descuento|descompte|% off|sale\b|deadline (is )?(approaching|extended|has passed|passed)|last chance|[uú]ltima oportunidad|new festivals|nuevos festivales|festivales (abiertos|recomendados)|open (for )?submissions|call for entries|convocatoria abierta|filmfreeway (awards|festival awards)|survey|encuesta/i;
   const SEL_F = /official selection|has been (officially )?selected|have been selected|been accepted|selected for|selecci[oó]n oficial|selecci[oó] oficial|ha sido seleccionad|han sido seleccionad|ha resultado seleccionad|ha estat seleccionad|ha quedat seleccionad|s[ée]lection officielle|selezione ufficiale|sele[cç][aã]o oficial|award winner|has won|ha ganado|ha guanyat|finalist|finalista|honou?rable mention|menci[oó]n (de honor|especial)|menci[oó] (d'honor|especial)|nominated|nominad/i;
   const REB_F = /not (been )?selected|not been accepted|were not able to (include|select)|unable to (include|select)|could not (include|select)|no ha sido seleccionad|no ha resultado seleccionad|no ha estat seleccionad|no ha quedat seleccionad|no seleccionad|n'a pas [ée]t[ée] s[ée]lectionn|non [èe] stat[oa] selezionat|not part of (our|the) (official )?selection|no forma parte de la selecci/i;
   const PRE_F = /submission (confirmation|received|complete|completed|successful)|successfully submitted|thank you for (your )?submi|thanks for submitting|you (have )?submitted|has been submitted|was received|new submission|receipt|payment (received|confirmation)|inscripci[oó]n (realizada|completada|confirmada|recibida)|gracias por (tu|su) inscripci|ha sido inscrit|inscrita (en|correctamente)|pago (realizado|confirmado)|inscripci[oó] (realitzada|completada|confirmada|rebuda)|gr[àa]cies per (la teva|la vostra) inscripci|ha estat inscrit|pagament (realitzat|confirmat)/i;
   const ACT = /(?:updated to|changed to|status:|estado:|ha cambiado a|ha canviat a|estat:)\s*:?\s*["«]?([a-záéíóúàèòç ]{4,30})/i;
-  const deParaula = w => /not selected|no seleccionad|rejected|rechazad|rebutjad|declined/i.test(w) ? "Rebutjat" : /withdrawn|retirad/i.test(w) ? "Descartat" : /selected|seleccionad|winner|ganador|guanyador|finalist|finalista|mention|menci/i.test(w) ? "Seleccionat" : /undecided|consideration|pending|pendent|pendiente|received|recibid|rebut|submitted|inscrit|in review|en revisi/i.test(w) ? "Presentat" : "";
+  const deParaula = w => /not selected|no seleccionad|rejected|rechazad|rebutjad|declined/i.test(w) ? "Rebutjat" : /withdrawn|retirad/i.test(w) ? "Descartat" : /selected|seleccionad|winner|ganador|guanyador|finalist|finalista|mention|menci/i.test(w) ? "Seleccionat" : /premiad|premiat/i.test(w) ? "Seleccionat" : /undecided|consideration|consideraci[oó]|pending|pendent|pendiente|received|recibid|rebut|rebuda|submitted|inscrit|in review|en revisi/i.test(w) ? "Presentat" : "";
   function estatDe(t) {
     t = String(t || ""); const a = t.match(ACT);
     if (a) { const e = deParaula(a[1]); if (e) return e }
@@ -21,7 +21,7 @@ window.FIMP = (() => {
     if (PRE_F.test(t)) return "Presentat";
     return "";
   }
-  const premiDe = t => (String(t).match(/(honou?rable mention|menci[oó]n? (de honor|d'honor|especial)|award winner|best [a-z ]{3,30}|millor [a-zàèéíòóúç ]{3,30}|mejor [a-záéíóú ]{3,30}|(gran )?premi[oa]? [a-zàèéíòóúç ]{3,30})/i) || [])[0] || "";
+  const premiDe = t => (String(t).match(/(semi-?finalist|semifinalista|finalist|finalista|honou?rable mention|menci[oó]n? (de honor|d'honor|especial)|award winner|best [a-z ]{3,30}|millor [a-zàèéíòóúç ]{3,30}|mejor [a-záéíóú ]{3,30}|(gran )?premi[oa]? [a-zàèéíòóúç ]{3,30})/i) || [])[0] || "";
   const net = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\b(festival|film|films|international|internacional|de|del|la|el|of|the|cine|cinema|fest|\d{4})\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
   const semblant = (a, b) => { const x = net(a), y = net(b); return x && y && (x === y || (x.length > 4 && y.includes(x)) || (y.length > 4 && x.includes(y))) };
   // dates: "12/03/2026" és dia/mes (Europa); la resta, com les entengui el navegador
@@ -31,18 +31,20 @@ window.FIMP = (() => {
   const neteja = f => String(f || "").replace(/\s+(was|has been|is|ha sido|ha estat|has|have|ha cambiado|ha canviat)\b.*$/i, "").replace(/\s*[|(].*$/, "").replace(/\s+[–—-]\s+.*$/, "").replace(/[.!¡¿?,:;]+$/, "").replace(/^(the|el|la|els|les)\s+/i, "").replace(/\s+(19|20)\d{2}$/, "").replace(/\s+/g, " ").trim();
   function festivalDe(assumpte, cos) {
     const t = String(assumpte || "").replace(/^((re|fwd?|rv|fw)\s*:\s*)+/i, "").trim(), c = String(cos || "");
-    const KW = "submission status update|submission confirmation|submission received|status update|submission|official selection|selecci[oó]n oficial|selecci[oó] oficial|notification|decision|status update|results?|resultado de la selecci[oó]n|resolució de la selecci[oó]|resoluci[oó]n|receipt|filmfreeway receipt|inscripci[oó]n realizada|inscripci[oó] realitzada|inscripci[oó]n|inscripci[oó]|selecci[oó]n|selecci[oó]|update";
+    const KW = "submission status update|submission confirmation|submission received|status update|inscripci[oó] rebuda|inscripci[oó]n recibida|notificaci[oó] del|notificaci[oó]n del|notificaci[oó]|notificaci[oó]n|resoluci[oó]|submission|official selection|selecci[oó]n oficial|selecci[oó] oficial|notification|decision|status update|results?|resultado de la selecci[oó]n|resolució de la selecci[oó]|resoluci[oó]n|receipt|filmfreeway receipt|inscripci[oó]n realizada|inscripci[oó] realitzada|inscripci[oó]n|inscripci[oó]|selecci[oó]n|selecci[oó]|update";
     const pats = [
       new RegExp(`^(?:${KW})\\s*(?:to|for|from|at|in|en|a|al|de|del|per|para)?\\s*[:–—-]\\s*(.+)$`, "i"),   // "Official Selection - X", "Receipt: X"
       new RegExp(`^(?:${KW})\\s+(?:to|for|from|at|in|en|a|al|de|del|per|para)\\s+(.+)$`, "i"),           // "Notification from X"
-      /(?:submission|submitted)\s+to\s+(.+)$/i,                                                          // "Your submission to X was received"
+      /(?:submission|submitted)\s+to\s+(.+)$/i,
+      /official selection\s+(?:at|for|in|of)\s+(?:the\s+)?(.+)$/i,
+      /(?:inscripci[oó]n?|selecci[oó]n?|participaci[oó]n?)\s+(?:en|a|al|del|de la|de)\s+(?:el\s+|la\s+)?(?!tu\b|la teva\b)(.+)$/i,                                                          // "Your submission to X was received"
       /(?:selected|accepted)\s+(?:for|at|in|by)\s+(?:the\s+)?(.+)$/i,
       /(?:seleccionad[ao]|inscrit[ao]|seleccionat|inscrita)\s+(?:en|a|al|para|per|por)\s+(?:el\s+|la\s+)?(.+)$/i,
       /^(.+?)\s+[–—-]\s+(?:submission|official|notification|selection|inscripci|selecci|resultado|decision|status)/i
     ];
     const generic = f => /filmfreeway|festhome|^(your|tu|la teva|su|el estado|the status)\b|ha cambiado|has changed|ha canviat/i.test(f);
     for (const p of pats) { const m = t.match(p); if (m && m[1]) { const f = neteja(m[1]); if (f.length > 2 && f.length < 90 && !generic(f)) return f } }
-    const b = c.match(/(?:submitted to|selected (?:for|at|by)|official selection (?:of|at)|submission to|inscrita en|inscripci[oó]n en|inscripci[oó] a|seleccionada (?:en|para|por)|seleccionat a|inscrit a)\s+(?:the\s+|el\s+|la\s+)?([A-ZÀ-Ý0-9][^.,!\n]{2,80})/);
+    const b = c.match(/(?:[Ss]ubmitted to:?|selected (?:for|at|by)|official selection (?:of|at)|submission to|inscrita en|inscripci[oó]n en|inscripci[oó] a|seleccionada (?:en|para|por)|seleccionat a|inscrit a|[Ss]ubmission to:?)\s+(?:the\s+|el\s+|la\s+)?([A-ZÀ-Ý0-9][^.,!\n]{2,80})/);
     return b ? neteja(b[1]) : neteja(t).slice(0, 80);
   }
   async function projecteDe(text) {
@@ -68,7 +70,7 @@ window.FIMP = (() => {
   }
 
   // ---------- 2) enganxar la llista ----------
-  const COLS = { festival: /^(festival|event|evento|esdeveniment|convocatoria)$/i, proyecto: /^(project|proyecto|projecte|pel[ií]cula|film|obra|t[ií]tulo)$/i, data: /^(date|fecha|data|submitted|date submitted|fecha de inscripci[oó]n)$/i, estat: /^(status|estado|estat|submission status)$/i, jutjat: /^(judging status|judging|decision|decisi[oó]n|resultado|resultat|selecci[oó]n)$/i };
+  const COLS = { festival: /^(festival|event|evento|esdeveniment|convocatoria)$/i, proyecto: /^(project|proyecto|projecte|pel[ií]cula|pel·l[ií]cula|film|obra|t[ií]tulo|t[ií]tol)$/i, data: /^(date|fecha|data|submitted|date submitted|fecha de inscripci[oó]n)$/i, estat: /^(status|estado|estat|submission status)$/i, jutjat: /^(judging status|judging|decision|decisi[oó]n|resultado|resultat|selecci[oó]n)$/i };
   async function deText(text) {
     const ps = await H.col("proyecto"), out = [];
     const prj = t => { t = String(t || "").toLowerCase(); const p = ps.filter(p => p.titulo && t.includes(p.titulo.toLowerCase())).sort((a, b) => b.titulo.length - a.titulo.length)[0]; return p ? p.id : "" };
