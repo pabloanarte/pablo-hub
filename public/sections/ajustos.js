@@ -4,7 +4,7 @@
   const fa = s => { if (!s) return "mai"; const d = Math.floor((Date.now() - new Date(s)) / 864e5); return d <= 0 ? "avui" : d === 1 ? "ahir" : `fa ${d} dies` };
   async function pintar() {
     const [a, cal, cor] = await Promise.all([H.col("ajust").then(l => l.find(x => x.id === "ajust:copia") || {}), H.api("GET", "calendari").catch(() => ({})), H.api("GET", "correu/config").catch(() => ({}))]);
-    el.innerHTML = `<div class="dash" style="grid-template-columns:repeat(auto-fill,minmax(380px,1fr))">
+    el.innerHTML = `<div class="dash" style="grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))">
       <div class="card"><h3>Còpia de seguretat</h3>
         <p>Última còpia: <b>${fa(a.ultima)}</b>${a.on === "drive" ? " (al Drive)" : a.on ? " (descarregada)" : ""}.</p>
         <p class="em">Tot el que hi ha al hub (contactes, projectes, guions, plans, dossiers…) en un sol arxiu. Els arxius pujats (fotos, vídeos) es queden al servidor i no hi van inclosos.</p>

@@ -24,6 +24,6 @@
     ],
     orden: (a, b) => (a.rol || "").localeCompare(b.rol || "") || (a.titulo || "").localeCompare(b.titulo || ""),
     grupos: l => { const g = {}; l.forEach(d => { const k = d.tipus === "Repartiment" ? "Repartiment" : d.rol || "Sense rol"; (g[k] = g[k] || []).push(d) }); return Object.entries(g) },
-    fila: d => ({ t: d.titulo || "Sense nom", s: [d.tipus === "Repartiment" ? d.edat && "edat " + d.edat : d.rol, d.ciutat, d.tarifa, d.valoracio, d.tel].filter(Boolean).join(" · "), c: d.tipus === "Repartiment" ? "#af52de" : "#0a84ff" })
+    fila: d => ({ t: d.titulo || "Sense nom", s: [d.tipus === "Repartiment" ? d.edat && "edat " + d.edat : d.rol, d.ciutat, d.tarifa, d.valoracio, d.tel].filter(Boolean).join(" · "), c: d.tipus === "Repartiment" ? "#000" : ({ "Direcció de fotografia": "#0a84ff", "Gaffer / elèctrics": "#0a84ff", "Foto fixa": "#0a84ff", "Producció": "#30b27a", "Ajudant de direcció": "#30b27a", "Art": "#ff9f0a", "Vestuari": "#ff9f0a", "Maquillatge i perruqueria": "#ff9f0a", "So": "#5ac8fa", "Muntatge": "#ff375f", "Color": "#ff375f", "Música": "#ff375f" })[d.rol] || "#8e8e93" })
   });
 })();

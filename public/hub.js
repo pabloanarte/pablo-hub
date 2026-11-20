@@ -36,7 +36,7 @@ const SECTIONS = [
  {id:"planes",label:"Plans de rodatge",desc:"Generats des del guió tècnic, ordenats i amb hores",src:"sections/planes.js"},
  {id:"postproduccion",label:"Postproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/postproduccion.js"},
  {id:"festivales",label:"Festivals",desc:"Festivals, labs i residències",src:"sections/festivales.js"},
- {id:"feines",label:"Feines",desc:"Ajudant de direcció, script, encàrrecs i docència",src:"sections/feines.js"},
+ {id:"feines",label:"Feines",desc:"Ajudant de direcció, script, direcció i docència",src:"sections/feines.js"},
  {id:"brainstorm",label:"Brainstorm",desc:"Idees soltes",src:"sections/brainstorm.js"},
  {id:"web",label:"La meva web",desc:"pabloanarte.com",src:"sections/web.js"},
  {id:"ajustos",label:"Ajustos",desc:"Còpia de seguretat, calendari al mòbil, app",src:"sections/ajustos.js"}

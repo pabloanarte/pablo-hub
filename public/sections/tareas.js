@@ -9,7 +9,7 @@
     { f: "proyecto", l: "Projecte", tipo: "proyecto" },
     { f: "notas", l: "Notes", tipo: "textarea" }
   ];
-  const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a", rodatge: "#ff375f", feina: "#af52de" };
+  const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a", rodatge: "#5ac8fa", feina: "#af52de" };
   let vista = "lista", mes = today().slice(0, 7), verHechas = false;
 
   el.innerHTML = `<div class="tabs"><button class="t on" data-k="v" data-v="lista">Llista</button><button class="t" data-k="v" data-v="cal">Calendari</button></div>
@@ -26,7 +26,7 @@
       r.filter(x => x.fecha).map(x => ({ d: x.fecha, c: COL.reunion, t: (x.hora ? x.hora + " " : "") + (x.titulo || "Reunió"), id: x.id, tipo: "reunion" })),
       f.filter(x => x.limite).map(x => ({ d: x.limite, c: COL.limite, t: "Límit: " + (x.titulo || ""), id: x.id, tipo: "convocatoria" })),
       f.filter(x => x.evento).map(x => ({ d: x.evento, c: COL.evento, t: x.titulo || "", id: x.id, tipo: "convocatoria" })),
-      pl.flatMap(x => (x.dias || []).map((d, i) => d.fecha ? { d: d.fecha, c: COL.rodatge, t: `Rodatge ${pn(x.proyecto) || x.titulo || ""} · J${i + 1}`, id: x.id, tipo: "pdr" } : null).filter(Boolean)),
+      pl.flatMap(x => (x.dias || []).map((d, i) => d.fecha ? { d: d.fecha, c: COL.rodatge, t: `${(String(d.calls || "").match(/\d{1,2}[:.]\d{2}/) || [""])[0]} Rodatge ${pn(x.proyecto) || x.titulo || ""} · J${i + 1}`.trim(), id: x.id, tipo: "pdr" } : null).filter(Boolean)),
       fe.filter(x => x.ini).flatMap(x => { const o = [], fi = x.fin && x.fin >= x.ini ? x.fin : x.ini; for (let d = x.ini, n = 0; d <= fi && n < 60; d = H.addDays(d, 1), n++) o.push({ d, c: COL.feina, t: `${x.rol || "Feina"}: ${x.titulo || ""}`, id: x.id, tipo: "feina" }); return o }));
     return { t, ev };
   }
@@ -37,7 +37,7 @@
       const p = t.filter(x => !x.hecha).sort((a, b) => (a.fecha || "9").localeCompare(b.fecha || "9"));
       const G = [["Endarrerides", p.filter(x => x.fecha && x.fecha < hoy)], ["Avui", p.filter(x => x.fecha === hoy)], ["Propers 7 dies", p.filter(x => x.fecha > hoy && x.fecha <= sem)], ["Més endavant", p.filter(x => x.fecha > sem)], ["Sense data", p.filter(x => !x.fecha)]];
       const h = t.filter(x => x.hecha);
-      const prox = ev.filter(e => e.tipo !== "tarea" && e.d >= hoy && e.d <= sem).sort((a, b) => a.d.localeCompare(b.d));
+      const vist = new Set(), prox = ev.filter(e => e.tipo !== "tarea" && e.d >= hoy && e.d <= sem).sort((a, b) => a.d.localeCompare(b.d)).filter(e => e.tipo !== "feina" || (!vist.has(e.id) && vist.add(e.id)));
       const agenda = `<div class="card"><h3>Propers 7 dies</h3>` + (prox.length ? prox.map(e => `<div class="r" data-k="evl" data-t="${e.tipo}" data-id="${e.id}"><i class="dot" style="background:${e.c}"></i><div class="g"><b>${E(e.t)}</b><small>${E(fecha(e.d))}</small></div></div>`).join("") : `<p class="em">Sense reunions ni dates límit.</p>`) + `</div>`;
       v.innerHTML = `<div class="split"><div>` +
         (G.some(g => g[1].length) ? G.filter(g => g[1].length).map(([n, l]) => `<h2 ${n === "Endarrerides" ? 'style="color:#d70015"' : ""}>${n} <span>${l.length}</span></h2>` + l.map(fila).join("")).join("") : `<p class="em">Cap tasca pendent.</p>`) +

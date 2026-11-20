@@ -68,7 +68,7 @@ window.CIT = (() => {
       <div class="card cit"><h3>Notes per departament</h3><textarea data-k="notes" rows="5" placeholder="Art: …&#10;Vestuari: …&#10;So: …&#10;Vehicles i parking: …">${E(c.notes)}</textarea><label>Emergències</label><textarea data-k="emergencia" rows="2">${E(c.emergencia)}</textarea></div>
       <div class="ls" style="margin:18px 0 40px"><button class="del" style="margin:0" data-c="reset">Tornar a fer-la tota des del pla</button></div>
       <datalist id="cit-dl">${gent.map(p => `<option value="${E(p.titulo || "")}">${E([p.rol, p.tipus].filter(Boolean).join(" · "))}</option>`).join("")}</datalist>`;
-    el.querySelectorAll(".cit textarea").forEach(alca);
+    requestAnimationFrame(() => el.querySelectorAll(".cit textarea").forEach(alca));
   }
   const alca = t => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px" };
 
@@ -83,7 +83,7 @@ window.CIT = (() => {
       ${tb("horaris")}${tb("locs", 1)}${c.temps.text ? `<h3 style="font-size:13px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.06em">Temps${c.temps.lloc ? " · " + E(c.temps.lloc) : ""}</h3><div style="font-size:12px">${E(c.temps.text).replace(/\n/g, "<br>")}</div>` : ""}
       ${tb("pla", 1)}${tb("rep", 1)}${tb("equip", 1)}
       ${c.notes ? `<h3 style="font-size:13px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.06em">Notes</h3><div style="font-size:12px">${E(c.notes).replace(/\n/g, "<br>")}</div>` : ""}
-      ${c.emergencia ? `<div style="font-size:12px;margin-top:14px;padding:8px;border:1px solid #ff3b30;border-radius:6px">${E(c.emergencia).replace(/\n/g, "<br>")}</div>` : ""}</div>`;
+      ${c.emergencia ? `<div style="font-size:12px;margin-top:14px;padding:8px;border:1px solid #ff3b30;border-radius:6px;box-sizing:border-box">${E(c.emergencia).replace(/\n/g, "<br>")}</div>` : ""}</div>`;
   }
   const assumpte = () => `Citació · ${c.titol || "rodatge"} · jornada ${c.jornada}${c.data ? " · " + H.fecha(c.data) : ""}`;
   const destinataris = () => [...new Set([...(c.equip || []), ...(c.rep || [])].map(r => String(r.email || "").trim().toLowerCase()).filter(x => /@/.test(x)))];
@@ -96,7 +96,7 @@ window.CIT = (() => {
       <div class="ls">${ds.map(x => `<label class="ck" style="margin:0 10px 0 0"><input type="checkbox" class="cd" value="${E(x)}" checked> ${E(x)}</label>`).join("") || `<span class="em">Cap fila d'Equip o Repartiment té email.</span>`}</div>
       <label>Altres adreces (separades per comes)</label><input id="ce-x">
       <label>Assumpte</label><input id="ce-s" value="${E(assumpte())}">
-      <label>Missatge (va a sobre de la citació)</label><textarea id="ce-m" rows="4">${E(c.missatge || "Hola a tothom,\n\nUs passo la citació de demà. Qualsevol dubte, digueu-me.\n\nPablo")}</textarea>
+      <label>Missatge (va a sobre de la citació)</label><textarea id="ce-m" rows="4">${E(c.missatge || `Hola a tothom,\n\nUs passo la citació ${c.data === H.addDays(H.today(), 1) ? "de demà" : c.data ? "del " + H.fecha(c.data, true) : "de la jornada"}. Qualsevol dubte, digueu-me.\n\nPablo`)}</textarea>
       <label>Vista prèvia</label><div style="border:1px solid var(--bd);border-radius:12px;padding:14px;max-height:340px;overflow:auto">${full(1)}</div>
       <div class="ls envb" style="margin-top:14px"><button class="b" data-c="env" ${ok ? "" : "disabled"}>Enviar ara</button><span style="flex:1"></span><input type="datetime-local" id="ce-q" style="width:auto"><button class="b2" data-c="prog" ${ok ? "" : "disabled"}>Programar</button></div>`);
   }
@@ -131,6 +131,7 @@ window.CIT = (() => {
   const viu = () => el && el.querySelector('[data-c="torna"]') && c;
   document.addEventListener("input", e => {
     const t = e.target; if (!viu() || !el.contains(t)) return;
+    if (t.dataset.c === "base") return;
     if (t.dataset.t) { c[t.dataset.t][+t.dataset.i][t.dataset.f] = t.value; alca(t); return save() }
     if (t.dataset.k) { const [a, b] = t.dataset.k.split("."); if (b) c[a][b] = t.value; else c[a] = t.value; save() }
   });
@@ -138,6 +139,7 @@ window.CIT = (() => {
     const t = e.target; if (!viu() || t.dataset.c !== "base" || !t.value) return;
     const p = (await H.col("persona")).find(x => (x.titulo || "") === t.value); if (!p) return;
     const k = t.dataset.t;
+    if ([...(c.equip || []), ...(c.rep || [])].some(r => (r.nom || r.actor) === p.titulo)) { t.value = ""; return H.toast("Ja hi és") }
     if (k === "equip") c.equip.push({ id: uid(), rol: p.rol || "", nom: p.titulo || "", call: "", tel: p.tel || "", email: p.email || "" });
     else { const lliure = c.rep.find(r => !r.actor); if (lliure) Object.assign(lliure, { actor: p.titulo || "", tel: p.tel || "", email: p.email || "" }); else c.rep.push({ id: uid(), pers: "", actor: p.titulo || "", recollida: "", maq: "", apunt: "", tel: p.tel || "", email: p.email || "" }) }
     save(); pinta();
