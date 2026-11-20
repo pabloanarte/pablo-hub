@@ -147,7 +147,7 @@ async function correu(accio, m, request, db, j) {
     return j({ ok: 1 });
   }
   if (!cfg) return j({ error: "config" }, 503);
-  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia"].includes(accio)) return j({ error: "no" }, 404);
+  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia", "festivals"].includes(accio)) return j({ error: "no" }, 404);
   // el que envia o cancel·la només per POST amb JSON (un enllaç o un formulari d'una altra web no ho pot fer)
   if (["envia", "cancela", "resum", "copia"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
   const q = m === "GET" ? Object.fromEntries(new URL(request.url).searchParams) : await request.json();

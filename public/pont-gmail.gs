@@ -74,6 +74,15 @@ const ACCIONS = {
     const p = PropertiesService.getScriptProperties().getProperties();
     return { llista: Object.keys(p).filter(k => k.indexOf("P_") === 0).map(k => Object.assign({ id: k }, JSON.parse(p[k]))).sort((a, b) => a.quan < b.quan ? -1 : 1) };
   },
+  // avisos de FilmFreeway i Festhome (inscripcions i decisions dels festivals)
+  festivals(q) {
+    const out = [];
+    GmailApp.search("from:(filmfreeway.com OR festhome.com) newer_than:" + Math.min(+q.dies || 365, 1500) + "d", 0, 150).forEach(t => t.getMessages().forEach(m => {
+      if (!/filmfreeway|festhome/i.test(m.getFrom())) return;
+      out.push({ id: m.getId(), data: m.getDate().toISOString(), de: m.getFrom(), assumpte: m.getSubject(), cos: m.getPlainBody().replace(/\s+/g, " ").slice(0, 2500) });
+    }));
+    return { missatges: out };
+  },
   copia() { const f = copiaDrive(); return { ok: 1, url: f.getUrl(), nom: f.getName() } },
   cancela(q) {
     const ps = PropertiesService.getScriptProperties(), v = String(q.id).indexOf("P_") === 0 && ps.getProperty(q.id);

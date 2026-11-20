@@ -56,11 +56,12 @@
     el.querySelectorAll(".fvis .t").forEach(b => b.classList.toggle("on", b.dataset.v === vista));
     if (vista === "rec") recorregut();
   }
-  el.insertAdjacentHTML("afterbegin", `<div class="seg fvis" style="margin-bottom:14px"><button class="t on" data-k="fvis" data-v="llista">Convocatòries</button><button class="t" data-k="fvis" data-v="rec">Recorregut per pel·lícula</button></div>`);
+  el.insertAdjacentHTML("afterbegin", `<div class="seg fvis" style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><button class="t on" data-k="fvis" data-v="llista">Convocatòries</button><button class="t" data-k="fvis" data-v="rec">Recorregut per pel·lícula</button><span style="flex:1"></span><button class="b2" data-k="fimp">Importar de FilmFreeway i Festhome</button></div>`);
   el.insertAdjacentHTML("beforeend", `<div id="frec" hidden></div>`);
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
     if (k === "fvis") { vista = b.dataset.v; posaVista() }
+    if (k === "fimp") return FIMP.obre();
     if (k === "fobre") H.abrir("convocatoria", b.dataset.id);
     if (k === "fcopia" || k === "fdeck") {
       const sel = seleccions((await H.col("convocatoria")).filter(d => d.proyecto === b.dataset.p && d.tipo !== "Lab / residència")), txt = sel.map(linia).join("\n");
