@@ -40,11 +40,13 @@
     const grups = ps.map(p => [p, fs.filter(d => d.proyecto === p.id)]).filter(([, l]) => l.length).sort((a, b) => b[1].length - a[1].length);
     box.innerHTML = grups.length ? grups.map(([p, l]) => {
       const n = e => l.filter(d => d.estado === e).length, sel = seleccions(l), cost = l.reduce((a, d) => a + (+d.cost || 0), 0);
-      const fetes = ["Mundial", "Internacional", "Europea", "Estatal", "Catalana"].map(e => [e, l.find(d => d.estrena === e && (d.estado === "Seleccionat" || d.premi))]);
+      const NIV = ["Mundial", "Internacional", "Europea", "Estatal", "Catalana"], fetes = NIV.map(e => [e, l.find(d => d.estrena === e && (d.estado === "Seleccionat" || d.premi))]);
+      // una estrena d'un nivell més ampli ja cobreix els de sota (una mundial també és estatal…)
+      fetes.forEach((f, i) => { if (!f[1]) { const ant = fetes.slice(0, i).find(x => x[1]); if (ant) f[2] = ant[0] } });
       const prox = l.filter(d => d.estado === "Per presentar" && d.limite && d.limite >= H.today()).sort((a, b) => a.limite.localeCompare(b.limite))[0];
       return `<div class="card frc"><h3>${E(p.titulo || "Sense títol")}</h3>
         <div class="st s5">${[["Presentats", l.length - n("Per presentar") - n("Descartat")], ["Seleccions", sel.length], ["Premis", l.filter(d => d.premi).length], ["Pendents", n("Per presentar")], ["Taxes", cost + " €"]].map(([t, v]) => `<div><b>${v}</b><small>${t}</small></div>`).join("")}</div>
-        <p class="em" style="margin:10px 0">Estrenes: ${fetes.map(([e, d]) => d ? `<b>${e}</b> a ${E(d.titulo)}` : `<span class="mut">${e} lliure</span>`).join(" · ")}${prox ? `<br>Pròxima data límit: <b>${E(prox.titulo)}</b>, ${H.fecha(prox.limite)}` : ""}</p>
+        <p class="em" style="margin:10px 0">Estrenes: ${fetes.map(([e, d, per]) => d ? `<b>${e}</b> a ${E(d.titulo)}` : per ? `<span class="mut">${e}: ja feta (${per.toLowerCase()})</span>` : `<span class="mut">${e} lliure</span>`).join(" · ")}${prox ? `<br>Pròxima data límit: <b>${E(prox.titulo)}</b>, ${H.fecha(prox.limite)}` : ""}</p>
         ${l.slice().sort((a, b) => (b.evento || b.limite || "").localeCompare(a.evento || a.limite || "")).map(d => `<div class="r" data-k="fobre" data-id="${d.id}"><i class="dot" style="background:${CE[d.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(d.titulo || "")}${d.premi ? ` · <span style="color:#b8860b">${E(d.premi)}</span>` : ""}</b><small>${[d.estado, d.seccio, d.estrena && "estrena " + d.estrena.toLowerCase(), d.evento ? H.fecha(d.evento) : d.limite && "límit " + H.fecha(d.limite), d.lugar].filter(Boolean).map(E).join(" · ")}</small></div></div>`).join("")}
         ${sel.length ? `<div class="ls" style="margin-top:12px"><button class="b2" data-k="fcopia" data-p="${p.id}">Copiar la llista de seleccions</button><button class="b2" data-k="fdeck" data-p="${p.id}">Posar els llorers als dossiers d'aquest projecte</button></div>` : ""}</div>`;
     }).join("") : `<p class="em">Quan una convocatòria de festival tingui un projecte assignat, aquí veuràs el recorregut de cada pel·lícula.</p>`;

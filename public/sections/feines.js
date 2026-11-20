@@ -4,7 +4,7 @@
   const EST = ["Pressupostat", "Confirmat", "Fet", "Facturat", "Cobrat"];
   const CE = { "Pressupostat": "#8e8e93", "Confirmat": "#0a84ff", "Fet": "#ff9f0a", "Facturat": "#af52de", "Cobrat": "#30b27a" };
   const total = d => +d.total || (+d.tarifa || 0) * (+d.jornades || 0);
-  const eur = n => (Math.round(n * 100) / 100).toLocaleString("ca-ES") + " €";
+  const eur = n => n.toLocaleString("ca-ES", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
   H.coleccion({
     sec: "feines", tipo: "feina", nuevo: "Feina",
     tabs: { f: "rol", llista: "feina_rol", op: ["Ajudant de direcció", "Script", "Direcció", "Docència"] },

@@ -5,8 +5,9 @@
   let doc = null, vista = "esc", ver = 0;
   const save = () => H.put(doc);
   const CAMPS = [["num", "Esc.", 5], ["intext", "INT/EXT", 7], ["set", "Set", 16], ["moment", "Moment", 8], ["pag", "Pàg.", 6], ["pers", "Personatges", 18], ["atrezzo", "Atrezzo", 12], ["vestuari", "Vestuari / maquillatge", 12], ["notes", "Notes (FX, vehicles, animals…)", 16]];
-  const vuitens = n => { const e = Math.max(1, Math.round(n * 8)), p = Math.floor(e / 8), r = e % 8; return (p ? p + (r ? " " : "") : "") + (r ? r + "/8" : "") };
-  const aNum = s => { const m = String(s || "").trim().match(/^(?:(\d+)\s*)?(?:(\d+)\/8)?$/); return m ? (+m[1] || 0) + (+m[2] || 0) / 8 : 0 };
+  const vuitens = n => { if (!n) return "0"; const e = Math.max(1, Math.round(n * 8)), p = Math.floor(e / 8), r = e % 8; return (p ? p + (r ? " " : "") : "") + (r ? r + "/8" : "") };
+  // "1 4/8", "3/8", "1/2", "1.5", "1,5" → pàgines
+  const aNum = s => { s = String(s || "").trim().replace(",", "."); let m; if ((m = s.match(/^(\d+)\s+(\d+)\/(\d+)$/))) return +m[1] + m[2] / m[3]; if ((m = s.match(/^(\d+)\/(\d+)$/))) return m[1] / m[2]; return parseFloat(s) || 0 };
 
   // ---------- llegir el guió ----------
   const HEAD = /^\s*(\d+[A-Z]?[.)]?\s+)?(INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|INT|EXT)[.\s:]/i;
@@ -109,5 +110,6 @@
     t.value = "";
   });
   window.addEventListener("hub-sec", e => { if (e.detail === "desglossament" && !doc) lista() });
+  window.DESG = { obre };
   if (!el.hidden) lista();
 })();

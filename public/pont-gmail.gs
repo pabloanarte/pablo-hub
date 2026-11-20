@@ -132,6 +132,6 @@ function copiaDrive() {
   const nom = "pablo-hub-" + Utilities.formatDate(new Date(), "Europe/Madrid", "yyyy-MM-dd_HH-mm") + ".json";
   const f = dir.createFile(nom, r.getContentText(), "application/json");
   const fs = []; const all = dir.getFiles(); while (all.hasNext()) fs.push(all.next());
-  fs.sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(12).forEach(x => x.setTrashed(true));
+  fs.filter(x => /^pablo-hub-.*\.json$/.test(x.getName())).sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(12).forEach(x => x.setTrashed(true));
   return f;
 }

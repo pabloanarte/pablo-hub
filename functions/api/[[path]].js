@@ -166,7 +166,9 @@ async function pont(cfg, q) {
 // GET: totes les dades (sense secrets) en un JSON. POST: restaura una còpia (afegeix o substitueix documents; no esborra res).
 async function totesDades(db) {
   const { results } = await db.prepare("SELECT id,data,updated FROM docs WHERE id NOT LIKE 'secret:%'").all();
-  return { hub: "pablo-hub", versio: 1, data: new Date().toISOString(), docs: results.map(r => ({ id: r.id, data: JSON.parse(r.data), updated: r.updated })) };
+  // les contrasenyes dels enllaços públics dels dossiers no surten de la base de dades
+  const net = (id, o) => { if (id.startsWith("deck:") && o.compartir) { const { pw, ...c } = o.compartir; o.compartir = { ...c, pw: pw ? "(oculta)" : "" } } return o };
+  return { hub: "pablo-hub", versio: 1, data: new Date().toISOString(), docs: results.map(r => ({ id: r.id, data: net(r.id, JSON.parse(r.data)), updated: r.updated })) };
 }
 async function marcaCopia(db, on) {
   const r = await db.prepare("SELECT data FROM docs WHERE id='ajust:copia'").first(), o = r ? JSON.parse(r.data) : {};
@@ -179,7 +181,9 @@ async function copia(m, request, db, j) {
     if ((request.headers.get("content-type") || "").split(";")[0].trim() !== "application/json") return j({ error: "no" }, 405);
     const c = await request.json();
     if (c.hub !== "pablo-hub" || !Array.isArray(c.docs)) return j({ error: "Aquest arxiu no és una còpia del hub." }, 400);
-    const ok = c.docs.filter(d => d && typeof d.id === "string" && !d.id.toLowerCase().startsWith("secret:") && d.data && typeof d.data === "object");
+    const ok = c.docs.filter(d => d && typeof d.id === "string" && /^[\w:-]+$/.test(d.id) && !d.id.toLowerCase().startsWith("secret:") && d.data && typeof d.data === "object" && !Array.isArray(d.data) && !(d.id.startsWith("pdr:") && !Array.isArray(d.data.dias)) && !(d.id.startsWith("gt:") && !Array.isArray(d.data.escenas)) && !(d.id.startsWith("deck:") && !Array.isArray(d.data.slides)));
+    // l'estat de compartir dels dossiers no es recupera de la còpia: es manté l'actual (o queda desactivat)
+    for (const d of ok.filter(d => d.id.startsWith("deck:"))) { const r = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(d.id).first(); const ara = r ? JSON.parse(r.data).compartir : null; if (ara) d.data.compartir = ara; else if (d.data.compartir) d.data.compartir = { ...d.data.compartir, actiu: false, pw: "" } }
     for (let i = 0; i < ok.length; i += 50) await db.batch(ok.slice(i, i + 50).map(d => db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(d.id, JSON.stringify(d.data), Date.now())));
     return j({ ok: 1, n: ok.length });
   }
@@ -217,7 +221,7 @@ async function ical(t, db) {
   T("tarea").filter(x => !x.hecha).forEach(x => add(x.id, x.fecha, "☐ " + (x.titulo || "Tasca"), { desc: x.notas }));
   T("reunion").forEach(x => add(x.id, x.fecha, "Reunió: " + (x.titulo || ""), { hora: x.hora, durada: 60, lloc: x.lugar, desc: x.apuntes }));
   T("convocatoria").forEach(x => { add(x.id + "-l", x.limite, "Límit: " + (x.titulo || ""), { desc: [x.web, x.notas].filter(Boolean).join("\n") }); if (x.evento) add(x.id + "-e", x.evento, (x.titulo || "Festival") + (x.lugar ? " (" + x.lugar + ")" : ""), {}) });
-  T("pdr").forEach(x => (x.dias || []).forEach((d, i) => add(x.id + "-" + i, d.fecha, `Rodatge ${proj[x.proyecto] || x.titulo || ""} · jornada ${i + 1}`, { desc: d.calls })));
+  T("pdr").forEach(x => (Array.isArray(x.dias) ? x.dias : []).forEach((d, i) => add(x.id + "-" + i, d.fecha, `Rodatge ${proj[x.proyecto] || x.titulo || ""} · jornada ${i + 1}`, { desc: d.calls })));
   T("feina").forEach(x => { add(x.id, x.ini, `${x.rol || "Feina"}: ${x.titulo || ""}`, { fi: x.fin, lloc: x.productora }) });
   const esc = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, m => "\\" + m);
   const ara = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
@@ -225,7 +229,7 @@ async function ical(t, db) {
   const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//pablo-hub//CA", "CALSCALE:GREGORIAN", "X-WR-CALNAME:PABLO hub", "X-WR-TIMEZONE:Europe/Madrid", "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H"];
   for (const e of ev) {
     L.push("BEGIN:VEVENT", "UID:" + e.uid + "@pablo-hub", "DTSTAMP:" + ara, "SUMMARY:" + esc(e.titol));
-    if (e.hora && /^\d{1,2}:\d{2}$/.test(e.hora)) { const [h, mi] = e.hora.split(":").map(Number), fi = h * 60 + mi + (e.durada || 60), p2 = n => String(n).padStart(2, "0"); L.push(`DTSTART;TZID=Europe/Madrid:${e.d}T${p2(h)}${p2(mi)}00`, `DTEND;TZID=Europe/Madrid:${e.d}T${p2(Math.floor(fi / 60) % 24)}${p2(fi % 60)}00`) }
+    if (e.hora && /^\d{1,2}:\d{2}$/.test(e.hora)) { const [h, mi] = e.hora.split(":").map(Number), fi = h * 60 + mi + (e.durada || 60), p2 = n => String(n).padStart(2, "0"); L.push(`DTSTART;TZID=Europe/Madrid:${e.d}T${p2(h)}${p2(mi)}00`, `DTEND;TZID=Europe/Madrid:${fi >= 1440 ? seg(e.d) : e.d}T${p2(Math.floor(fi / 60) % 24)}${p2(fi % 60)}00`) } // si acaba passada la mitjanit, l'endemà
     else L.push("DTSTART;VALUE=DATE:" + e.d, "DTEND;VALUE=DATE:" + seg(dia(e.fi) && dia(e.fi) >= e.d ? dia(e.fi) : e.d));
     if (e.lloc) L.push("LOCATION:" + esc(e.lloc)); if (e.desc) L.push("DESCRIPTION:" + esc(String(e.desc).slice(0, 1500)));
     L.push("END:VEVENT");

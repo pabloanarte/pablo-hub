@@ -94,7 +94,7 @@ document.getElementById("hsh").addEventListener("click", e => {
  if (b.dataset.k === "gc") { show("contactos"); setTimeout(() => { const nb = document.querySelector('#nav [data-v="contactos"]'); nb && nb.click(); setTimeout(() => { const r = document.querySelector(`#s-contactos [data-a="o"][data-id="${id}"]`); r && r.click() }, 150) }, 50); return }
  if (t === "gt") { show("guiones"); return window.GT && GT.abrir(id) }
  if (t === "pdr") { show("planes"); return window.P && P.abrir(id) }
- if (t === "desg") { show("desglossament"); return }
+ if (t === "desg") { show("desglossament"); return window.DESG && DESG.obre(id) }
  if (t === "pre" || t === "post") { show(t === "pre" ? "preproduccion" : "postproduccion"); return window.CronoAbrir && CronoAbrir[t] && CronoAbrir[t](id) }
  t === "tarea" ? H.abrirTarea(id) : H.abrir(t, id);
 });

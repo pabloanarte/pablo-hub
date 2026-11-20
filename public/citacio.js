@@ -144,7 +144,7 @@ window.CIT = (() => {
   });
   document.addEventListener("click", async e => {
     const b = e.target.closest("[data-c]"); if (!b || !c) return; const k = b.dataset.c;
-    const dinsSheet = b.closest("#hshc"); if (!dinsSheet && !viu()) return;
+    const dinsSheet = b.closest("#hshc"); if (dinsSheet || !viu() || !el.contains(b)) return; // només clics de la citació oberta
     if (k === "torna") { c = null; return torna() }
     if (k === "fila") { c[b.dataset.t].push(Object.fromEntries([["id", uid()]].concat(T[b.dataset.t].map(([f]) => [f, ""])))); save(); pinta() }
     if (k === "treu") { c[b.dataset.t].splice(+b.dataset.i, 1); save(); pinta() }
@@ -154,6 +154,6 @@ window.CIT = (() => {
     if (k === "pdf") R.pdf(`<div class="pz">${full(0)}</div>`, false);
     if (k === "envia") enviar();
   });
-  document.getElementById("hsh").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (!b || !c) return; if (b.dataset.c === "env") fesEnvia(); if (b.dataset.c === "prog") { const v = document.getElementById("ce-q").value; if (!v) return H.toast("Tria el dia i l'hora"); fesEnvia(v) } });
+  document.getElementById("hsh").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (!b || !c || !document.getElementById("ce-m")) return; if (b.dataset.c === "env") fesEnvia(); if (b.dataset.c === "prog") { const v = document.getElementById("ce-q").value; if (!v) return H.toast("Tria el dia i l'hora"); fesEnvia(v) } });
   return { obre };
 })();
