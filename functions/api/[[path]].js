@@ -181,13 +181,22 @@ async function copia(m, request, db, j) {
     if ((request.headers.get("content-type") || "").split(";")[0].trim() !== "application/json") return j({ error: "no" }, 405);
     const c = await request.json();
     if (c.hub !== "pablo-hub" || !Array.isArray(c.docs)) return j({ error: "Aquest arxiu no és una còpia del hub." }, 400);
-    const ok = c.docs.filter(d => d && typeof d.id === "string" && /^[\w:-]+$/.test(d.id) && !d.id.toLowerCase().startsWith("secret:") && d.data && typeof d.data === "object" && !Array.isArray(d.data) && !(d.id.startsWith("pdr:") && !Array.isArray(d.data.dias)) && !(d.id.startsWith("gt:") && !Array.isArray(d.data.escenas)) && !(d.id.startsWith("deck:") && !Array.isArray(d.data.slides)));
+    const ok = c.docs.filter(d => d && typeof d.id === "string" && /^[\w:-]+$/.test(d.id) && !d.id.toLowerCase().startsWith("secret:") && d.data && typeof d.data === "object" && !Array.isArray(d.data) && formaBona(d.id, d.data));
     // l'estat de compartir dels dossiers no es recupera de la còpia: es manté l'actual (o queda desactivat)
     for (const d of ok.filter(d => d.id.startsWith("deck:"))) { const r = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(d.id).first(); const ara = r ? JSON.parse(r.data).compartir : null; if (ara) d.data.compartir = ara; else if (d.data.compartir) d.data.compartir = { ...d.data.compartir, actiu: false, pw: "" } }
     for (let i = 0; i < ok.length; i += 50) await db.batch(ok.slice(i, i + 50).map(d => db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(d.id, JSON.stringify(d.data), Date.now())));
-    return j({ ok: 1, n: ok.length });
+    return j({ ok: 1, n: ok.length, descartats: c.docs.length - ok.length });
   }
   return j({ error: "no" }, 405);
+}
+// Comprova que els documents amb llistes internes (plans, guions, dossiers) tinguin la forma que el hub espera
+function formaBona(id, o) {
+  const obj = x => x && typeof x === "object" && !Array.isArray(x), llista = (l, f) => Array.isArray(l) && l.every(x => obj(x) && (!f || f(x)));
+  if (id.startsWith("pdr:")) return llista(o.dias, d => llista(d.filas));
+  if (id.startsWith("gt:")) return llista(o.escenas, e => e.planos === undefined || llista(e.planos));
+  if (id.startsWith("deck:")) return llista(o.slides);
+  if (id.startsWith("desg:")) return llista(o.escenes);
+  return true;
 }
 // El pont de Google (el mateix del correu) demana la còpia cada setmana i la desa al Drive de Pablo.
 async function pontCopia(request, db, j) {

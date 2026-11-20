@@ -67,7 +67,7 @@
       if (k === "fcopia") { try { await navigator.clipboard.writeText(txt); H.toast("Copiat") } catch (er) { H.toast("No s'ha pogut copiar") } return }
       const ds = (await H.col("deck")).filter(d => d.proyecto === b.dataset.p);
       if (!ds.length) return H.toast("Aquest projecte encara no té cap dossier");
-      const items = sel.map(d => ({ nom: d.titulo || "", text: [d.premi || d.seccio || "selecció oficial", ANY(d)].filter(Boolean).join(" · ") }));
+      const items = sel.map(d => ({ nom: d.titulo || "", premi: !!d.premi, text: [d.premi || d.seccio || "selecció oficial", ANY(d)].filter(Boolean).join(" · ") }));
       ds.forEach(d => {
         d.dades = d.dades || {}; d.dades.festivals = Object.assign({}, d.dades.festivals, { text: txt });
         const s = (d.slides || []).find(x => x.tipus === "laurels" || (x.tipus === "llista" && /festivals/i.test(x.titol || "")));

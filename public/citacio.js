@@ -153,7 +153,7 @@ window.CIT = (() => {
     if (k === "refa" && confirm(`Refer «${TIT[b.dataset.t]}» a partir del pla? Es perdran els canvis fets a mà en aquesta taula.`)) { desDelPla([b.dataset.t]); save(); pinta() }
     if (k === "reset" && confirm("Refer tota la citació a partir del pla? Es perdran tots els canvis fets a mà.")) { await nova(); save(); pinta() }
     if (k === "temps") temps();
-    if (k === "pdf") R.pdf(`<div class="pz">${full(0)}</div>`, false);
+    if (k === "pdf") R.pdf(`<div class="pz czp">${full(0)}</div>`, false);
     if (k === "envia") enviar();
   });
   document.getElementById("hsh").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (!b || !c || !document.getElementById("ce-m")) return; if (b.dataset.c === "env") fesEnvia(); if (b.dataset.c === "prog") { const v = document.getElementById("ce-q").value; if (!v) return H.toast("Tria el dia i l'hora"); fesEnvia(v) } });

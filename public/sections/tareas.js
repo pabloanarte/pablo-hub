@@ -9,7 +9,7 @@
     { f: "proyecto", l: "Projecte", tipo: "proyecto" },
     { f: "notas", l: "Notes", tipo: "textarea" }
   ];
-  const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a", rodatge: "#5ac8fa", feina: "#af52de" };
+  const COL = { tarea: "#000", reunion: "#0a84ff", limite: "#ff3b30", evento: "#30b27a", rodatge: "#0e8fb8", feina: "#af52de" };
   let vista = "lista", mes = today().slice(0, 7), verHechas = false;
 
   el.innerHTML = `<div class="tabs"><button class="t on" data-k="v" data-v="lista">Llista</button><button class="t" data-k="v" data-v="cal">Calendari</button></div>
