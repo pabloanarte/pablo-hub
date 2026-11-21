@@ -43,7 +43,7 @@ window.DOC = (() => {
     const l = (await H.col("curs")).slice().sort((a, b) => (b.inici || "").localeCompare(a.inici || "") || (a.titulo || "").localeCompare(b.titulo || "")); if (v !== ver) return;
     const avui = H.today(), actiu = c => !c.fi || c.fi >= avui;
     const fila = c => { const s = ses(c), prop = s.find(x => x.data && x.data >= avui), n = s.reduce((a, x) => a + (x.arxius || []).length, 0);
-      return `<div class="r" data-k="obre" data-id="${c.id}"><i class="dot" style="background:${actiu(c) ? "#0a84ff" : "#c7c7cc"}"></i><div class="g"><b>${E(c.titulo || "Sense títol")}</b><small>${E([c.centre, c.nivell, s.length ? s.length + (s.length > 1 ? " sessions" : " sessió") : "", n ? n + " PDF" : "", prop ? "propera: " + H.fecha(prop.data) : ""].filter(Boolean).join(" · "))}</small></div></div>` };
+      return `<div class="r" data-k="obre" data-id="${c.id}"><i class="dot" style="background:${actiu(c) ? "#0a84ff" : "#c7c7cc"}"></i><div class="g"><b>${E(c.titulo || "Sense títol")}</b><small>${E([c.centre, c.nivell, s.length ? s.length + (s.length > 1 ? " sessions" : " sessió") : "", n ? n + " PDF" : "", prop ? "propera: " + H.fecha(prop.data) + (prop.hora ? ", " + prop.hora : "") : ""].filter(Boolean).join(" · "))}</small></div></div>` };
     const act = l.filter(actiu), alt = l.filter(c => !actiu(c));
     el.innerHTML = cap() + `<div class="bar"><span class="em">Cada curs amb les seves sessions: tema, PDF, visionats i notes.</span><span style="flex:1"></span><button class="b" data-k="nou">+ Curs</button></div>
       <div class="hl">${l.length ? (act.length ? `<h2>En curs i propers <span>${act.length}</span></h2>` + act.map(fila).join("") : "") + (alt.length ? `<h2>Acabats <span>${alt.length}</span></h2>` + alt.map(fila).join("") : "") : `<p class="em">Encara no hi ha cap curs. Prem «+ Curs» per començar.</p>`}</div>`;
@@ -56,7 +56,7 @@ window.DOC = (() => {
     const inp = (f, l, t = "text", ph = "") => `<div style="flex:1;min-width:150px"><label>${l}</label><input type="${t}" data-c="${f}" value="${E(c[f] || "")}" placeholder="${E(ph)}"></div>`;
     const sessio = x => { const n = s.indexOf(x) + 1, vv = (x.vis || []).map(id => vs.find(y => y.id === id)).filter(Boolean);
       return `<div class="card dses${x === act ? " on" : ""}" data-s="${x.id}">
-        <div class="ls"><b style="font-size:16px;white-space:nowrap">Sessió ${n}</b><input type="date" data-sf="data" value="${E(x.data || "")}" style="width:auto"><span style="flex:1"></span><button class="x" data-k="qses" title="Treure la sessió">×</button></div>
+        <div class="ls"><b style="font-size:16px;white-space:nowrap">Sessió ${n}</b><input type="date" data-sf="data" value="${E(x.data || "")}" style="width:auto"><span class="dhor"><input type="time" data-sf="hora" value="${E(x.hora || "")}" title="Hora d'inici" style="width:auto">–<input type="time" data-sf="horafi" value="${E(x.horafi || "")}" title="Hora d'acabar" style="width:auto"></span><span style="flex:1"></span><button class="x" data-k="qses" title="Treure la sessió">×</button></div>
         <input data-sf="tema" value="${E(x.tema || "")}" placeholder="Tema o exercici de la sessió" style="margin-top:8px;font-weight:600">
         <div class="dpdf">${(x.arxius || []).map(a => `<span class="chip"><a href="/api/archivo/${E(a.id)}" target="_blank">${E(a.nombre)}</a> <button data-k="qpdf" data-a="${E(a.id)}" title="Treure">×</button></span>`).join("")}<label class="b2" style="cursor:pointer;font-size:13px">+ PDF<input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.key,.pages,image/*" data-k="pujar" hidden></label></div>
         ${vv.length ? `<div class="dvis">${vv.map(y => `<div class="dvs" data-k="vveu" data-id="${y.id}" title="${E(y.notas || "")}">${y.thumb ? `<img src="${E(y.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=dvph>${PLAY.replace(/"/g, "&quot;")}</span>'">` : `<span class="dvph">${PLAY}</span>`}<small>${E(y.titulo || "Sense títol (" + ((video(y.url) || {}).pl || "enllaç") + ")")}</small><button class="x" data-k="qvis" data-id="${y.id}" title="Treure de la sessió">×</button></div>`).join("")}</div>` : ""}
@@ -146,7 +146,7 @@ window.DOC = (() => {
     if (k === "vveu") { if (e.target.closest('[data-k="qvis"]')) return; const d = (await H.col("visionat")).find(x => x.id === b.dataset.id); return d && editaVis(d) }
     const c = await doc(); if (!c) return;
     if (k === "qcurs") { if (!confirm("Eliminar aquest curs amb totes les sessions i els seus PDF?")) return; (c.setmanes || []).forEach(x => (x.arxius || []).forEach(a => H.api("DELETE", "archivo/" + a.id).catch(() => { }))); await H.del(c); curs = null; return pintar() }
-    if (k === "nses") { const s = ses(c), u = s[s.length - 1]; c.setmanes = (c.setmanes || []).concat({ id: Date.now().toString(36), data: u && u.data ? H.addDays(u.data, 7) : (c.inici || H.today()), tema: "", arxius: [], vis: [], notes: "" }); await H.put(c, 1); await pintar(); const l = el.querySelectorAll('input[data-sf="tema"]'); return l.length && l[l.length - 1].focus() }
+    if (k === "nses") { const s = ses(c), u = s[s.length - 1]; c.setmanes = (c.setmanes || []).concat({ id: Date.now().toString(36), data: u && u.data ? H.addDays(u.data, 7) : (c.inici || H.today()), hora: u ? u.hora || "" : "", horafi: u ? u.horafi || "" : "", tema: "", arxius: [], vis: [], notes: "" }); await H.put(c, 1); await pintar(); const l = el.querySelectorAll('input[data-sf="tema"]'); return l.length && l[l.length - 1].focus() }
     const x = sessioDe(c, b); if (!x) return;
     if (k === "qses") { if (!confirm("Treure aquesta sessió" + ((x.arxius || []).length ? " i els seus PDF" : "") + "?")) return; (x.arxius || []).forEach(a => H.api("DELETE", "archivo/" + a.id).catch(() => { })); c.setmanes = c.setmanes.filter(y => y !== x); H.put(c, 1); return pintar() }
     if (k === "qpdf") { if (!confirm("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.a).catch(() => { }); x.arxius = (x.arxius || []).filter(a => a.id !== b.dataset.a); H.put(c, 1); return pintar() }
@@ -166,6 +166,7 @@ window.DOC = (() => {
   el.addEventListener("change", async e => {
     const t = e.target, c = curs && await doc(); if (!c) return; const x = sessioDe(c, t); if (!x) return;
     if (t.type === "date" && t.dataset.sf) { H.put(c, 1); return pintar() }
+    if (t.type === "time") return H.put(c, 1);
     if (t.dataset.k === "avis" && t.value) { x.vis = (x.vis || []).concat(t.value); H.put(c, 1); return pintar() }
     if (t.dataset.k === "pujar" && t.files.length) {
       for (const f of t.files) {
