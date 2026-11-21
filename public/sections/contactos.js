@@ -198,3 +198,14 @@ document.addEventListener("change",async e=>{if(e.target.id!=="fi")return;const 
 
 document.getElementById("sh").addEventListener("click",e=>{if(e.target.id==="sh"){const b=document.querySelector('#shc [data-a="x"]');b&&b.click()}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.getElementById("sh").hidden){const b=document.querySelector('#shc [data-a="x"]');b&&b.click()}});
+
+// En tornar a la pestanya o a l'app, es recarreguen els contactes (p. ex. els que afegeix la drecera d'Instagram)
+let recT=0;
+async function recarrega(){
+ if(loc||!store||Date.now()-recT<5000)return;recT=Date.now();
+ if(!$("#sh").hidden||(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)))return;
+ try{const r=await fetch("/api/all");if(!r.ok)return;const d=await r.json();const n=JSON.stringify(d.contacts);if(n===JSON.stringify(C))return;C=d.contacts;cfg=Object.assign({tpl:{},mo:[],tipos:[]},d.cfg||{});H.refrescaContactes&&H.refrescaContactes();render()}catch(e){}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")recarrega()});
+window.addEventListener("focus",recarrega);
+setInterval(()=>{if(document.visibilityState==="visible")recarrega()},60000);
