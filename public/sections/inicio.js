@@ -38,7 +38,7 @@
     const a = ((await H.col("ajust")).find(x => x.id === "ajust:copia") || {}), box = document.getElementById("icop"); if (!box) return;
     const d = a.ultima ? Math.floor((Date.now() - new Date(a.ultima)) / 864e5) : null;
     if (d !== null && d <= 10) return box.remove();
-    box.outerHTML = `<div class="card"><h3>Còpia de seguretat</h3><p class="em" style="margin:0 0 10px">${d === null ? "Encara no has fet cap còpia de les dades del hub." : `Fa ${d} dies de l'última còpia.`}</p><div class="ls"><a class="b" href="/api/copia" download data-cop="1">Descarregar-la ara</a><button class="b2" data-ves="ajustos">Ajustos</button></div></div>`;
+    box.outerHTML = `<div class="card"><h3>Còpia de seguretat</h3><p class="em" style="margin:0 0 10px">${d === null ? "Encara no has fet cap còpia de les dades del hub." : `Fa ${d} dies de l'última còpia.`}</p><div class="ls"><a class="b" href="/api/copia" download data-cop="1">Descarregar-la ara</a><button class="b2" data-ves="ajustos">Configuració</button></div></div>`;
   }
   // Correu: qui t'ha respost (correus de contactes posteriors a l'últim enviament) i no llegits
   let cache = null;

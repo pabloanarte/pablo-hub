@@ -182,7 +182,7 @@ window.FIMP = (() => {
       if (b.dataset.fk === "mail") {
         document.getElementById("fist").textContent = "Llegint el correu…"; b.disabled = true;
         try { const r = await delCorreu(); revisa(r.props, "correu", r.aj) }
-        catch (er) { b.disabled = false; document.getElementById("fist").textContent = er && er.error === "accio" ? "Cal actualitzar el pont de Google (Ajustos → Pont de Google)." : "No s'ha pogut llegir: " + ((er && er.error) || "error") }
+        catch (er) { b.disabled = false; document.getElementById("fist").textContent = er && er.error === "accio" ? "Cal actualitzar el pont de Google (Configuració → Pont de Google)." : "No s'ha pogut llegir: " + ((er && er.error) || "error") }
       }
       if (b.dataset.fk === "txt") { const t = document.getElementById("fitx").value; if (!t.trim()) return H.toast("Enganxa la llista primer"); const pl = /festhome|mis inscripciones/i.test(t) ? "Festhome" : /filmfreeway|my submissions|judging status/i.test(t) ? "FilmFreeway" : ""; revisa((await deText(t)).props.map(p => Object.assign(p, { plat: pl })), "text") }
     };

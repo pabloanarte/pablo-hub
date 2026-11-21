@@ -1,4 +1,4 @@
-// Ajustos: còpia de seguretat, calendari al mòbil, hub com a app i pont de Google.
+// Configuració: còpia de seguretat, calendari al mòbil, hub com a app i pont de Google.
 (() => {
   const { E } = H, el = document.getElementById("s-ajustos");
   const fa = s => { if (!s) return "mai"; const d = Math.floor((Date.now() - new Date(s)) / 864e5); return d <= 0 ? "avui" : d === 1 ? "ahir" : `fa ${d} dies` };

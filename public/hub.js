@@ -39,7 +39,7 @@ const SECTIONS = [
  {id:"feines",label:"Feines",desc:"Ajudant de direcció, script, direcció i docència",src:"sections/feines.js"},
  {id:"brainstorm",label:"Brainstorm",desc:"Idees soltes",src:"sections/brainstorm.js"},
  {id:"web",label:"La meva web",desc:"pabloanarte.com",src:"sections/web.js"},
- {id:"ajustos",label:"Ajustos",desc:"Còpia de seguretat, calendari al mòbil, app",src:"sections/ajustos.js"}
+ {id:"ajustos",label:"Configuració",desc:"Còpia de seguretat, calendari al mòbil, app",src:"sections/ajustos.js"}
 ];
 const nav = document.getElementById("hubnav"), wrap = document.querySelector(".w");
 SECTIONS.forEach(s => { if (!document.getElementById("s-" + s.id)) { const e = document.createElement("section"); e.id = "s-" + s.id; e.hidden = true; wrap.appendChild(e) } });
