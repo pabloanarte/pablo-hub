@@ -288,10 +288,13 @@ async function drecera(t, request, db) {
   const tok = JSON.parse(r.data).token; if (!tok || t.length !== tok.length || !igual(t, tok)) return txt("no", 404);
   const q = new URL(request.url).searchParams; let u = q.get("u") || "";
   if (request.method === "POST") { const b = await request.text(); try { const o = JSON.parse(b); u = o.u || o.url || u } catch (e) { u = b || u } }
+  // el que arribi (també codificat, o enganxat a la resta de l'adreça si no ve dins de «u»)
+  let tot = String(u) + " " + new URL(request.url).search;
+  for (let i = 0; i < 3; i++) { try { const d = decodeURIComponent(tot); if (d === tot) break; tot = d } catch (e) { break } }
   u = String(u).trim();
-  // perfil a partir de l'enllaç compartit (instagram.com/usuari?igsh=…) o de @usuari
-  const m = u.match(/instagram\.com\/(?!p\/|reel\/|stories\/|explore\/)([A-Za-z0-9._]{1,30})/i) || u.match(/^@?([A-Za-z0-9._]{1,30})$/);
-  if (!m) return txt("No és un perfil d'Instagram. Comparteix-lo des del perfil (⋯ → «Compartir este perfil»).", 400);
+  // perfil a partir de l'enllaç compartit (instagram.com/usuari?igsh=…, instagram.com/_u/usuari) o de @usuari
+  const m = tot.match(/instagram\.com\/(?:_u\/)?(?!p\/|reel\/|reels\/|stories\/|explore\/|tv\/|share\/)([A-Za-z0-9._]{1,30})/i) || u.match(/^@?([A-Za-z0-9._]{1,30})$/);
+  if (!m) return txt("No és un perfil d'Instagram. Comparteix-lo des del perfil (⋯ → «Compartir este perfil»)." + (u ? " He rebut: " + u.slice(0, 160) : " No ha arribat cap enllaç."), 400);
   const usr = m[1].toLowerCase(), norm = s => String(s || "").toLowerCase().replace(/^.*instagram\.com\//, "").replace(/[/?#].*$/, "").replace(/^@/, "").trim();
   const avui = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
   const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'c\\_%' ESCAPE '\\'").all();
