@@ -20,7 +20,7 @@
   function marca() { sucio = true; el.querySelector("#wpub").hidden = false }
 
   function pintar() {
-    const lista = k => (W[k] || []).map((p, i) => `<div class="r"><div class="g" data-k="ed" data-i="${i}"><b>${E(p.titulo || "Sense títol")}</b><small>${E(k === "videoclips" ? p.artista || "" : [p.tipo, p.nota].filter(Boolean).join(" · "))}${p.video || p.vimeo ? "" : p.poster ? " · pòster" : " · sense vídeo"}</small></div><button class="t" data-k="sube" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="t" data-k="baja" data-i="${i}" ${i < W[k].length - 1 ? "" : "disabled"}>↓</button></div>`).join("") + `<div class="bar" style="margin-top:14px"><button class="b" data-k="add">+ ${tab === "videoclips" ? "Afegir videoclip" : "Afegir projecte"}</button></div>`;
+    const lista = k => (W[k] || []).map((p, i) => `<div class="r" data-ix="${i}"><span class="arr" title="Arrossega per canviar l'ordre">⠿</span><div class="g" data-k="ed" data-i="${i}"><b>${E(p.titulo || "Sense títol")}</b><small>${E(k === "videoclips" ? p.artista || "" : [p.tipo, p.nota].filter(Boolean).join(" · "))}${p.video || p.vimeo ? "" : p.poster ? " · pòster" : " · sense vídeo"}</small></div><button class="t" data-k="sube" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="t" data-k="baja" data-i="${i}" ${i < W[k].length - 1 ? "" : "disabled"}>↓</button></div>`).join("") + `<div class="bar" style="margin-top:14px"><button class="b" data-k="add">+ ${tab === "videoclips" ? "Afegir videoclip" : "Afegir projecte"}</button></div>`;
     const inp = (ruta, v, ph = "") => `<input data-w="${ruta}" value="${E(v)}" placeholder="${E(ph)}">`;
     const arch = (ruta, v, acc, carp, nota) => `<div class="r" style="cursor:default"><div class="g"><b>${E(v || "—")}</b>${nota ? `<small>${E(nota)}</small>` : ""}</div>${v ? `<a class="ln" target="_blank" rel="noopener" href="${WEB}/${E(v)}">Veure</a>` : ""}<label class="b" style="margin:0;color:#fff;font-size:14px">Canviar<input type="file" accept="${acc}" data-up="${ruta}" data-c="${carp}" hidden></label></div>`;
     let h = "";
@@ -57,6 +57,29 @@
   }
   const setRuta = (o, ruta, v) => { const ks = ruta.split("."); let x = o; ks.slice(0, -1).forEach(k => x = x[k] = x[k] || {}); x[ks.at(-1)] = v };
 
+  // canviar l'ordre arrossegant (ratolí i dit) per la nansa ⠿
+  el.addEventListener("pointerdown", e => {
+    const h = e.target.closest(".arr"); if (!h || e.button > 0) return;
+    const row = h.closest(".r[data-ix]"), L = W && W[tab]; if (!row || !L) return;
+    e.preventDefault(); h.setPointerCapture(e.pointerId);
+    const from = +row.dataset.ix, altres = [...row.parentElement.querySelectorAll(".r[data-ix]")].filter(r => r !== row);
+    let y0 = e.clientY, sc0 = window.scrollY, to = from, roda = 0, yAra = e.clientY;
+    row.classList.add("arrs");
+    const marcaLloc = () => {
+      row.style.transform = `translateY(${yAra - y0 + window.scrollY - sc0}px)`;
+      to = altres.filter(r => { const b = r.getBoundingClientRect(); return yAra > b.top + b.height / 2 }).length;
+      altres.forEach((r, n) => { r.classList.toggle("dst", n === to); r.classList.toggle("dsb", to === altres.length && n === altres.length - 1) });
+    };
+    const mou = ev => { yAra = ev.clientY; marcaLloc() };
+    // si s'acosta a dalt o a baix de la pantalla, la pàgina es desplaça sola
+    roda = setInterval(() => { const v = yAra < 70 ? -12 : yAra > innerHeight - 70 ? 12 : 0; if (v) { window.scrollBy(0, v); marcaLloc() } }, 30);
+    const fi = () => {
+      clearInterval(roda); h.removeEventListener("pointermove", mou); h.removeEventListener("pointerup", fi); h.removeEventListener("pointercancel", fi);
+      row.classList.remove("arrs"); row.style.transform = ""; altres.forEach(r => r.classList.remove("dst", "dsb"));
+      if (to !== from) { L.splice(to, 0, L.splice(from, 1)[0]); marca(); pintar() }
+    };
+    h.addEventListener("pointermove", mou); h.addEventListener("pointerup", fi); h.addEventListener("pointercancel", fi);
+  });
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b || b.disabled) return; const k = b.dataset.k, L = W && W[tab], i = +b.dataset.i;
     if (k === "rec") cargar();

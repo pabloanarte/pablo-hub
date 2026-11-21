@@ -40,7 +40,7 @@ const SECTIONS = [
  {id:"docencia",label:"Docència",desc:"Cursos, sessions i visionats per exercici",src:"sections/docencia.js"},
  {id:"feines",label:"Feines",desc:"Ajudant de direcció, script, direcció i docència",src:"sections/feines.js"},
  {id:"brainstorm",label:"Brainstorm",desc:"Idees soltes",src:"sections/brainstorm.js"},
- {id:"web",label:"La meva web",desc:"pabloanarte.com",src:"sections/web.js"},
+ {id:"web",label:"pabloanarte.com",desc:"La meva web",src:"sections/web.js"},
  {id:"ajustos",label:"Configuració",desc:"Còpia de seguretat, calendari al mòbil, app",src:"sections/ajustos.js"}
 ];
 const nav = document.getElementById("hubnav"), wrap = document.querySelector(".w");
