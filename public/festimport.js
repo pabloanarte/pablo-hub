@@ -1,6 +1,6 @@
 // Importar inscripcions de FilmFreeway i Festhome a Festivals:
 //  1) llegint els avisos que aquestes plataformes envien al Gmail (via el pont de Google),
-//  2) enganxant la llista «My Submissions» copiada de la web.
+//  2) enganxant la llista «My Submissions» copiada de la web o pujant l'arxiu exportat (CSV o Excel).
 // Sempre es proposa i Pablo revisa i accepta cada canvi; no es canvia res sol.
 window.FIMP = (() => {
   const { E } = H;
@@ -70,7 +70,7 @@ window.FIMP = (() => {
   }
 
   // ---------- 2) enganxar la llista ----------
-  const COLS = { festival: /^(festival|event|evento|esdeveniment|convocatoria)$/i, proyecto: /^(project|proyecto|projecte|pel[ií]cula|pel·l[ií]cula|film|obra|t[ií]tulo|t[ií]tol)$/i, data: /^(date|fecha|data|submitted|date submitted|fecha de inscripci[oó]n)$/i, estat: /^(status|estado|estat|submission status)$/i, jutjat: /^(judging status|judging|decision|decisi[oó]n|resultado|resultat|selecci[oó]n)$/i };
+  const COLS = { festival: /^(festival|festival name|festival title|event|event name|evento|esdeveniment|convocatoria|nombre del festival)$/i, proyecto: /^(project|project title|project name|proyecto|projecte|pel[ií]cula|pel·l[ií]cula|film|film title|obra|t[ií]tulo|t[ií]tol)$/i, data: /^(date|fecha|data|submitted|date submitted|submission date|submitted on|fecha de inscripci[oó]n)$/i, estat: /^(status|estado|estat|submission status)$/i, jutjat: /^(judging status|judging|decision|decisi[oó]n|resultado|resultat|selecci[oó]n)$/i, cost: /^(fee|entry fee|submission fee|fee paid|amount|amount paid|price|tarifa|cuota|precio|preu|import)$/i };
   async function deText(text) {
     const ps = await H.col("proyecto"), out = [];
     const prj = t => { t = String(t || "").toLowerCase(); const p = ps.filter(p => p.titulo && t.includes(p.titulo.toLowerCase())).sort((a, b) => b.titulo.length - a.titulo.length)[0]; return p ? p.id : "" };
@@ -86,7 +86,7 @@ window.FIMP = (() => {
       const hi = fs.findIndex(f => f.some(c => COLS.festival.test(c)) && f.some(c => COLS.estat.test(c) || COLS.jutjat.test(c)));
       const cap = hi >= 0 ? fs[hi] : ["Festival", "Project", "Category", "Date", "Status", "Judging Status"].slice(0, fs[0].length);
       const ix = k => cap.findIndex(c => COLS[k].test(c));
-      fs.slice(hi + 1).forEach(f => { if (f.length < 2) return; const g = k => ix(k) >= 0 ? f[ix(k)] : ""; afegeix(g("festival") || f[0], g("proyecto"), g("data"), g("jutjat"), g("estat")) });
+      fs.slice(hi + 1).forEach(f => { if (f.length < 2) return; const g = k => ix(k) >= 0 ? f[ix(k)] : "", n = out.length; afegeix(g("festival") || f[0], g("proyecto"), g("data"), g("jutjat"), g("estat")); const c = parseFloat(String(g("cost")).replace(/[^\d.,]/g, "").replace(",", ".")); if (out.length > n && c > 0) out[n].cost = c });
     } else {
       // b) una cel·la per línia: si hi ha capçalera, es tallen les files segons el nombre de columnes
       const hi = ls.findIndex(l => COLS.festival.test(l));
@@ -127,12 +127,12 @@ window.FIMP = (() => {
       const c = cs.find(c => c.tipo !== "Lab / residència" && semblant(c.titulo, p.festival) && (!p.proyecto || !c.proyecto || c.proyecto === p.proyecto));
       p.cid = c ? c.id : ""; p.ja = c;
       if (c && RANG[p.estado] < RANG[c.estado || "Per presentar"]) { p.estado = c.estado; p.baixa = 1 } // mai es rebaixa
-      p.canvis = !c || c.estado !== p.estado || (p.premi && !c.premi) || (p.proyecto && !c.proyecto);
+      p.canvis = !c || c.estado !== p.estado || (p.premi && !c.premi) || (p.proyecto && !c.proyecto) || (p.cost && !c.cost);
       p.on = p.canvis && !p.dubte;
     });
     const fila = (p, i) => `<div class="fip ${p.on ? "" : "fio"}" id="fip${i}"><label class="ck" style="margin:0"><input type="checkbox" data-fi="${i}" ${p.on ? "checked" : ""}></label>
       <div class="g"><div class="ls"><input data-fv="festival" data-i="${i}" value="${E(p.festival)}" style="flex:2;min-width:160px;font-weight:700"><select data-fv="proyecto" data-i="${i}" style="flex:1;min-width:140px"><option value="">— Projecte —</option>${ps.map(x => `<option value="${x.id}" ${x.id === p.proyecto ? "selected" : ""}>${E(x.titulo || "")}</option>`).join("")}</select><select data-fv="estado" data-i="${i}" style="width:auto">${EST.map(e => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select></div>
-      <small>${E(p.font)}${p.data ? " · " + H.fecha(p.data) : ""} · ${p.ja ? `ja hi és (${E(p.ja.estado || "")})${p.canvis ? " → s'actualitzarà" : ", sense canvis"}${p.baixa ? " (un avís antic no rebaixa l'estat)" : ""}` : "es crearà nova"}${p.premi ? " · premi: " + E(p.premi) : ""}${p.dubte ? ' · <b style="color:#ff9f0a">no he entès l\'estat: revisa\'l</b>' : ""} · <span class="mut">${E(p.resum.slice(0, 90))}</span></small></div></div>`;
+      <small>${E(p.font)}${p.data ? " · " + H.fecha(p.data) : ""} · ${p.ja ? `ja hi és (${E(p.ja.estado || "")})${p.canvis ? " → s'actualitzarà" : ", sense canvis"}${p.baixa ? " (un avís antic no rebaixa l'estat)" : ""}` : "es crearà nova"}${p.premi ? " · premi: " + E(p.premi) : ""}${p.cost ? " · " + p.cost + " €" : ""}${p.dubte ? ' · <b style="color:#ff9f0a">no he entès l\'estat: revisa\'l</b>' : ""} · <span class="mut">${E(p.resum.slice(0, 90))}</span></small></div></div>`;
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Revisa abans d'importar</h2>
       <p class="em">${props.length ? "Marca el que vols importar. Pots corregir el nom del festival, la pel·lícula i l'estat." : origen === "correu" ? "No hi ha avisos nous de FilmFreeway ni de Festhome." : "No he trobat cap inscripció en el text enganxat. Prova de copiar tota la taula de «My Submissions»."}</p>
       <div id="fil">${props.map(fila).join("")}</div>
@@ -144,8 +144,8 @@ window.FIMP = (() => {
       let nous = 0, act = 0;
       for (const p of props.filter(p => p.on && p.festival.trim())) {
         const c = p.cid && cs.find(x => x.id === p.cid);
-        if (c) { Object.assign(c, { estado: p.estado }, p.proyecto && !c.proyecto ? { proyecto: p.proyecto } : {}, p.premi && !c.premi ? { premi: p.premi } : {}, !c.tasa ? { tasa: p.font === "Llista" ? "" : p.font } : {}); H.put(c); act++ }
-        else { H.put({ id: H.uid("convocatoria"), titulo: p.festival.trim(), tipo: "Festival", estado: p.estado, proyecto: p.proyecto, premi: p.premi || "", tasa: p.font === "Llista" ? "" : p.font, notas: "Importat de " + (p.font === "Llista" ? "la llista enganxada" : p.font) + (p.data ? " (" + p.data + ")" : "") }, 1); nous++ }
+        if (c) { Object.assign(c, { estado: p.estado }, p.proyecto && !c.proyecto ? { proyecto: p.proyecto } : {}, p.premi && !c.premi ? { premi: p.premi } : {}, p.cost && !c.cost ? { cost: p.cost } : {}, !c.tasa ? { tasa: /^(Llista|Arxiu)$/.test(p.font) ? "" : p.font } : {}); H.put(c); act++ }
+        else { H.put({ id: H.uid("convocatoria"), titulo: p.festival.trim(), tipo: "Festival", estado: p.estado, proyecto: p.proyecto, premi: p.premi || "", cost: p.cost || "", tasa: /^(Llista|Arxiu)$/.test(p.font) ? "" : p.font, notas: "Importat de " + (p.font === "Llista" ? "la llista enganxada" : p.font === "Arxiu" ? "l'arxiu exportat" : p.font) + (p.data ? " (" + p.data + ")" : "") }, 1); nous++ }
       }
       // es donen per vistos els avisos importats i els que no aportaven res; els desmarcats amb canvis tornaran a sortir
       if (aj) { aj.vistos = [...new Set(aj.vistos.concat(props.filter(p => p.on || !p.canvis).flatMap(p => p.mids || [])))].slice(-3000); H.put(aj, 1) }
@@ -158,9 +158,21 @@ window.FIMP = (() => {
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">FilmFreeway i Festhome</h2>
       <div class="card" style="margin:12px 0"><h3>Des del correu</h3><p class="em">Llegeix els avisos que FilmFreeway i Festhome t'envien a pablo.anarte.film@gmail.com (inscripcions, seleccions i rebutjos dels últims dos anys) i et proposa els canvis. Els avisos ja revisats no tornen a sortir.</p>
         <button class="b" data-fk="mail" ${corOk ? "" : "disabled"}>Buscar avisos nous</button>${corOk ? "" : `<p class="em" style="color:#ff3b30">Cal connectar el correu (secció Correu).</p>`}<span id="fist" class="em" style="margin-left:10px"></span></div>
+      <div class="card" style="margin-bottom:12px"><h3>Des d'un arxiu</h3><p class="em">A FilmFreeway, «Submissions» → «Export Submissions» → Date Range «All», CSV → «Export Data». Puja aquí l'arxiu (CSV o Excel). També serveix una llista teva de Numbers o Excel exportada, amb una fila de títols.</p>
+        <label class="b" style="display:inline-flex;cursor:pointer;color:#fff">Triar l'arxiu<input type="file" id="fiarx" accept=".csv,.tsv,.txt,.xlsx" hidden></label><span id="fiax" class="em" style="margin-left:10px"></span></div>
       <div class="card"><h3>Enganxar la llista</h3><p class="em">A FilmFreeway, ves a «Submissions» (o a Festhome, «Mis inscripciones»), selecciona tota la llista, copia-la i enganxa-la aquí.</p>
         <textarea id="fitx" rows="8" placeholder="Enganxa aquí la llista copiada…"></textarea><button class="b2" data-fk="txt" style="margin-top:8px">Llegir la llista</button></div>`);
     const box = document.getElementById("hshc");
+    document.getElementById("fiarx").onchange = async e => {
+      const f = e.target.files[0]; if (!f) return; const st = document.getElementById("fiax"); st.textContent = "Llegint " + f.name + "…";
+      try {
+        const fulls = await IMP.llegir(f), rows = (fulls.find(x => x.rows && x.rows.length) || {}).rows || [];
+        const t = rows.map(r => r.map(c => String(c ?? "").replace(/[\t\r\n]+/g, " ").trim()).join("\t")).join("\n");
+        const props = (await deText(t)).props;
+        if (!props.length) { st.textContent = "No hi he trobat inscripcions. Comprova que l'arxiu tingui les columnes Festival i Status."; e.target.value = ""; return }
+        props.forEach(p => p.font = "Arxiu"); revisa(props, "arxiu");
+      } catch (er) { st.textContent = "No s'ha pogut llegir l'arxiu."; e.target.value = "" }
+    };
     box.onclick = async e => {
       const b = e.target.closest("[data-fk]"); if (!b) return;
       if (b.dataset.fk === "mail") {
