@@ -70,7 +70,12 @@ function contactos(){return `<div class="bar"><input id="q" placeholder="Cerca" 
 function fill(){const k=q.toLowerCase(),l=C.filter(c=>(!flt||c.tipo===flt)&&(!k||[c.nombre,c.persona,c.notas,c.man].join(" ").toLowerCase().includes(k))).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
  $("#lst").innerHTML=l.map(c=>row(c,E([c.tipo,c.estado||"Pendent",(c.motivos||[]).join(", ")].filter(Boolean).join(" · ")))).join("")||`<p class="em">Sense resultats.</p>`}
 function plantillas(){return `<p class="em">Es desen soles. [Nombre] es substitueix pel nom del contacte en crear un enviament.</p>`+Object.keys(TN).map(k=>`<h2>${TN[k]}</h2><textarea data-k="${k}" rows="${k==="seg"||k.startsWith("ig")?5:10}">${E(cfg.tpl&&cfg.tpl[k]||DT[k])}</textarea><div class="ls"><button class="b" data-a="ct" data-k="${k}">Copiar</button><button class="t" data-a="rt" data-k="${k}">Restaurar</button></div>`).join("")}
-function datos(){return `<h2>Dades</h2><p>${C.length} contactes desats${loc?" només en aquest dispositiu (no s'ha pogut connectar amb el teu compte)":" a la teva base de dades de Cloudflare, accessibles des de qualsevol dispositiu"}.</p><div class="ls"><button class="b" data-a="ej">Exportar JSON</button><button class="b" data-a="ec">Exportar CSV</button></div><h2>Importar</h2><button class="b" data-a="im">Importar JSON</button><input id="fi" type="file" accept=".json" hidden>`}
+function datos(){return `<h2>Dades</h2><p>${C.length} contactes desats${loc?" només en aquest dispositiu (no s'ha pogut connectar amb el teu compte)":" a la teva base de dades de Cloudflare, accessibles des de qualsevol dispositiu"}.</p><div class="ls"><button class="b" data-a="ej">Exportar JSON</button><button class="b" data-a="ec">Exportar CSV</button></div><h2>Importar</h2><div class="ls"><button class="b" data-a="iv">Importar del mòbil (vCard)</button><button class="b2" data-a="im">Importar JSON</button></div><input id="fi" type="file" accept=".json" hidden><input id="fiv" type="file" accept=".vcf,text/vcard,text/x-vcard" hidden>
+<details style="margin-top:12px"><summary class="em" style="cursor:pointer">Com trec els contactes del mòbil</summary><ol class="pasos">
+<li><b>iPhone:</b> app Contactos → «Listas» (a dalt a l'esquerra) → mantén premut «Todos los contactos» → «Exportar» → «OK» → «Guardar en Archivos». Després, obre el hub al mateix iPhone, prem «Importar del mòbil» i tria l'arxiu.</li>
+<li><b>Mac:</b> app Contactos → selecciona'ls tots (Cmd+A) → Archivo → Exportar → «Exportar vCard…».</li>
+<li><b>Google o Android:</b> contacts.google.com → «Exportar» → «vCard (para contactos de iOS)».</li>
+<li>Abans d'importar veuràs la llista: hi pots desmarcar els que no vulguis. Els que ja tens no es dupliquen.</li></ol></details>`}
 function draw(){document.querySelectorAll("#nav .t").forEach(b=>b.classList.toggle("on",b.dataset.v===view));$("#v").innerHTML=({hoy,contactos,plantillas,datos})[view]();if(view==="contactos")fill()}
 function render(){if(view==="contactos"&&$("#lst"))fill();else if(!(view==="plantillas"&&document.activeElement&&document.activeElement.tagName==="TEXTAREA"))draw()}
 function tk(c,via){if(M(c).length)return"seg";const p=via==="Email"?"email":"ig";if(c.tipo==="Artista")return p+"A"+(c.sub==="Grup"?"g":"s");return p+(c.tipo==="Mànager"?"M":"P")}
@@ -158,6 +163,7 @@ document.addEventListener("click",e=>{
  else if(a==="ec")dl("pablo-contactos.csv",csv())
 
  else if(a==="im")$("#fi").click()
+ else if(a==="iv")$("#fiv").click()
 });
 document.addEventListener("input",e=>{
  if(!e.target.closest||!e.target.closest("#s-contactos,#sh"))return; // només dins de Contactes
@@ -187,6 +193,7 @@ async function init(){
 function go(){if(!started){started=1;draw();init()}}
 go();
 
+document.addEventListener("change",async e=>{if(e.target.id!=="fiv")return;const f=e.target.files[0];e.target.value="";if(!f)return;window.VCF.obre(await f.text(),{C,tipos:tipos(),estats:ES,nouTipus:t=>{if(!tipos().includes(t)){cfg.tipos=(cfg.tipos||[]).concat({n:t,c:PAL[(cfg.tipos||[]).length%PAL.length]});store.set("cfg",cfg)}},desa:c=>save(c),afegeix:c=>{C.push(c);return save(c)},fet:()=>render()})});
 document.addEventListener("change",async e=>{if(e.target.id!=="fi")return;const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text()),n=j.contactos||[];C=C.filter(x=>!n.some(y=>y.id===x.id)).concat(n);n.forEach(save);if(j.config){cfg=Object.assign(cfg,j.config);store.set("cfg",cfg)}render();toast("Importats "+n.length+(n.length===1?" contacte":" contactes"))}catch(x){toast("Arxiu no vàlid")}e.target.value=""});
 
 document.getElementById("sh").addEventListener("click",e=>{if(e.target.id==="sh"){const b=document.querySelector('#shc [data-a="x"]');b&&b.click()}});
