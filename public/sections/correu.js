@@ -19,9 +19,9 @@
     el.innerHTML = `<div class="card" style="max-width:760px"><h3>Connectar el correu</h3>
       <p>El hub llegeix i envia des de <b>${COMPTE}</b> a través d'un petit programa que viu dins del teu propi compte de Google. Es fa una sola vegada (uns 5 minuts):</p>
       <ol class="pasos">
-        <li>Obre <a class="ln" href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> amb el compte <b>${COMPTE}</b>. Es crea un projecte nou: clica el nom de dalt i posa-li «Pont hub».</li>
+        <li>Obre <a class="ln" href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> amb el compte <b>${COMPTE}</b>. Es crea un projecte nou: clica el nom de dalt i posa-li «Puente Web».</li>
         <li>Esborra el que hi ha a l'editor i enganxa-hi aquest codi: <button class="b2" data-k="copia">Copiar el codi</button></li>
-        <li>Desa (icona del disquet). A la barra de dalt, al desplegable de funcions, tria <b>configurar</b> i prem <b>Ejecutar</b>. Google et demanarà permís: «Revisar permisos» → el teu compte → «Configuración avanzada» → «Ir a Pont hub». Si surten caselles, marca-les totes («Seleccionar todo») i prem «Continuar» o «Permitir».</li>
+        <li>Desa (icona del disquet). A la barra de dalt, al desplegable de funcions, tria <b>configurar</b> i prem <b>Ejecutar</b>. Google et demanarà permís: «Revisar permisos» → el teu compte → «Configuración avanzada» → «Ir a Puente Web». Si surten caselles, marca-les totes («Seleccionar todo») i prem «Continuar» o «Permitir».</li>
         <li>A baix, al «Registro de ejecución», surt una clau llarga. Copia-la.</li>
         <li>Prem <b>Implementar → Nueva implementación</b>. A la rodeta, tria <b>Aplicación web</b>. «Ejecutar como»: <b>Yo</b>. «Quién tiene acceso»: <b>Cualquier usuario</b>. Prem Implementar i copia l'<b>URL de l'aplicació web</b> (acaba en /exec).</li>
         <li>Enganxa les dues coses aquí:</li>
