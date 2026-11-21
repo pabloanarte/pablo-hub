@@ -309,7 +309,7 @@ async function drecera(t, request, db) {
     return txt(`✓ ${c.nombre || "@" + usr}: contactat avui`);
   }
   const id = "c_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const n = { id, nombre: "@" + usr, persona: "", tipo: tipus || "Productora", estado: "Contactat", motivos: [], email: "", ig: "@" + usr, tel: "", web: "", dir: "", man: "", manId: "", notas: "Afegit des de la drecera d'Instagram.", msgs: [{ d: avui, v: "Instagram", t: "" }] };
+  const n = { id, nombre: "@" + usr, persona: "", tipo: tipus || "Artista", estado: "Contactat", motivos: [], email: "", ig: "@" + usr, tel: "", web: "", dir: "", man: "", manId: "", notas: "Afegit des de la drecera d'Instagram.", msgs: [{ d: avui, v: "Instagram", t: "" }] };
   await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(n), Date.now()).run();
   return txt(`✓ @${usr} afegit a Contactes com a contactat avui`);
 }
