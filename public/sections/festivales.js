@@ -32,7 +32,7 @@
     ],
     orden: (a, b) => (a.limite || a.evento || "9").localeCompare(b.limite || b.evento || "9") || (a.titulo || "").localeCompare(b.titulo || ""),
     grupos: l => [["Per presentar", l.filter(d => !d.estado || d.estado === "Per presentar")], ["Sense decidir", l.filter(d => d.estado === "Presentat")], ["Premiats", l.filter(d => d.estado === "Seleccionat" && d.premi)], ["Seleccionats", l.filter(d => d.estado === "Seleccionat" && !d.premi)], ["Rebutjats", l.filter(d => d.estado === "Rebutjat")], ["Descartats", l.filter(d => d.estado === "Descartat")]],
-    fila: d => { const nec = (d.necessitats || []).filter(x => !(d.enviat || []).includes(x)); return { t: d.titulo, s: [PS[d.proyecto], d.plataforma, d.estado === "Per presentar" && d.limite && "Límit " + H.fecha(d.limite), d.premi || (d.estado !== "Per presentar" && d.estado), [].concat(d.classe || []).join(", "), d.estado !== "Rebutjat" && d.estado !== "Descartat" && nec.length && "Falta: " + nec.join(", ")].filter(Boolean).join(" · "), c: CE[d.estado] } }
+    fila: d => { const nec = (d.necessitats || []).filter(x => !(d.enviat || []).includes(x)); return { t: d.titulo, s: [PS[d.proyecto], d.estado === "Per presentar" && d.limite && "Límit " + H.fecha(d.limite), d.premi || (d.estado !== "Per presentar" && d.estado), d.plataforma, [].concat(d.classe || []).join(", "), d.estado !== "Rebutjat" && d.estado !== "Descartat" && nec.length && "Falta: " + nec.join(", ")].filter(Boolean).join(" · "), c: CE[d.estado] } }
   });
 
   carregaPS(); H.onChange(carregaPS);
