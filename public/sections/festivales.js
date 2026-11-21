@@ -50,7 +50,7 @@
     H.put({ id: "ajust:migplat", fet: 1 }, 1);
   })();
 
-  // ---------- Recorregut per pel·lícula ----------
+  // ---------- Recorregut per projecte ----------
   const { E } = H, el = document.getElementById("s-festivales");
   let vista = "llista";
   const ANY = d => (d.evento || d.limite || "").slice(0, 4);
@@ -78,7 +78,7 @@
     el.querySelectorAll(".fvis .t").forEach(b => b.classList.toggle("on", b.dataset.v === vista));
     if (vista === "rec") recorregut();
   }
-  el.insertAdjacentHTML("afterbegin", `<div class="seg fvis" style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><button class="t on" data-k="fvis" data-v="llista">Convocatòries</button><button class="t" data-k="fvis" data-v="rec">Recorregut per pel·lícula</button><span style="flex:1"></span><button class="b2" data-k="fimp">Importar de FilmFreeway i Festhome</button></div>`);
+  el.insertAdjacentHTML("afterbegin", `<div class="seg fvis" style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><button class="t on" data-k="fvis" data-v="llista">Convocatòries</button><button class="t" data-k="fvis" data-v="rec">Recorregut per projecte</button><span style="flex:1"></span><button class="b2" data-k="fimp">Importar de FilmFreeway i Festhome</button></div>`);
   el.insertAdjacentHTML("beforeend", `<div id="frec" hidden></div>`);
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
