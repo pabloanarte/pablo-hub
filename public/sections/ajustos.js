@@ -3,7 +3,7 @@
   const { E } = H, el = document.getElementById("s-ajustos");
   const fa = s => { if (!s) return "mai"; const d = Math.floor((Date.now() - new Date(s)) / 864e5); return d <= 0 ? "avui" : d === 1 ? "ahir" : `fa ${d} dies` };
   async function pintar() {
-    const [a, cal, cor] = await Promise.all([H.col("ajust").then(l => l.find(x => x.id === "ajust:copia") || {}), H.api("GET", "calendari").catch(() => ({})), H.api("GET", "correu/config").catch(() => ({}))]);
+    const [a, cal, cor, gc] = await Promise.all([H.col("ajust").then(l => l.find(x => x.id === "ajust:copia") || {}), H.api("GET", "calendari").catch(() => ({})), H.api("GET", "correu/config").catch(() => ({})), H.col("ajust").then(l => l.find(x => x.id === "ajust:gcal") || {})]);
     el.innerHTML = `<div class="dash" style="grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))">
       <div class="card"><h3>Còpia de seguretat</h3>
         <p>Última còpia: <b>${fa(a.ultima)}</b>${a.on === "drive" ? " (al Drive)" : a.on ? " (descarregada)" : ""}.</p>
@@ -12,8 +12,23 @@
         <h2 style="margin-top:22px">Al Drive, cada dilluns</h2>
         ${cor.connectat ? `<p class="em">El pont de Google desa una còpia a la carpeta «Còpies PABLO hub» del teu Drive cada dilluns a les 7 i guarda les 12 últimes.</p><div class="ls"><button class="b2" data-k="drive">Fer-ne una ara al Drive</button><span id="drv" class="em"></span></div>` : `<p class="em">Quan connectis el correu (secció Correu), també es farà una còpia setmanal al teu Drive.</p>`}
       </div>
-      <div class="card"><h3>Calendari al mòbil</h3>
-        <p class="em">Tasques, reunions, dates límit i festivals, jornades de rodatge i feines, al calendari del teu iPhone o de Google. S'actualitza sol (cada hora, aproximadament). Només s'hi veuen, no s'hi editen.</p>
+      <div class="card"><h3>Google Calendar (editable)</h3>
+        ${cor.connectat ? `<p class="em">Un calendari «PABLO hub» al teu Google Calendar, sincronitzat cada 10 minuts en els dos sentits: si hi canvies una data o una hora (també des de l'iPhone), canvia al hub.</p>
+        <p>Última sincronització: <b>${gc.ultima ? new Date(gc.ultima).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "encara cap"}</b></p>
+        <div class="ls"><button class="b" data-k="gcal">Sincronitzar ara</button><span id="gcs" class="em"></span></div>
+        <details style="margin-top:12px"><summary class="em" style="cursor:pointer">Què es sincronitza</summary><ol class="pasos">
+          <li>Hi van classes, reunions, rodatges, feines, tasques pendents i dates de festivals (dels últims 2 mesos als propers 5 anys).</li>
+          <li>De Google al hub tornen la data de tot i l'hora de classes i reunions; de les reunions, també el títol, el lloc i les notes; de les tasques, el títol i les notes; de les classes, les notes; de les feines, les dates d'inici i final. La resta de canvis fets a Google es desfan i mana el hub.</li>
+          <li>Un esdeveniment nou creat en aquest calendari arriba al hub com a reunió (si té hora) o com a tasca (si és de dia sencer). Si dura uns quants dies, arriba com a tasca del primer dia. Els esdeveniments periòdics no se sincronitzen.</li>
+          <li>Si esborres a Google una reunió, s'esborra del hub; si esborres una tasca, queda feta. Si s'hi esborra una altra cosa, es torna a posar. Si en falten més de 5 de cop, no s'esborra res del hub.</li></ol></details>
+        <details style="margin-top:8px"><summary class="em" style="cursor:pointer">Com es posa i es veu a l'iPhone</summary><ol class="pasos">
+          <li>Actualitza el pont de Google (targeta «Pont de Google») i, en executar <b>configurar</b>, accepta el permís nou de Calendar.</li>
+          <li>Prem «Sincronitzar ara»: apareixerà el calendari «PABLO hub» a calendar.google.com.</li>
+          <li>iPhone: Ajustes → Calendario → Cuentas → el teu compte de Google (pablo.anarte.film@gmail.com) amb «Calendarios» activat. A l'app Calendario → Calendarios, marca «PABLO hub». Si no hi surt, obre calendar.google.com/calendar/syncselect i marca'l.</li>
+          <li>Si tenies subscrit el calendari de la targeta «Calendari al mòbil», treu-lo perquè no surti tot repetit.</li></ol></details>` : `<p class="em">Primer connecta el correu (secció Correu): el calendari de Google va pel mateix pont.</p>`}
+      </div>
+      <div class="card"><h3>Calendari al mòbil (només lectura)</h3>
+        <p class="em">Tasques, reunions, classes, dates límit i festivals, jornades de rodatge i feines, al calendari del teu iPhone o de Google. S'actualitza sol (cada hora, aproximadament). Només s'hi veuen, no s'hi editen.</p>
         <input readonly value="${E(cal.url || "")}" id="calu" style="font-size:13px">
         <div class="ls" style="margin-top:8px"><button class="b" data-k="calcp">Copiar l'enllaç</button><a class="b2" href="${E((cal.url || "").replace(/^https?:/, "webcal:"))}">Afegir a l'iPhone / Mac</a><button class="b2" data-k="calnou">Canviar l'enllaç</button></div>
         <details style="margin-top:12px"><summary class="em" style="cursor:pointer">Com s'afegeix</summary><ol class="pasos">
@@ -37,6 +52,12 @@
     if (k === "calnou" && confirm("L'enllaç actual deixarà de funcionar i l'hauràs de tornar a afegir al mòbil. Continuar?")) { await H.api("POST", "calendari", {}); pintar(); H.toast("Enllaç nou creat") }
     if (k === "codi") { const t = await (await fetch("/pont-gmail.gs")).text(); try { await navigator.clipboard.writeText(t); H.toast("Codi copiat") } catch (er) { H.toast("No s'ha pogut copiar") } }
     if (k === "desconnecta" && confirm("Desconnectar el correu del hub? Podràs tornar-lo a connectar quan vulguis.")) { await H.api("DELETE", "correu/config"); H.toast("Desconnectat"); location.reload() }
+    if (k === "gcal") {
+      const s = document.getElementById("gcs"); s.textContent = "Sincronitzant…"; b.disabled = true;
+      try { const r = await H.api("POST", "correu/calendari", {}); s.textContent = r.ocupat ? "Ja s'està sincronitzant; torna-ho a provar d'aquí a un minut." : `Fet: ${r.aGoogle || 0} canvis cap a Google i ${r.alHub || 0} cap al hub.`; H.col("ajust", true); if (r.alHub) H.col("tarea", true) }
+      catch (er) { s.textContent = er && er.error === "accio" ? "Cal actualitzar el pont de Google (mira «Pont de Google»)." : "No s'ha pogut: " + ((er && er.error) || "error") }
+      b.disabled = false;
+    }
     if (k === "drive") {
       const s = document.getElementById("drv"); s.textContent = "Fent la còpia…"; b.disabled = true;
       try { const r = await H.api("POST", "correu/copia", {}); s.innerHTML = `Desada: <a class="ln" target="_blank" rel="noopener" href="${E(r.url)}">${E(r.nom)}</a>`; H.col("ajust", true) }

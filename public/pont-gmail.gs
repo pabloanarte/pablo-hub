@@ -1,4 +1,5 @@
-// Pont entre el hub PABLO i Gmail (pablo.anarte.film@gmail.com). També desa cada dilluns una còpia del hub al Drive.
+// Pont entre el hub PABLO i Gmail (pablo.anarte.film@gmail.com). També desa cada dilluns una còpia del hub al Drive
+// i manté el calendari «PABLO hub» de Google Calendar sincronitzat amb el hub en els dos sentits.
 const HUB = "https://pablo-hub.pages.dev";
 // S'enganxa a script.google.com amb aquest compte. Instruccions a la secció "Correu" del hub.
 // El hub hi parla des del servidor amb una clau; sense la clau no respon res.
@@ -9,6 +10,8 @@ function configurar() {
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("enviaProgramats").timeBased().everyMinutes(5).create(); // enviaments programats
   ScriptApp.newTrigger("copiaDrive").timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(7).create(); // còpia del hub cada dilluns
+  ScriptApp.newTrigger("sincronitzaCal").timeBased().everyMinutes(10).create(); // calendari «PABLO hub» a Google Calendar
+  CalendarApp.getDefaultCalendar();
   DriveApp.getRootFolder();
   GmailApp.getInboxUnreadCount();
   Logger.log("Clau per enganxar al hub:\n" + p.getProperty("CLAU"));
@@ -43,6 +46,7 @@ function resumFil(t) {
 }
 
 const ACCIONS = {
+  calendari: () => sincronitzaCal(),
   // llista de fils: q amb la sintaxi de Gmail (in:inbox, in:sent, from:…)
   llista(q) {
     const max = Math.min(+q.max || 30, 60);
@@ -143,4 +147,96 @@ function copiaDrive() {
   const fs = []; const all = dir.getFiles(); while (all.hasNext()) fs.push(all.next());
   fs.filter(x => /^pablo-hub-.*\.json$/.test(x.getName())).sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(12).forEach(x => x.setTrashed(true));
   return f;
+}
+
+// ---------- Google Calendar ----------
+// Calendari «PABLO hub»: el hub hi posa classes, reunions, rodatges, feines, tasques i dates de festivals.
+// Si mous o edites un esdeveniment aquí, el canvi torna al hub. Si en crees un de nou en aquest calendari,
+// al hub surt com a reunió (amb hora) o com a tasca (de dia sencer). Si tots dos canvien alhora, mana el hub.
+const ZONA = "Europe/Madrid";
+const DIES_ENRERE = 60, DIES_ENDAVANT = 1825; // finestra que es sincronitza (ha de coincidir amb el hub)
+function calHub() {
+  const p = PropertiesService.getScriptProperties(), id = p.getProperty("CAL_ID");
+  let c = id ? CalendarApp.getCalendarById(id) : null, nou = false;
+  if (!c) { c = CalendarApp.createCalendar("PABLO hub", { timeZone: ZONA }); p.setProperty("CAL_ID", c.getId()); nou = true }
+  return { c: c, nou: nou };
+}
+function cridaCal(cos) {
+  const clau = PropertiesService.getScriptProperties().getProperty("CLAU");
+  const r = UrlFetchApp.fetch(HUB + "/api/pont/cal", { method: "post", contentType: "application/json", payload: JSON.stringify(cos || {}), headers: { "x-clau": clau }, muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error("El hub no respon (" + r.getResponseCode() + ")");
+  return JSON.parse(r.getContentText());
+}
+// Hores: a Madrid. Dies sencers: a la zona del projecte d'Apps Script (així no es mouen d'un dia).
+function zonaDia() { return Session.getScriptTimeZone() || ZONA }
+function dataHora(d, h) { return Utilities.parseDate(d.slice(0, 4) + "-" + d.slice(4, 6) + "-" + d.slice(6, 8) + " " + h, ZONA, "yyyy-MM-dd HH:mm") }
+function dataDia(d) { return Utilities.parseDate(d.slice(0, 4) + "-" + d.slice(4, 6) + "-" + d.slice(6, 8) + " 12:00", zonaDia(), "yyyy-MM-dd HH:mm") }
+function fmtCal(dt, f, z) { return Utilities.formatDate(dt, z || ZONA, f) }
+// "petjada" curta d'un esdeveniment (igual vingui del hub o de Google) per saber qui l'ha canviat
+function petjada(o) {
+  const t = JSON.stringify([o.titol || "", o.d, o.hora || "", o.hora ? (o.durada || 60) : (o.fi || ""), o.lloc || "", String(o.desc || "").slice(0, 1500)]);
+  return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, t, Utilities.Charset.UTF_8));
+}
+function normHub(e) {
+  const h = /^\d{1,2}:\d{2}$/.test(e.hora || "") ? ("0" + e.hora).slice(-5) : "", fi = String(e.fi || "").replace(/-/g, "");
+  return { titol: e.titol || "", d: e.d, hora: h, durada: h ? (e.durada || 60) : 0, fi: !h && /^\d{8}$/.test(fi) && fi > e.d ? fi : "", lloc: e.lloc || "", desc: String(e.desc || "").slice(0, 1500) };
+}
+function deGoogle(g) {
+  const tot = g.isAllDayEvent();
+  const o = { titol: g.getTitle(), d: "", hora: "", durada: 0, fi: "", lloc: g.getLocation() || "", desc: String(g.getDescription() || "").slice(0, 1500), gid: g.getId() };
+  if (!tot) { const ini = g.getStartTime(); o.d = fmtCal(ini, "yyyyMMdd"); o.hora = fmtCal(ini, "HH:mm"); o.durada = Math.round((g.getEndTime() - ini) / 60000) }
+  else { o.d = fmtCal(g.getAllDayStartDate(), "yyyyMMdd", zonaDia()); const f = fmtCal(new Date(g.getAllDayEndDate().getTime() - 12 * 3600e3), "yyyyMMdd", zonaDia()); if (f > o.d) o.fi = f }
+  return o;
+}
+function posaCal(c, g, e) {
+  if (e.hora) {
+    const ini = dataHora(e.d, e.hora), fi = new Date(ini.getTime() + (e.durada || 60) * 60000);
+    if (!g) g = c.createEvent(e.titol, ini, fi); else g.setTime(ini, fi);
+  } else {
+    const ini = dataDia(e.d), fi = e.fi ? new Date(dataDia(e.fi).getTime() + 864e5) : null;
+    if (!g) g = fi ? c.createAllDayEvent(e.titol, ini, fi) : c.createAllDayEvent(e.titol, ini);
+    else if (fi) g.setAllDayDates(ini, fi); else g.setAllDayDate(ini);
+  }
+  if (g.getTitle() !== e.titol) g.setTitle(e.titol);
+  if ((g.getLocation() || "") !== e.lloc) g.setLocation(e.lloc);
+  if (String(g.getDescription() || "") !== e.desc) g.setDescription(e.desc);
+  return g;
+}
+function sincronitzaCal() {
+  const lock = LockService.getScriptLock(); if (!lock.tryLock(20000)) return { ocupat: 1 };
+  try {
+    const k = calHub(), c = k.c, r = cridaCal({}), ara = Date.now(), DIA = 864e5;
+    const gs = c.getEvents(new Date(ara - (DIES_ENRERE + 2) * DIA), new Date(ara + (DIES_ENDAVANT + 2) * DIA)), perUid = {}, sense = [];
+    gs.forEach(g => {
+      const u = g.getTag("hub");
+      if (u) { if (!perUid[u]) perUid[u] = g; else if (!g.isRecurringEvent()) g.deleteEvent() }
+      else if (!g.isRecurringEvent()) sense.push(g);
+    });
+    // només es considera esborrat a Google el que és clarament dins la finestra (no el que hi entra o en surt avui)
+    const dins = d => d >= fmtCal(new Date(ara - (DIES_ENRERE - 5) * DIA), "yyyyMMdd") && d <= fmtCal(new Date(ara + (DIES_ENDAVANT - 5) * DIA), "yyyyMMdd");
+    const abans = {}; (r.vistos || []).forEach(u => abans[u] = 1);
+    const falten = (r.ev || []).filter(e => abans[e.uid] && !perUid[e.uid] && e.esb && dins(e.d)).map(e => e.uid);
+    // si en falten molts de cop (calendari esborrat o refet, error de Google…), no s'esborra res al hub: es tornen a crear
+    const segur = !k.nou && falten.length <= 5;
+    const hub = {}, canvis = [], esborrats = [], nous = [], nousG = [], marques = [];
+    let posats = 0;
+    (r.ev || []).forEach(e => {
+      hub[e.uid] = 1;
+      const h = normHub(e), ph = petjada(h), g = perUid[e.uid];
+      if (!g) {
+        if (segur && falten.indexOf(e.uid) >= 0) { esborrats.push(e.uid); return } // esborrat a Google: es treu també del hub
+        const n = posaCal(c, null, h); n.setTag("hub", e.uid); n.setTag("h", ph); perUid[e.uid] = n; posats++; return;
+      }
+      const og = deGoogle(g), pg = petjada(og), ant = g.getTag("h") || "";
+      if (pg !== ant && ph === ant) { canvis.push(Object.assign({ uid: e.uid }, og)); marques.push([g, pg]) } // canviat a Google
+      else if (ph !== ant) { posaCal(c, g, h); g.setTag("h", ph); posats++ } // canviat al hub
+    });
+    Object.keys(perUid).forEach(u => { if (!hub[u]) { try { perUid[u].deleteEvent() } catch (er) { } delete perUid[u] } });
+    sense.forEach(g => { nous.push(deGoogle(g)); nousG.push(g) });
+    const r2 = cridaCal({ canvis: canvis, esborrats: esborrats, nous: nous, vistos: Object.keys(perUid) });
+    // les marques es posen només quan el hub ja ho ha desat (si falla, el proper cicle ho torna a enviar)
+    marques.forEach(m => m[0].setTag("h", m[1]));
+    (r2.creats || []).forEach((u, i) => { if (u && nousG[i]) { nousG[i].setTag("hub", u); nousG[i].setTag("h", "") } });
+    return { ok: 1, alHub: canvis.length + nous.length + esborrats.length, aGoogle: posats, protegits: segur ? 0 : falten.length };
+  } finally { lock.releaseLock() }
 }

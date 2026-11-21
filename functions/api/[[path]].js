@@ -39,6 +39,7 @@ export async function onRequest({ request, env, params }) {
     if (p.startsWith("public/")) return publica(p, request, env, db, j);
     if (p === "copia") return copia(m, request, db, j);
     if (p === "pont/copia" && m === "POST") return pontCopia(request, db, j);
+    if (p === "pont/cal" && m === "POST") return pontCal(request, db, j);
     if (p.startsWith("ical/")) return ical(decodeURIComponent(p.slice(5)), db);
     if (p === "calendari" ) return calCfg(m, request, db, j);
     return j({ error: "not found" }, 404);
@@ -157,9 +158,9 @@ async function correu(accio, m, request, db, j) {
     return j({ ok: 1 });
   }
   if (!cfg) return j({ error: "config" }, 503);
-  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia", "festivals"].includes(accio)) return j({ error: "no" }, 404);
+  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia", "festivals", "calendari"].includes(accio)) return j({ error: "no" }, 404);
   // el que envia o cancel·la només per POST amb JSON (un enllaç o un formulari d'una altra web no ho pot fer)
-  if (["envia", "cancela", "resum", "copia"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
+  if (["envia", "cancela", "resum", "copia", "calendari"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
   const q = m === "GET" ? Object.fromEntries(new URL(request.url).searchParams) : await request.json();
   const { clau, ...o } = await pont(cfg, { ...q, accio }); // la clau no surt mai cap al navegador
   return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200); // 401 faria tornar a demanar la contrasenya del hub
@@ -215,6 +216,56 @@ async function pontCopia(request, db, j) {
   if (!cfg || !cfg.clau || clau.length !== cfg.clau.length || !igual(clau, cfg.clau)) return j({ error: "no" }, 403);
   const c = await totesDades(db); await marcaCopia(db, "drive"); return j(c);
 }
+// Sincronització amb Google Calendar, feta pel pont de Google cada 10 minuts (o des de Configuració).
+// Crida 1 (cos buit): el pont rep els esdeveniments del hub i els uid que ja hi havia a Google l'última vegada.
+// Crida 2: el pont envia el que s'ha canviat, creat o esborrat a Google; el hub ho aplica i desa els uid vistos.
+async function pontCal(request, db, j) {
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:correu'").first(), cfg = r ? JSON.parse(r.data) : null;
+  const clau = request.headers.get("x-clau") || "";
+  if (!cfg || !cfg.clau || clau.length !== cfg.clau.length || !igual(clau, cfg.clau)) return j({ error: "no" }, 403);
+  const b = await request.json().catch(() => ({})) || {};
+  const get = async id => { const x = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(id).first(); return x ? JSON.parse(x.data) : null };
+  const put = (id, o) => db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, JSON.stringify(o), Date.now()).run();
+  const st = (await get("ajust:gcal")) || {};
+  const iso = d => /^\d{8}$/.test(d || "") ? d.slice(0, 4) + "-" + d.slice(4, 6) + "-" + d.slice(6, 8) : "";
+  const hm = h => /^\d{2}:\d{2}$/.test(h || "") ? h : "";
+  const suma = (h, min) => { if (!hm(h) || !(min > 0)) return ""; const t = (+h.slice(0, 2) * 60 + +h.slice(3, 5) + min) % 1440; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0") };
+  const treu = (t, pre) => String(t || "").replace(pre, "").trim();
+  const fets = [], creats = [];
+  if (Array.isArray(b.canvis)) for (const c of b.canvis.slice(0, 300)) {
+    const u = String(c.uid || ""), d = iso(c.d); if (!d) continue;
+    try {
+      let m;
+      if ((m = u.match(/^(tarea:[\w-]+)$/))) { const o = await get(m[1]); if (!o) continue; o.fecha = d; if (c.titol) o.titulo = treu(c.titol, /^☐\s*/).slice(0, 300); if (c.desc !== undefined) o.notas = String(c.desc).slice(0, 5000); await put(m[1], o) }
+      else if ((m = u.match(/^(reunion:[\w-]+)$/))) { const o = await get(m[1]); if (!o) continue; o.fecha = d; o.hora = hm(c.hora); o.durada = c.durada > 0 && c.durada < 1440 ? Math.round(c.durada) : 60; if (c.titol) o.titulo = treu(c.titol, /^Reunió:\s*/).slice(0, 300); if (c.lloc !== undefined) o.lugar = String(c.lloc).slice(0, 300); if (c.desc !== undefined) o.apuntes = String(c.desc).slice(0, 5000); await put(m[1], o) }
+      else if ((m = u.match(/^(convocatoria:[\w-]+)-(l|e)$/))) { const o = await get(m[1]); if (!o) continue; o[m[2] === "l" ? "limite" : "evento"] = d; await put(m[1], o) }
+      else if ((m = u.match(/^(pdr:[\w-]+)-(\d+)$/))) { const o = await get(m[1]); if (!o || !Array.isArray(o.dias) || !o.dias[+m[2]]) continue; o.dias[+m[2]].fecha = d; await put(m[1], o) }
+      else if ((m = u.match(/^(curs:[\w-]+)-([\w-]+)$/))) { const o = await get(m[1]); const x = o && Array.isArray(o.setmanes) && o.setmanes.find((y, i) => y && (y.id || String(i)) === m[2]); if (!x) continue; x.data = d; x.hora = hm(c.hora); x.horafi = suma(c.hora, c.durada); if (c.desc !== undefined) x.notes = String(c.desc).slice(0, 5000); await put(m[1], o) }
+      else if ((m = u.match(/^(feina:[\w-]+)$/))) { const o = await get(m[1]); if (!o) continue; o.ini = d; o.fin = iso(c.fi) || ""; await put(m[1], o) }
+      else continue;
+      fets.push(u);
+    } catch (e) { }
+  }
+  if (Array.isArray(b.esborrats)) for (const u of b.esborrats.slice(0, 100)) {
+    if (/^reunion:[\w-]+$/.test(u)) await db.prepare("DELETE FROM docs WHERE id=?1").bind(u).run();
+    else if (/^tarea:[\w-]+$/.test(u)) { const o = await get(u); if (o) { o.hecha = true; await put(u, o) } }
+  }
+  // esdeveniments creats directament al calendari de Google: amb hora → reunió; de dia sencer → tasca
+  if (Array.isArray(b.nous)) for (const n of b.nous.slice(0, 50)) {
+    const d = iso(n.d); if (!d) { creats.push(""); continue }
+    const gid = String(n.gid || "").slice(0, 300);
+    // si ja s'havia creat (la resposta anterior es va perdre), es torna el mateix
+    if (gid) { const ja = await db.prepare("SELECT id FROM docs WHERE (id LIKE 'reunion:%' OR id LIKE 'tarea:%') AND json_extract(data,'$.gcal')=?1").bind(gid).first(); if (ja) { creats.push(ja.id); continue } }
+    const id = (hm(n.hora) ? "reunion:" : "tarea:") + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const titol = String(n.titol || "").slice(0, 300), desc = String(n.desc || "").slice(0, 5000), lloc = String(n.lloc || "").slice(0, 300);
+    await put(id, hm(n.hora) ? { titulo: titol, fecha: d, hora: n.hora, durada: n.durada > 0 && n.durada < 1440 ? Math.round(n.durada) : 60, lugar: lloc, apuntes: desc, gcal: gid } : { titulo: titol, fecha: d, notas: [desc, lloc].filter(Boolean).join("\n"), gcal: gid });
+    creats.push(id);
+  }
+  if (Array.isArray(b.vistos)) { st.vistos = b.vistos.filter(x => typeof x === "string" && x.length < 200).slice(0, 3000); st.ultima = Date.now(); await put("ajust:gcal", st) }
+  const avui = new Date(), lim = (n) => new Date(avui.getTime() + n * 864e5).toISOString().slice(0, 10).replace(/-/g, "");
+  const ev = (await esdeveniments(db)).filter(e => (/^\d{4}-\d{2}-\d{2}$/.test(e.fi || "") && e.fi.replace(/-/g, "") > e.d ? e.fi.replace(/-/g, "") : e.d) >= lim(-62) && e.d <= lim(1827)).map(e => ({ ...e, esb: /^(tarea|reunion):/.test(e.uid) }));
+  return j({ ev, vistos: st.vistos || [], fets, creats });
+}
 function igual(a, b) { let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0 }
 
 // ---------- Calendari per subscriure's (iPhone, Google Calendar) ----------
@@ -227,22 +278,27 @@ async function calCfg(m, request, db, j) {
   }
   return j({ url: new URL(request.url).origin + "/api/ical/" + tok + ".ics" });
 }
-async function ical(t, db) {
-  const no = () => new Response("not found", { status: 404 });
-  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:ical'").first(); if (!r) return no();
-  const tok = JSON.parse(r.data).token; t = t.replace(/\.ics$/, "");
-  if (!tok || t.length !== tok.length || !igual(t, tok)) return no();
+// Esdeveniments del hub per al calendari (iCal i Google Calendar). esb = es pot esborrar des de Google.
+async function esdeveniments(db) {
   const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'convocatoria:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'proyecto:%' OR id LIKE 'curs:%'").all();
   const D = results.map(x => ({ ...JSON.parse(x.data), id: x.id })), T = k => D.filter(x => x.id.startsWith(k + ":"));
   const proj = Object.fromEntries(T("proyecto").map(p => [p.id, p.titulo || ""]));
   const ev = [], dia = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "") ? s.replace(/-/g, "") : null;
   const add = (uid, d, titol, o = {}) => { if (!dia(d)) return; ev.push({ uid, d: dia(d), titol, ...o }) };
   T("tarea").filter(x => !x.hecha).forEach(x => add(x.id, x.fecha, "☐ " + (x.titulo || "Tasca"), { desc: x.notas }));
-  T("reunion").forEach(x => add(x.id, x.fecha, "Reunió: " + (x.titulo || ""), { hora: x.hora, durada: 60, lloc: x.lugar, desc: x.apuntes }));
+  T("reunion").forEach(x => add(x.id, x.fecha, "Reunió: " + (x.titulo || ""), { hora: x.hora, durada: x.durada > 0 && x.durada < 1440 ? x.durada : 60, lloc: x.lugar, desc: x.apuntes }));
   T("convocatoria").forEach(x => { add(x.id + "-l", x.limite, "Límit: " + (x.titulo || ""), { desc: [x.web, x.notas].filter(Boolean).join("\n") }); if (x.evento) add(x.id + "-e", x.evento, (x.titulo || "Festival") + (x.lugar ? " (" + x.lugar + ")" : ""), {}) });
   T("pdr").forEach(x => (Array.isArray(x.dias) ? x.dias : []).forEach((d, i) => add(x.id + "-" + i, d.fecha, `Rodatge ${proj[x.proyecto] || x.titulo || ""} · jornada ${i + 1}`, { desc: d.calls })));
   T("curs").forEach(x => (Array.isArray(x.setmanes) ? x.setmanes : []).forEach((s, i) => s && add(x.id + "-" + (s.id || i), s.data, `Classe: ${x.titulo || ""}${s.tema ? " · " + s.tema : ""}`, { hora: s.hora, durada: /^\d\d:\d\d$/.test(s.hora || "") && /^\d\d:\d\d$/.test(s.horafi || "") && s.horafi > s.hora ? (+s.horafi.slice(0, 2) * 60 + +s.horafi.slice(3, 5)) - (+s.hora.slice(0, 2) * 60 + +s.hora.slice(3, 5)) : 60, lloc: x.centre, desc: s.notes })));
   T("feina").forEach(x => { add(x.id, x.ini, `${x.rol || "Feina"}: ${x.titulo || ""}`, { fi: x.fin, lloc: x.productora }) });
+  return ev;
+}
+async function ical(t, db) {
+  const no = () => new Response("not found", { status: 404 });
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:ical'").first(); if (!r) return no();
+  const tok = JSON.parse(r.data).token; t = t.replace(/\.ics$/, "");
+  if (!tok || t.length !== tok.length || !igual(t, tok)) return no();
+  const ev = await esdeveniments(db);
   const esc = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, m => "\\" + m);
   const ara = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
   const seg = d => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8) + 1)); return x.toISOString().slice(0, 10).replace(/-/g, "") };

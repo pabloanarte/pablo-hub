@@ -48,8 +48,8 @@ window.H = (() => {
   const tst = document.createElement("div"); tst.id = "htoast"; tst.hidden = true; document.body.appendChild(tst);
   let tt, alCerrar;
   function toast(t) { tst.textContent = t; tst.hidden = false; clearTimeout(tt); tt = setTimeout(() => tst.hidden = true, 2600) }
-  function sheet(html, onClose) { document.getElementById("hshc").innerHTML = '<div class="top"><button class="t" data-k="cerrar">Tancar</button></div>' + html; ov.hidden = false; alCerrar = onClose; document.body.style.overflow = "hidden" }
-  function cerrar() { ov.hidden = true; document.body.style.overflow = ""; ed = null; const f = alCerrar; alCerrar = null; f && f() }
+  function sheet(html, onClose) { const c = document.getElementById("hshc"), nova = ov.hidden; c.innerHTML = '<div class="top"><button class="t" data-k="cerrar">Tancar</button></div>' + html; ov.hidden = false; if (nova) { c.scrollTop = 0; ov.scrollTop = 0; requestAnimationFrame(() => { c.scrollTop = 0 }) } alCerrar = onClose; document.body.style.overflow = "hidden" }
+  function cerrar() { document.getElementById("hshc").scrollTop = 0; ov.hidden = true; document.body.style.overflow = ""; ed = null; const f = alCerrar; alCerrar = null; f && f() }
   ["input", "change", "click"].forEach(t => ov.addEventListener(t, e => e.stopPropagation())); // que contactos.js no reciba estos eventos
   ov.addEventListener("click", e => { if (e.target === ov || e.target.closest('[data-k="cerrar"]')) cerrar() });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !ov.hidden) cerrar() });
