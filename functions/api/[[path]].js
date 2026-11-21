@@ -34,6 +34,7 @@ export async function onRequest({ request, env, params }) {
     if (p === "web" || p.startsWith("web/")) return web(p, m, request, env, j);
     if (p === "archivo" || p.startsWith("archivo/")) return archivo(p, m, request, env, j);
     if (p === "importar" && m === "GET") return importar(request);
+    if (p === "oembed" && m === "GET") return oembed(request, j);
     if (p.startsWith("correu/")) return correu(p.slice(7), m, request, db, j);
     if (p.startsWith("public/")) return publica(p, request, env, db, j);
     if (p === "copia") return copia(m, request, db, j);
@@ -81,6 +82,15 @@ function b64(bytes) { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000)
 function deB64(t) { const s = atob(t.replace(/\s/g, "")); return new TextDecoder().decode(Uint8Array.from(s, c => c.charCodeAt(0))) }
 
 // ---------- Archivos ----------
+// Títol, autor i miniatura d'un vídeo de YouTube o Vimeo (només aquests dos llocs)
+async function oembed(request, j) {
+  let u; try { u = new URL(new URL(request.url).searchParams.get("url") || "") } catch (e) { return j({ error: "url" }, 400) }
+  const h = u.hostname.replace(/^(www|m)\./, "");
+  const api = /^(youtube\.com|youtu\.be)$/.test(h) ? "https://www.youtube.com/oembed?format=json&url=" : /^(vimeo\.com|player\.vimeo\.com)$/.test(h) ? "https://vimeo.com/api/oembed.json?width=640&url=" : "";
+  if (!api || !/^https?:$/.test(u.protocol)) return j({ error: "plataforma" }, 400);
+  let o; try { const r = await fetch(api + encodeURIComponent(u.href), { headers: { "user-agent": "Mozilla/5.0 (pablo-hub)" } }); if (!r.ok) return j({ error: "no", status: r.status }, 404); o = await r.json() } catch (e) { return j({ error: "xarxa" }, 502) }
+  return j({ titol: String(o.title || ""), autor: String(o.author_name || ""), thumb: /^https:\/\//.test(o.thumbnail_url || "") ? o.thumbnail_url : "", durada: +o.duration || 0 });
+}
 async function archivo(p, m, request, env, j) {
   const kv = env.ARCHIVOS; if (!kv) return j({ error: "sin-archivos" }, 503);
   if (p === "archivo" && m === "POST") { // ?nombre=cancion.mp3 (cuerpo = el archivo)
@@ -222,7 +232,7 @@ async function ical(t, db) {
   const r = await db.prepare("SELECT data FROM docs WHERE id='secret:ical'").first(); if (!r) return no();
   const tok = JSON.parse(r.data).token; t = t.replace(/\.ics$/, "");
   if (!tok || t.length !== tok.length || !igual(t, tok)) return no();
-  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'convocatoria:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'proyecto:%'").all();
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'convocatoria:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'proyecto:%' OR id LIKE 'curs:%'").all();
   const D = results.map(x => ({ ...JSON.parse(x.data), id: x.id })), T = k => D.filter(x => x.id.startsWith(k + ":"));
   const proj = Object.fromEntries(T("proyecto").map(p => [p.id, p.titulo || ""]));
   const ev = [], dia = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "") ? s.replace(/-/g, "") : null;
@@ -231,6 +241,7 @@ async function ical(t, db) {
   T("reunion").forEach(x => add(x.id, x.fecha, "Reunió: " + (x.titulo || ""), { hora: x.hora, durada: 60, lloc: x.lugar, desc: x.apuntes }));
   T("convocatoria").forEach(x => { add(x.id + "-l", x.limite, "Límit: " + (x.titulo || ""), { desc: [x.web, x.notas].filter(Boolean).join("\n") }); if (x.evento) add(x.id + "-e", x.evento, (x.titulo || "Festival") + (x.lugar ? " (" + x.lugar + ")" : ""), {}) });
   T("pdr").forEach(x => (Array.isArray(x.dias) ? x.dias : []).forEach((d, i) => add(x.id + "-" + i, d.fecha, `Rodatge ${proj[x.proyecto] || x.titulo || ""} · jornada ${i + 1}`, { desc: d.calls })));
+  T("curs").forEach(x => (Array.isArray(x.setmanes) ? x.setmanes : []).forEach((s, i) => s && add(x.id + "-" + (s.id || i), s.data, `Classe: ${x.titulo || ""}${s.tema ? " · " + s.tema : ""}`, { lloc: x.centre, desc: s.notes })));
   T("feina").forEach(x => { add(x.id, x.ini, `${x.rol || "Feina"}: ${x.titulo || ""}`, { fi: x.fin, lloc: x.productora }) });
   const esc = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, m => "\\" + m);
   const ara = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";

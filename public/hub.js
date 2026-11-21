@@ -16,6 +16,7 @@ const I = {
  persones: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5 M16 4.5a3 3 0 0 1 0 6 M18 14.5c2 .6 3.5 2.3 3.5 5.5",
  desenvolupament: "M4 20l4-1 11-11-3-3L5 16z M14 7l3 3",
  desglossament: "M5 3h10l4 4v14H5z M8 9h3 M8 13h8 M8 17h8 M14 9h2",
+ docencia: "M2 8l10-4 10 4-10 4z M6 10v5c0 1.5 3 3 6 3s6-1.5 6-3v-5 M22 8v6",
  feines: "M3 8h18v12H3z M8 8V5h8v3 M3 13h18",
  ajustos: "M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z M12 2v3 M12 19v3 M2 12h3 M19 12h3 M4.9 4.9l2.1 2.1 M17 17l2.1 2.1 M4.9 19.1L7 17 M17 7l2.1-2.1",
  web: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 3c3.5 3.5 3.5 14.5 0 18 M12 3c-3.5 3.5-3.5 14.5 0 18"
@@ -36,6 +37,7 @@ const SECTIONS = [
  {id:"planes",label:"Plans de rodatge",desc:"Generats des del guió tècnic, ordenats i amb hores",src:"sections/planes.js"},
  {id:"postproduccion",label:"Postproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/postproduccion.js"},
  {id:"festivales",label:"Festivals",desc:"Festivals, labs i residències",src:"sections/festivales.js"},
+ {id:"docencia",label:"Docència",desc:"Cursos, sessions i visionats per exercici",src:"sections/docencia.js"},
  {id:"feines",label:"Feines",desc:"Ajudant de direcció, script, direcció i docència",src:"sections/feines.js"},
  {id:"brainstorm",label:"Brainstorm",desc:"Idees soltes",src:"sections/brainstorm.js"},
  {id:"web",label:"La meva web",desc:"pabloanarte.com",src:"sections/web.js"},
@@ -79,7 +81,7 @@ async function contar() {
 document.getElementById("gq").addEventListener("keydown", async e => {
  if (e.key !== "Enter" || !e.target.value.trim()) return;
  const q = e.target.value.trim().toLowerCase(), E = H.E, txt = d => H.valors(d).toLowerCase();
- const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Brainstorm"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["feina", "Feines"], ["desg", "Desglossament", "desglossament"]];
+ const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Brainstorm"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["feina", "Feines"], ["desg", "Desglossament", "desglossament"], ["curs", "Cursos"], ["visionat", "Visionats"]];
  const ls = await Promise.all(T.map(([t]) => H.col(t))), cs = await H.contactos();
  const data = (t, d) => t === "convocatoria" ? (d.limite ? "Límit " + H.fecha(d.limite) : "") : t === "pre" || t === "post" ? H.fecha(d.ini) : t === "pdr" ? (d.dias && d.dias[0] && d.dias[0].fecha ? H.fecha(d.dias[0].fecha) : "") : d.fecha ? H.fecha(d.fecha) : "";
  let h = `<h2 style="margin-top:0">Resultats de «${E(q)}»</h2>`, n = 0;
@@ -94,6 +96,7 @@ document.getElementById("hsh").addEventListener("click", e => {
  if (b.dataset.k === "gc") { show("contactos"); setTimeout(() => { const nb = document.querySelector('#nav [data-v="contactos"]'); nb && nb.click(); setTimeout(() => { const r = document.querySelector(`#s-contactos [data-a="o"][data-id="${id}"]`); r && r.click() }, 150) }, 50); return }
  if (t === "gt") { show("guiones"); return window.GT && GT.abrir(id) }
  if (t === "pdr") { show("planes"); return window.P && P.abrir(id) }
+ if (t === "curs" || t === "visionat") { show("docencia"); return window.DOC && (t === "curs" ? DOC.curs(id) : DOC.vis(id)) }
  if (t === "desg") { show("desglossament"); return window.DESG && DESG.obre(id) }
  if (t === "pre" || t === "post") { show(t === "pre" ? "preproduccion" : "postproduccion"); return window.CronoAbrir && CronoAbrir[t] && CronoAbrir[t](id) }
  t === "tarea" ? H.abrirTarea(id) : H.abrir(t, id);

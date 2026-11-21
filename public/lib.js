@@ -9,7 +9,7 @@ window.H = (() => {
   const addDays = (s, n) => { const d = new Date(s + "T12:00"); d.setDate(d.getDate() + n); return iso(d) };
   const fecha = (s, largo) => s ? new Date(s + "T12:00").toLocaleDateString("ca-ES", largo ? { weekday: "long", day: "numeric", month: "long" } : { weekday: "short", day: "numeric", month: "short" }) : "";
   const uid = t => t + ":" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const valors = o => o == null ? "" : typeof o === "object" ? Object.entries(o).filter(([k]) => k !== "id" && k !== "img").map(([, v]) => valors(v)).join(" ") : String(o);
+  const valors = o => o == null ? "" : typeof o === "object" ? Object.entries(o).filter(([k]) => !["id", "img", "thumb", "url"].includes(k) && k[0] !== "_").map(([, v]) => valors(v)).join(" ") : String(o);
   const url = u => u ? (/^https?:/.test(u) ? u : "https://" + u) : "";
 
   // ---------- datos ----------
@@ -62,7 +62,8 @@ window.H = (() => {
     const ps = campos.some(c => c.tipo === "proyecto") ? await col("proyecto") : [];
     await llistes();
     ed = { campos, doc, opt, editL: ed && ed.doc === doc ? ed.editL : null, nouL: ed && ed.doc === doc ? ed.nouL : null };
-    const h = campos.map(c => campo(c, doc, cs, ps)).join("") +
+    const capH = opt.cap ? await opt.cap(doc) : "";
+    const h = campos.map((c, i) => campo(c, doc, cs, ps) + (i === 0 && capH ? capH : "")).join("") +
       (opt.acciones || []).map((a, i) => `<button class="b" style="margin-top:18px" data-k="acc" data-i="${i}">${E(a.l)}</button> `).join("") +
       (opt.extra ? `<div id="hextra">${await opt.extra(doc)}</div>` : "") +
       `<div class="sfoot"><button class="del" data-k="borrar">Eliminar</button><button class="b" data-k="desar">Desar</button></div>`;
@@ -77,9 +78,9 @@ window.H = (() => {
       case "pills": {
         if (c.opsDoc && !c.opsDoc(d).length) return c.buit ? lb + `<small style="display:block">${E(c.buit)}</small>` : "";
         const ops = c.opsDoc ? c.opsDoc(d) : opsDe(c), edita = c.llista && ed && ed.editL === c.llista;
-        if (edita) return lb + `<div class="seg">${ops.map((o, i) => `<span class="chip">${E(o)} <button data-k="lldel" data-l="${c.llista}" data-i="${i}" title="Eliminar de la llista">×</button></span>`).join("")}</div><div class="row"><input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nou tipus… (Retorn)"><button class="b2" data-k="llfet">Fet</button></div><small>Treure un tipus de la llista no canvia els projectes que ja el tenen.</small>`;
+        if (edita) return lb + `<div class="seg">${ops.map((o, i) => `<span class="chip">${E(o)} <button data-k="lldel" data-l="${c.llista}" data-i="${i}" title="Eliminar de la llista">×</button></span>`).join("")}</div><div class="row"><input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nova opció… (Retorn)"><button class="b2" data-k="llfet">Fet</button></div><small>Treure una opció de la llista no la treu d'on ja estigui posada.</small>`;
         const sel = c.multi ? (Array.isArray(v) ? v : v ? [v] : []) : [v], es = o => sel.includes(o);
-        return lb + `<div class="seg">${ops.concat(sel.filter(x => x && !ops.includes(x))).map(o => `<button class="t ${es(o) ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] && !/^#(8e8e93|c7c7cc)$/i.test(c.col[o]) ? ` style="${es(o) ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nom del nou tipus (p. ex. Fashion film) i Retorn" autofocus>` : ""}`;
+        return lb + `<div class="seg">${ops.concat(sel.filter(x => x && !ops.includes(x))).map(o => `<button class="t ${es(o) ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] && !/^#(8e8e93|c7c7cc)$/i.test(c.col[o]) ? ` style="${es(o) ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nova opció i Retorn" autofocus>` : ""}`;
       }
       case "url": return lb + `<div class="row"><input data-f="${c.f}" value="${E(v)}" placeholder="https://"><a class="ln" target="_blank" rel="noopener" href="${E(url(v))}" ${v ? "" : "hidden"}>Obrir</a></div>`;
       case "links": return lb + `<textarea data-f="${c.f}" rows="2" placeholder="Un enllaç per línia">${E(v)}</textarea><div class="ls">${String(v).split("\n").filter(x => x.trim()).map(x => `<a class="ln" target="_blank" rel="noopener" href="${E(url(x.trim()))}">${E(x.trim().replace(/^https?:\/\/(www\.)?/, "").slice(0, 40))}</a>`).join("")}</div>`;
