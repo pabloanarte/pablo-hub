@@ -3,7 +3,7 @@
   const { E } = H, el = document.getElementById("s-ajustos");
   const fa = s => { if (!s) return "mai"; const d = Math.floor((Date.now() - new Date(s)) / 864e5); return d <= 0 ? "avui" : d === 1 ? "ahir" : `fa ${d} dies` };
   async function pintar() {
-    const [a, cal, cor, gc] = await Promise.all([H.col("ajust").then(l => l.find(x => x.id === "ajust:copia") || {}), H.api("GET", "calendari").catch(() => ({})), H.api("GET", "correu/config").catch(() => ({})), H.col("ajust").then(l => l.find(x => x.id === "ajust:gcal") || {})]);
+    const [a, cal, cor, gc, dr] = await Promise.all([H.col("ajust").then(l => l.find(x => x.id === "ajust:copia") || {}), H.api("GET", "calendari").catch(() => ({})), H.api("GET", "correu/config").catch(() => ({})), H.col("ajust").then(l => l.find(x => x.id === "ajust:gcal") || {}), H.api("GET", "drecera").catch(() => ({}))]);
     el.innerHTML = `<div class="dash" style="grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))">
       <div class="card"><h3>Còpia de seguretat</h3>
         <p>Última còpia: <b>${fa(a.ultima)}</b>${a.on === "drive" ? " (al Drive)" : a.on ? " (descarregada)" : ""}.</p>
@@ -11,6 +11,19 @@
         <div class="ls"><a class="b" href="/api/copia" download data-k="baixa">Descarregar còpia</a><label class="b2" style="cursor:pointer">Restaurar una còpia…<input type="file" accept=".json,application/json" data-k="restaura" hidden></label></div>
         <h2 style="margin-top:22px">Al Drive, cada dilluns</h2>
         ${cor.connectat ? `<p class="em">El pont de Google desa una còpia a la carpeta «Còpies PABLO hub» del teu Drive cada dilluns a les 7 i guarda les 12 últimes.</p><div class="ls"><button class="b2" data-k="drive">Fer-ne una ara al Drive</button><span id="drv" class="em"></span></div>` : `<p class="em">Quan connectis el correu (secció Correu), també es farà una còpia setmanal al teu Drive.</p>`}
+      </div>
+      <div class="card"><h3>Drecera d'Instagram (iPhone)</h3>
+        <p class="em">Quan escriguis a algú per Instagram per feina: al seu perfil, ⋯ → «Compartir este perfil» → «Contactat al hub». Si ja és a Contactes, queda marcat com a contactat avui; si no, s'hi afegeix.</p>
+        <input readonly value="${E(dr.url || "")}" id="dru" style="font-size:13px">
+        <div class="ls" style="margin-top:8px"><button class="b" data-k="drcp">Copiar l'enllaç</button><button class="b2" data-k="drnou">Canviar l'enllaç</button></div>
+        <details style="margin-top:12px"><summary class="em" style="cursor:pointer">Com es crea la drecera (un sol cop)</summary><ol class="pasos">
+          <li>Copia l'enllaç d'aquí dalt i envia-te'l a l'iPhone (o obre aquesta pàgina a l'iPhone i copia'l allà).</li>
+          <li>App <b>Atajos</b> → <b>+</b>. Posa-li de nom <b>Contactat al hub</b>.</li>
+          <li>Toca la <b>ⓘ</b> de baix → activa <b>«Mostrar en la hoja para compartir»</b>.</li>
+          <li>Afegeix l'acció <b>«Obtener contenido de URL»</b>. A la URL enganxa l'enllaç (acaba en <b>?u=</b>) i, just a continuació, toca <b>«Entrada del atajo»</b> perquè s'hi afegeixi el perfil.</li>
+          <li>Afegeix l'acció <b>«Mostrar notificación»</b> i, com a text, tria <b>«Contenidos de la URL»</b>. Desa.</li>
+          <li>Prova-ho: a Instagram, a un perfil → ⋯ → «Compartir este perfil» → «Contactat al hub» (si no surt, a «Más» o a «Editar acciones»). Hauries de veure «✓ … contactat avui».</li>
+          <li>L'enllaç és secret: qui el tingui pot afegir contactes. Si el comparteixes per error, prem «Canviar l'enllaç» i posa el nou a la drecera.</li></ol></details>
       </div>
       <div class="card"><h3>Google Calendar (editable)</h3>
         ${cor.connectat ? `<p class="em">Un calendari «PABLO hub» al teu Google Calendar, sincronitzat cada 10 minuts en els dos sentits: si hi canvies una data o una hora (també des de l'iPhone), canvia al hub.</p>
@@ -48,6 +61,8 @@
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
     if (k === "baixa") setTimeout(() => { H.col("ajust", true).then(pintar) }, 1500);
+    if (k === "drcp") { try { await navigator.clipboard.writeText(document.getElementById("dru").value); H.toast("Copiat") } catch (er) { document.getElementById("dru").select() } }
+    if (k === "drnou" && confirm("L'enllaç actual deixarà de funcionar i l'hauràs de canviar a la drecera. Continuar?")) { await H.api("POST", "drecera", {}); pintar(); H.toast("Enllaç nou creat") }
     if (k === "calcp") { try { await navigator.clipboard.writeText(document.getElementById("calu").value); H.toast("Copiat") } catch (er) { document.getElementById("calu").select() } }
     if (k === "calnou" && confirm("L'enllaç actual deixarà de funcionar i l'hauràs de tornar a afegir al mòbil. Continuar?")) { await H.api("POST", "calendari", {}); pintar(); H.toast("Enllaç nou creat") }
     if (k === "codi") { const t = await (await fetch("/pont-gmail.gs")).text(); try { await navigator.clipboard.writeText(t); H.toast("Codi copiat") } catch (er) { H.toast("No s'ha pogut copiar") } }

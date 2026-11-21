@@ -42,6 +42,8 @@ export async function onRequest({ request, env, params }) {
     if (p === "pont/cal" && m === "POST") return pontCal(request, db, j);
     if (p.startsWith("ical/")) return ical(decodeURIComponent(p.slice(5)), db);
     if (p === "calendari" ) return calCfg(m, request, db, j);
+    if (p === "drecera" && (m === "GET" || m === "POST")) return dreceraCfg(m, request, db, j);
+    if (p.startsWith("drecera/")) return drecera(decodeURIComponent(p.slice(8)), request, db);
     return j({ error: "not found" }, 404);
   } catch (e) { return j({ error: String(e.message || e) }, 500) }
 }
@@ -265,6 +267,44 @@ async function pontCal(request, db, j) {
   const avui = new Date(), lim = (n) => new Date(avui.getTime() + n * 864e5).toISOString().slice(0, 10).replace(/-/g, "");
   const ev = (await esdeveniments(db)).filter(e => (/^\d{4}-\d{2}-\d{2}$/.test(e.fi || "") && e.fi.replace(/-/g, "") > e.d ? e.fi.replace(/-/g, "") : e.d) >= lim(-62) && e.d <= lim(1827)).map(e => ({ ...e, esb: /^(tarea|reunion):/.test(e.uid) }));
   return j({ ev, vistos: st.vistos || [], fets, creats });
+}
+// Drecera de l'iPhone: des d'un perfil d'Instagram, Compartir → «Contactat al hub». Enllaç secret a secret:drecera.
+async function dreceraCfg(m, request, db, j) {
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:drecera'").first();
+  let tok = r ? JSON.parse(r.data).token : "";
+  if (!tok || m === "POST") {
+    tok = [...crypto.getRandomValues(new Uint8Array(20))].map(b => b.toString(16).padStart(2, "0")).join("");
+    await db.prepare("INSERT INTO docs(id,data,updated) VALUES('secret:drecera',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify({ token: tok }), Date.now()).run();
+  }
+  return j({ url: new URL(request.url).origin + "/api/drecera/" + tok + "?u=" });
+}
+async function drecera(t, request, db) {
+  const txt = (s, st = 200) => new Response(s, { status: st, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:drecera'").first(); if (!r) return txt("no", 404);
+  const tok = JSON.parse(r.data).token; if (!tok || t.length !== tok.length || !igual(t, tok)) return txt("no", 404);
+  const q = new URL(request.url).searchParams; let u = q.get("u") || "";
+  if (request.method === "POST") { const b = await request.text(); try { const o = JSON.parse(b); u = o.u || o.url || u } catch (e) { u = b || u } }
+  u = String(u).trim();
+  // perfil a partir de l'enllaç compartit (instagram.com/usuari?igsh=…) o de @usuari
+  const m = u.match(/instagram\.com\/(?!p\/|reel\/|stories\/|explore\/)([A-Za-z0-9._]{1,30})/i) || u.match(/^@?([A-Za-z0-9._]{1,30})$/);
+  if (!m) return txt("No és un perfil d'Instagram. Comparteix-lo des del perfil (⋯ → «Compartir este perfil»).", 400);
+  const usr = m[1].toLowerCase(), norm = s => String(s || "").toLowerCase().replace(/^.*instagram\.com\//, "").replace(/[/?#].*$/, "").replace(/^@/, "").trim();
+  const avui = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'c\\_%' ESCAPE '\\'").all();
+  const tipus = ["Productora", "Artista", "Mànager"].includes(q.get("t")) ? q.get("t") : "";
+  let c = null;
+  for (const x of results) { try { const o = JSON.parse(x.data); if (norm(o.ig) === usr) { c = { ...o, id: x.id }; break } } catch (e) { } }
+  if (c) {
+    const msgs = Array.isArray(c.msgs) ? c.msgs : [];
+    if (!msgs.some(x => x && x.d === avui && x.v === "Instagram")) msgs.push({ d: avui, v: "Instagram", t: "" });
+    c.msgs = msgs; if ((c.estado || "Pendent") === "Pendent") c.estado = "Contactat"; if (tipus && !c.tipo) c.tipo = tipus;
+    await db.prepare("UPDATE docs SET data=?1,updated=?2 WHERE id=?3").bind(JSON.stringify(c), Date.now(), c.id).run();
+    return txt(`✓ ${c.nombre || "@" + usr}: contactat avui`);
+  }
+  const id = "c_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const n = { id, nombre: "@" + usr, persona: "", tipo: tipus || "Productora", estado: "Contactat", motivos: [], email: "", ig: "@" + usr, tel: "", web: "", dir: "", man: "", manId: "", notas: "Afegit des de la drecera d'Instagram.", msgs: [{ d: avui, v: "Instagram", t: "" }] };
+  await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(n), Date.now()).run();
+  return txt(`✓ @${usr} afegit a Contactes com a contactat avui`);
 }
 function igual(a, b) { let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0 }
 
