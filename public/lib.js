@@ -92,6 +92,7 @@ window.H = (() => {
         const ver = a => /^image\//.test(a.tipo) ? `<a href="${src(a)}" target="_blank"><img src="${src(a)}" alt="" style="max-width:100%;max-height:220px;border-radius:8px;display:block"></a>`
           : /^audio\//.test(a.tipo) ? `<audio controls preload="none" src="${src(a)}" style="width:100%"></audio>`
           : /^video\//.test(a.tipo) ? `<video controls preload="metadata" src="${src(a)}" style="width:100%;max-height:300px;border-radius:8px;background:#000"></video>` : "";
+        if (c.unic) { const a = fs[0]; return lb + (a ? `<div class="arch"><img src="${src(a)}" alt="" style="width:auto;height:auto;max-width:100%;max-height:360px;border-radius:8px;display:block"><div class="row"><span class="g"></span><button class="t" data-k="pcanvi">Canviar</button><input type="file" accept="image/*" data-k="sarch" data-f="${c.f}" hidden><button class="t" data-k="qarch" data-f="${c.f}" data-v="${a.id}">Treure</button></div></div>` : `<label class="b2" style="display:inline-block;color:#000;font-size:14px;cursor:pointer">+ Pujar imatge<input type="file" accept="image/*" data-k="sarch" data-f="${c.f}" hidden></label><small style="display:block;margin-top:4px">${E(c.ajuda || "JPG o PNG. Màxim 25 MB.")}</small>`) }
         return lb + fs.map(a => `<div class="arch">${ver(a)}<div class="row"><a class="g" href="${src(a)}" target="_blank" style="text-decoration:none"><b style="font-size:14px">${E(a.nombre)}</b><small>${a.size < 1048576 ? Math.max(1, Math.round(a.size / 1024)) + " KB" : (a.size / 1048576).toFixed(1) + " MB"}</small></a><button class="t" data-k="qarch" data-f="${c.f}" data-v="${a.id}">Treure</button></div></div>`).join("") +
           `<label class="b2" style="display:inline-block;margin-top:6px;color:#000;font-size:14px;cursor:pointer">+ Pujar arxius<input type="file" multiple accept="${E(c.accept || "image/*,audio/*,video/*,.pdf")}" data-k="sarch" data-f="${c.f}" hidden></label><small style="display:block;margin-top:4px">Àudio, vídeo, imatge o PDF. Màxim 25 MB cadascun; per a vídeos més grans, enganxa l'enllaç a Enllaços.</small>`;
       }
@@ -108,11 +109,12 @@ window.H = (() => {
   ov.addEventListener("change", async e => {
     const t = e.target;
     if (ed && t.dataset.k === "sarch" && t.files.length) {
-      const d = ed.doc, f = t.dataset.f;
-      for (const file of t.files) {
+      const d = ed.doc, f = t.dataset.f, unic = (ed.campos.find(c => c.f === f) || {}).unic;
+      for (const file of unic ? [t.files[0]] : t.files) {
+        if (unic && !/^image\//.test(file.type)) { toast("Ha de ser una imatge"); continue }
         if (file.size > 25 * 1024 * 1024) { toast(file.name + " passa de 25 MB"); continue }
         toast("Pujant " + file.name + "…");
-        try { const a = await api("POST", "archivo?nombre=" + encodeURIComponent(file.name), file); d[f] = (d[f] || []).concat(a) } catch (e) { toast(e && e.error === "sin-archivos" ? "Falta activar el magatzem d'arxius a Cloudflare" : "No s'ha pogut pujar " + file.name) }
+        try { const a = await api("POST", "archivo?nombre=" + encodeURIComponent(file.name), file); if (unic) (d[f] || []).forEach(x => api("DELETE", "archivo/" + x.id).catch(() => {})); d[f] = unic ? [a] : (d[f] || []).concat(a) } catch (e) { toast(e && e.error === "sin-archivos" ? "Falta activar el magatzem d'arxius a Cloudflare" : "No s'ha pogut pujar " + file.name) }
       }
       put(d, 1); if (ed && ed.doc === d) editar(ed.campos, d, ed.opt); toast("Pujat"); return;
     }
@@ -134,6 +136,7 @@ window.H = (() => {
     if (k === "lldel") { const c = ed.campos.find(x => x.llista === b.dataset.l), l = opsDe(c).slice(); l.splice(+b.dataset.i, 1); desaLlista(b.dataset.l, l); changed(); return editar(ed.campos, d, ed.opt) }
     if (k === "desar") { await put(d, 1); cerrar(); toast("Desat"); return }
     if (k === "pill") { d[b.dataset.f] = d[b.dataset.f] === b.dataset.v ? "" : b.dataset.v; put(d); editar(ed.campos, d, ed.opt) }
+    if (k === "pcanvi") return b.nextElementSibling.click();
     if (k === "qarch" && confirm("Treure aquest arxiu?")) { api("DELETE", "archivo/" + b.dataset.v).catch(() => {}); d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x.id !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
     if (k === "quita") { d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
     if (k === "acc") { await ed.opt.acciones[+b.dataset.i].fn(d); }
@@ -154,7 +157,7 @@ window.H = (() => {
       await llistes();
       if (cfg.tabs) { const ops = opsDe(cfg.tabs); el.querySelector(".tabsw").innerHTML = `<div class="tabs"><button class="t ${tab ? "" : "on"}" data-k="tab" data-v="">Tots<small></small></button>${ops.map(o => `<button class="t ${tab === o ? "on" : ""}" data-k="tab" data-v="${E(o)}">${E(o)} <small></small></button>`).join("")}</div>` }
       el.querySelectorAll('[data-k="tab"] small').forEach(x => { const v = x.parentNode.dataset.v, n = v ? l.filter(d => d[cfg.tabs.f] === v).length : l.length; x.textContent = n ? n : "" });
-      el.querySelector(".hl").innerHTML = vis.length ? lista.filter(g => g[1].length).map(([g, ds]) => (g ? `<h2>${E(g)} <span>${ds.length}</span></h2>` : "") + ds.map(d => { const r = cfg.fila(d); return `<div class="r" data-k="abre" data-id="${d.id}"><i class="dot" style="background:${r.c || "#c7c7cc"}"></i><div class="g"><b>${E(r.t || "Sense títol")}</b><small>${E(r.s || "")}</small></div></div>` }).join("")).join("") : `<p class="em">Encara no hi ha res. Prem «+ ${E(cfg.nuevo)}» per començar.</p>`;
+      el.querySelector(".hl").classList.toggle("hlc", !!cfg.cartell); el.querySelector(".hl").innerHTML = vis.length ? lista.filter(g => g[1].length).map(([g, ds]) => (g ? `<h2>${E(g)} <span>${ds.length}</span></h2>` : "") + ds.map(d => { const r = cfg.fila(d); if (cfg.cartell) return `<div class="pcar" data-k="abre" data-id="${d.id}"><div class="pcim">${r.img ? `<img src="${r.img}" alt="" loading="lazy">` : `<span>${E(r.t || "Sense títol")}</span>`}</div><div class="g"><b><i class="dot" style="background:${r.c || "#c7c7cc"}"></i>${E(r.t || "Sense títol")}</b><small>${E(r.s || "")}</small></div></div>`; return `<div class="r" data-k="abre" data-id="${d.id}"><i class="dot" style="background:${r.c || "#c7c7cc"}"></i><div class="g"><b>${E(r.t || "Sense títol")}</b><small>${E(r.s || "")}</small></div></div>` }).join("")).join("") : `<p class="em">Encara no hi ha res. Prem «+ ${E(cfg.nuevo)}» per començar.</p>`;
     }
     el.innerHTML = `<div class="tabsw"></div>` +
       `${cfg.tabs2 ? `<div class="seg" style="margin:0 0 12px"><button class="t on" data-k="tab2" data-v="">Tots</button>${cfg.tabs2.op.map(o => `<button class="t" data-k="tab2" data-v="${E(o)}">${E(o)}</button>`).join("")}</div>` : ""}<div class="bar"><input class="hq" placeholder="Cerca…"><span style="flex:1"></span><button class="b" data-k="nuevo">+ ${E(cfg.nuevo)}</button></div><div class="hl"><p class="em">Carregant…</p></div>`;

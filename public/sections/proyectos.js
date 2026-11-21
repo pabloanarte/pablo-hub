@@ -9,6 +9,7 @@
     campos: [
       { f: "titulo", tipo: "titulo" },
       { f: "altres", l: "Altres títols (anglès, de treball…), separats per comes", tipo: "text", ph: "p. ex. Rave To The Grave" },
+      { f: "poster", l: "Pòster", tipo: "archivos", unic: 1, ajuda: "Vertical, com un cartell. JPG o PNG, màxim 25 MB." },
       { f: "categoria", l: "Tipus de projecte", tipo: "pills", llista: "proj_cat", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
       { f: "rol", l: "El meu rol", tipo: "pills", op: ["Direcció", "Ajudant de direcció", "Script"], col: { "Direcció": "#000", "Ajudant de direcció": "#0a84ff", "Script": "#af52de" } },
       { f: "estado", l: "Estat", tipo: "pills", op: EST, col: CE },
@@ -19,7 +20,8 @@
       { f: "enlaces", l: "Enllaços (guió, carpeta, Vimeo…)", tipo: "links" }
     ],
     orden: (a, b) => EST.indexOf(a.estado) - EST.indexOf(b.estado) || (a.titulo || "").localeCompare(b.titulo || ""),
-    fila: d => ({ t: d.titulo, s: [d.categoria, d.rol, d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " arxius" : " arxiu")].filter(Boolean).join(" · "), c: CE[d.estado] }),
+    cartell: 1,
+    fila: d => ({ img: d.poster && d.poster[0] ? "/api/archivo/" + d.poster[0].id : "", t: d.titulo, s: [d.categoria, d.rol, d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " arxius" : " arxiu")].filter(Boolean).join(" · "), c: CE[d.estado] }),
     extra: d => H.relacionados(d.id)
   });
 })();
