@@ -20,9 +20,9 @@
           <li>Copia l'enllaç d'aquí dalt i envia-te'l a l'iPhone (o obre aquesta pàgina a l'iPhone i copia'l allà).</li>
           <li>App <b>Atajos</b> → <b>+</b>. Posa-li de nom <b>Contactat al hub</b>.</li>
           <li>Toca la <b>ⓘ</b> de baix → activa <b>«Mostrar en la hoja para compartir»</b>.</li>
-          <li>Afegeix l'acció <b>«Obtener contenido de URL»</b>. A la URL enganxa l'enllaç (acaba en <b>?u=</b>) i, just a continuació, toca <b>«Entrada del atajo»</b> perquè s'hi afegeixi el perfil.</li>
-          <li>Afegeix l'acció <b>«Mostrar notificación»</b> i, com a text, tria <b>«Contenidos de la URL»</b>. Desa.</li>
-          <li>Prova-ho: a Instagram, a un perfil → ⋯ → «Compartir este perfil» → «Contactat al hub» (si no surt, a «Más» o a «Editar acciones»). Hauries de veure «✓ … contactat avui».</li>
+          <li>Afegeix l'acció <b>«Obtener direcciones URL de»</b> amb <b>«Entrada del atajo»</b>.</li>
+          <li>Afegeix l'acció <b>«Abrir URL»</b>. Al seu camp enganxa l'enllaç (acaba en <b>?u=</b>) i, just a continuació, toca <b>«Direcciones URL»</b> a la tira de sobre el teclat. Desa.</li>
+          <li>Prova-ho: a Instagram, a un perfil → ⋯ → «Compartir este perfil» → «Contactat al hub» (si no surt, a «Más» o a «Editar acciones»). S'obrirà Safari un moment amb «✓ … contactat avui».</li>
           <li>L'enllaç és secret: qui el tingui pot afegir contactes. Si el comparteixes per error, prem «Canviar l'enllaç» i posa el nou a la drecera.</li></ol></details>
       </div>
       <div class="card"><h3>Google Calendar (editable)</h3>

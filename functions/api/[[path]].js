@@ -279,7 +279,11 @@ async function dreceraCfg(m, request, db, j) {
   return j({ url: new URL(request.url).origin + "/api/drecera/" + tok + "?u=" });
 }
 async function drecera(t, request, db) {
-  const txt = (s, st = 200) => new Response(s, { status: st, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
+  // al navegador (drecera amb «Abrir URL»): una pantalla senzilla; a «Obtener contenido de URL»: text per a la notificació
+  const html = /text\/html/.test(request.headers.get("accept") || "");
+  const txt = (s, st = 200) => html
+    ? new Response(`<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PABLO</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Helvetica,Arial,sans-serif;background:#fff;color:#000;text-align:center;padding:24px;box-sizing:border-box}h1{font-size:26px;line-height:1.3;margin:0 0 12px}p{color:#8e8e93;font-size:16px;margin:0}</style></head><body><div><h1>${s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c])}</h1><p>${st === 200 ? "Ja pots tornar a Instagram." : ""}</p></div></body></html>`, { status: st, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } })
+    : new Response(s, { status: st, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
   const r = await db.prepare("SELECT data FROM docs WHERE id='secret:drecera'").first(); if (!r) return txt("no", 404);
   const tok = JSON.parse(r.data).token; if (!tok || t.length !== tok.length || !igual(t, tok)) return txt("no", 404);
   const q = new URL(request.url).searchParams; let u = q.get("u") || "";
