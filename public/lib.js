@@ -75,9 +75,11 @@ window.H = (() => {
       case "textarea": return lb + `<textarea data-f="${c.f}" rows="${c.rows || 5}" placeholder="${E(c.ph || "")}">${E(v)}</textarea>`;
       case "check": return `<label class="ck"><input type="checkbox" data-f="${c.f}" ${v ? "checked" : ""}> ${E(c.l)}</label>`;
       case "pills": {
-        const ops = opsDe(c), edita = c.llista && ed && ed.editL === c.llista;
+        if (c.opsDoc && !c.opsDoc(d).length) return c.buit ? lb + `<small style="display:block">${E(c.buit)}</small>` : "";
+        const ops = c.opsDoc ? c.opsDoc(d) : opsDe(c), edita = c.llista && ed && ed.editL === c.llista;
         if (edita) return lb + `<div class="seg">${ops.map((o, i) => `<span class="chip">${E(o)} <button data-k="lldel" data-l="${c.llista}" data-i="${i}" title="Eliminar de la llista">×</button></span>`).join("")}</div><div class="row"><input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nou tipus… (Retorn)"><button class="b2" data-k="llfet">Fet</button></div><small>Treure un tipus de la llista no canvia els projectes que ja el tenen.</small>`;
-        return lb + `<div class="seg">${ops.concat(v && !ops.includes(v) ? [v] : []).map(o => `<button class="t ${v === o ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] && !/^#(8e8e93|c7c7cc)$/i.test(c.col[o]) ? ` style="${v === o ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nom del nou tipus (p. ex. Fashion film) i Retorn" autofocus>` : ""}`;
+        const sel = c.multi ? (Array.isArray(v) ? v : v ? [v] : []) : [v], es = o => sel.includes(o);
+        return lb + `<div class="seg">${ops.concat(sel.filter(x => x && !ops.includes(x))).map(o => `<button class="t ${es(o) ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] && !/^#(8e8e93|c7c7cc)$/i.test(c.col[o]) ? ` style="${es(o) ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nom del nou tipus (p. ex. Fashion film) i Retorn" autofocus>` : ""}`;
       }
       case "url": return lb + `<div class="row"><input data-f="${c.f}" value="${E(v)}" placeholder="https://"><a class="ln" target="_blank" rel="noopener" href="${E(url(v))}" ${v ? "" : "hidden"}>Obrir</a></div>`;
       case "links": return lb + `<textarea data-f="${c.f}" rows="2" placeholder="Un enllaç per línia">${E(v)}</textarea><div class="ls">${String(v).split("\n").filter(x => x.trim()).map(x => `<a class="ln" target="_blank" rel="noopener" href="${E(url(x.trim()))}">${E(x.trim().replace(/^https?:\/\/(www\.)?/, "").slice(0, 40))}</a>`).join("")}</div>`;
@@ -126,7 +128,7 @@ window.H = (() => {
     const t = e.target; if (!ed || !t.classList.contains("pnou") || e.key !== "Enter" || !t.value.trim()) return;
     const c = ed.campos.find(x => x.llista === t.dataset.l), v = t.value.trim(), l = opsDe(c).slice();
     if (!l.includes(v)) l.push(v); desaLlista(t.dataset.l, l);
-    if (!ed.editL) ed.doc[t.dataset.f] = v; ed.nouL = null; put(ed.doc); changed(); editar(ed.campos, ed.doc, ed.opt);
+    if (!ed.editL) { const cm = ed.campos.find(x => x.f === t.dataset.f) || {}, cur = ed.doc[t.dataset.f]; ed.doc[t.dataset.f] = cm.multi ? [...new Set((Array.isArray(cur) ? cur : cur ? [cur] : []).concat(v))] : v } ed.nouL = null; put(ed.doc); changed(); editar(ed.campos, ed.doc, ed.opt);
   });
   ov.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b || !ed) return; const k = b.dataset.k, d = ed.doc;
@@ -135,6 +137,7 @@ window.H = (() => {
     if (k === "llfet") { ed.editL = null; return editar(ed.campos, d, ed.opt) }
     if (k === "lldel") { const c = ed.campos.find(x => x.llista === b.dataset.l), l = opsDe(c).slice(); l.splice(+b.dataset.i, 1); desaLlista(b.dataset.l, l); changed(); return editar(ed.campos, d, ed.opt) }
     if (k === "desar") { await put(d, 1); cerrar(); toast("Desat"); return }
+    if (k === "pill" && (ed.campos.find(c => c.f === b.dataset.f) || {}).multi) { const l = Array.isArray(d[b.dataset.f]) ? d[b.dataset.f] : d[b.dataset.f] ? [d[b.dataset.f]] : []; d[b.dataset.f] = l.includes(b.dataset.v) ? l.filter(x => x !== b.dataset.v) : l.concat(b.dataset.v); put(d); return editar(ed.campos, d, ed.opt) }
     if (k === "pill") { d[b.dataset.f] = d[b.dataset.f] === b.dataset.v ? "" : b.dataset.v; put(d); editar(ed.campos, d, ed.opt) }
     if (k === "pcanvi") return b.nextElementSibling.click();
     if (k === "qarch" && confirm("Treure aquest arxiu?")) { api("DELETE", "archivo/" + b.dataset.v).catch(() => {}); d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x.id !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }

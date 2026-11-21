@@ -2,6 +2,8 @@
 (() => {
   const EST = ["Per presentar", "Presentat", "Seleccionat", "Rebutjat", "Descartat"];
   const CE = { "Per presentar": "#ff9f0a", "Presentat": "#0a84ff", "Seleccionat": "#30b27a", "Rebutjat": "#8e8e93", "Descartat": "#c7c7cc" };
+  let PS = {}; // id del projecte → títol, per mostrar-lo a cada festival
+  const carregaPS = () => H.col("proyecto").then(l => { const n = {}; l.forEach(p => n[p.id] = p.titulo || ""); const canvi = JSON.stringify(n) !== JSON.stringify(PS); PS = n; if (canvi && col) col.pintar() });
   const col = H.coleccion({
     sec: "festivales", tipo: "convocatoria", nuevo: "Convocatòria",
     tabs: { f: "tipo", op: ["Festival", "Lab / residència"] },
@@ -13,6 +15,10 @@
       { f: "limite", l: "Data límit", tipo: "date" },
       { f: "evento", l: "Data del festival o resolució", tipo: "date" },
       { f: "proyecto", l: "Projecte", tipo: "proyecto" },
+      { f: "classe", l: "Categoria del festival (si en té)", tipo: "pills", multi: 1, op: ["Categoria A", "Categoria B", "De gènere"] },
+      { f: "necessitats", l: "Què demanen (marca el que cal enviar)", tipo: "pills", multi: 1, llista: "fest_nec", op: ["DCP", "ProRes", "H.264", "Subtítols en anglès", "Subtítols en castellà", "Llista de diàlegs", "Tràiler", "Fotos fixes", "Pòster", "Press kit", "Biofilmografia", "Fitxa tècnica i artística", "Còpia de visionat (Vimeo)", "Música lliure de drets"] },
+      { f: "enviat", l: "Ja enviat", tipo: "pills", multi: 1, opsDoc: d => [].concat(d.necessitats || []), buit: "Marca primer què demanen." },
+      { f: "necnotes", l: "Altres requisits (formats, terminis d'enviament de còpia, adreça…)", tipo: "textarea", rows: 2 },
       { f: "lugar", l: "Lloc", tipo: "text" },
       { f: "seccio", l: "Secció", tipo: "text", ph: "Secció oficial, competició de curts…" },
       { f: "premi", l: "Premi o menció", tipo: "text", ph: "Si n'hi ha" },
@@ -23,10 +29,12 @@
       { f: "tasa", l: "Taxa / plataforma", tipo: "text", ph: "Gratuït, 20 €, FilmFreeway…" },
       { f: "notas", l: "Notes", tipo: "textarea" }
     ],
-    orden: (a, b) => (a.limite || "9").localeCompare(b.limite || "9"),
-    grupos: l => { const act = d => ["Per presentar", ""].includes(d.estado || ""); return [["Per presentar", l.filter(act)], ["Presentats i tancats", l.filter(d => !act(d))]] },
-    fila: d => ({ t: d.titulo, s: [d.limite && "Límit " + H.fecha(d.limite), d.estado, d.lugar].filter(Boolean).join(" · "), c: CE[d.estado] })
+    orden: (a, b) => (a.limite || a.evento || "9").localeCompare(b.limite || b.evento || "9") || (a.titulo || "").localeCompare(b.titulo || ""),
+    grupos: l => [["Per presentar", l.filter(d => !d.estado || d.estado === "Per presentar")], ["Sense decidir", l.filter(d => d.estado === "Presentat")], ["Seleccionats", l.filter(d => d.estado === "Seleccionat")], ["Rebutjats", l.filter(d => d.estado === "Rebutjat")], ["Descartats", l.filter(d => d.estado === "Descartat")]],
+    fila: d => { const nec = (d.necessitats || []).filter(x => !(d.enviat || []).includes(x)); return { t: d.titulo, s: [PS[d.proyecto], d.estado === "Per presentar" && d.limite && "Límit " + H.fecha(d.limite), d.premi || (d.estado !== "Per presentar" && d.estado), [].concat(d.classe || []).join(", "), d.estado !== "Rebutjat" && d.estado !== "Descartat" && nec.length && "Falta: " + nec.join(", ")].filter(Boolean).join(" · "), c: CE[d.estado] } }
   });
+
+  carregaPS(); H.onChange(carregaPS);
 
   // ---------- Recorregut per pel·lícula ----------
   const { E } = H, el = document.getElementById("s-festivales");
