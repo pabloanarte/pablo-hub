@@ -118,8 +118,10 @@ window.FIMP = (() => {
 
   const marcats = l => { const n = l.filter(p => p.on).length; return n === 1 ? "1 marcat" : n + " marcats" };
   // ---------- revisió ----------
+  let PLAT = ["FilmFreeway", "Festhome"];
   async function revisa(props, origen, aj) {
     const cs = await H.col("convocatoria"), ps = await H.col("proyecto");
+    await H.llistes(); PLAT = H.opsDe({ llista: "fest_plat", op: ["FilmFreeway", "Festhome"] });
     // dins la mateixa tanda, el mateix festival i pel·lícula és una sola proposta (es queda l'estat més avançat)
     const uni = [];
     props.forEach(p => { const u = uni.find(x => semblant(x.festival, p.festival) && (!x.proyecto || !p.proyecto || x.proyecto === p.proyecto)); if (!u) return uni.push({ ...p, mids: p.mid ? [p.mid] : [] }); if (p.mid) u.mids.push(p.mid); if (RANG[p.estado] > RANG[u.estado]) { u.estado = p.estado; u.resum = p.resum; u.dubte = p.dubte } u.proyecto = u.proyecto || p.proyecto; u.premi = u.premi || p.premi; if ((p.data || "") > (u.data || "")) u.data = p.data });
@@ -128,11 +130,12 @@ window.FIMP = (() => {
       const c = cs.find(c => c.tipo !== "Lab / residència" && semblant(c.titulo, p.festival) && (!p.proyecto || !c.proyecto || c.proyecto === p.proyecto));
       p.cid = c ? c.id : ""; p.ja = c;
       if (c && RANG[p.estado] < RANG[c.estado || "Per presentar"]) { p.estado = c.estado; p.baixa = 1 } // mai es rebaixa
-      p.canvis = !c || c.estado !== p.estado || (p.premi && !c.premi) || (p.proyecto && !c.proyecto) || (p.cost && !c.cost);
+      if (!p.plat && /^(FilmFreeway|Festhome)$/.test(p.font)) p.plat = p.font;
+      p.canvis = !c || c.estado !== p.estado || (p.premi && !c.premi) || (p.proyecto && !c.proyecto) || (p.cost && !c.cost) || (p.plat && !c.plataforma);
       p.on = p.canvis && !p.dubte;
     });
     const fila = (p, i) => `<div class="fip ${p.on ? "" : "fio"}" id="fip${i}"><label class="ck" style="margin:0"><input type="checkbox" data-fi="${i}" ${p.on ? "checked" : ""}></label>
-      <div class="g"><div class="ls"><input data-fv="festival" data-i="${i}" value="${E(p.festival)}" style="flex:2;min-width:160px;font-weight:700"><select data-fv="proyecto" data-i="${i}" style="flex:1;min-width:140px"><option value="">— Projecte —</option>${ps.map(x => `<option value="${x.id}" ${x.id === p.proyecto ? "selected" : ""}>${E(x.titulo || "")}</option>`).join("")}</select><select data-fv="estado" data-i="${i}" style="width:auto">${EST.map(e => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select></div>
+      <div class="g"><div class="ls"><input data-fv="festival" data-i="${i}" value="${E(p.festival)}" style="flex:2;min-width:160px;font-weight:700"><select data-fv="proyecto" data-i="${i}" style="flex:1;min-width:140px"><option value="">— Projecte —</option>${ps.map(x => `<option value="${x.id}" ${x.id === p.proyecto ? "selected" : ""}>${E(x.titulo || "")}</option>`).join("")}</select><select data-fv="plat" data-i="${i}" style="width:auto"><option value="">— Plataforma —</option>${PLAT.concat(p.plat && !PLAT.includes(p.plat) ? [p.plat] : []).map(x => `<option ${x === p.plat ? "selected" : ""}>${E(x)}</option>`).join("")}</select><select data-fv="estado" data-i="${i}" style="width:auto">${EST.map(e => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select></div>
       <small>${E(p.font)}${p.data ? " · " + H.fecha(p.data) : ""} · ${p.ja ? `ja hi és (${E(p.ja.estado || "")})${p.canvis ? " → s'actualitzarà" : ", sense canvis"}${p.baixa ? " (un avís antic no rebaixa l'estat)" : ""}` : "es crearà nova"}${p.premi ? " · premi: " + E(p.premi) : ""}${p.cost ? " · " + p.cost + " €" : ""}${p.dubte ? ' · <b style="color:#ff9f0a">no he entès l\'estat: revisa\'l</b>' : ""} · <span class="mut">${E(p.resum.slice(0, 90))}</span></small></div></div>`;
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Revisa abans d'importar</h2>
       <p class="em">${props.length ? "Marca el que vols importar. Pots corregir el nom del festival, la pel·lícula i l'estat." : origen === "correu" ? "No hi ha avisos nous de FilmFreeway ni de Festhome." : "No he trobat cap inscripció en el text enganxat. Prova de copiar tota la taula de «My Submissions»."}</p>
@@ -145,8 +148,8 @@ window.FIMP = (() => {
       let nous = 0, act = 0;
       for (const p of props.filter(p => p.on && p.festival.trim())) {
         const c = p.cid && cs.find(x => x.id === p.cid);
-        if (c) { Object.assign(c, { estado: p.estado }, p.proyecto && !c.proyecto ? { proyecto: p.proyecto } : {}, p.premi && !c.premi ? { premi: p.premi } : {}, p.cost && !c.cost ? { cost: p.cost } : {}, !c.tasa ? { tasa: /^(Llista|Arxiu)$/.test(p.font) ? "" : p.font } : {}); H.put(c); act++ }
-        else { H.put({ id: H.uid("convocatoria"), titulo: p.festival.trim(), tipo: "Festival", estado: p.estado, proyecto: p.proyecto, premi: p.premi || "", cost: p.cost || "", tasa: /^(Llista|Arxiu)$/.test(p.font) ? "" : p.font, notas: "Importat de " + (p.font === "Llista" ? "la llista enganxada" : p.font === "Arxiu" ? "l'arxiu exportat" : p.font) + (p.data ? " (" + p.data + ")" : "") }, 1); nous++ }
+        if (c) { Object.assign(c, { estado: p.estado }, p.proyecto && !c.proyecto ? { proyecto: p.proyecto } : {}, p.premi && !c.premi ? { premi: p.premi } : {}, p.cost && !c.cost ? { cost: p.cost } : {}, p.plat && !c.plataforma ? { plataforma: p.plat } : {}); H.put(c); act++ }
+        else { H.put({ id: H.uid("convocatoria"), titulo: p.festival.trim(), tipo: "Festival", estado: p.estado, proyecto: p.proyecto, premi: p.premi || "", cost: p.cost || "", plataforma: p.plat || "", notas: "Importat de " + (p.font === "Llista" ? "la llista enganxada" : p.font === "Arxiu" ? "l'arxiu exportat" : p.font) + (p.data ? " (" + p.data + ")" : "") }, 1); nous++ }
       }
       // es donen per vistos els avisos importats i els que no aportaven res; els desmarcats amb canvis tornaran a sortir
       if (aj) { aj.vistos = [...new Set(aj.vistos.concat(props.filter(p => p.on || !p.canvis).flatMap(p => p.mids || [])))].slice(-3000); H.put(aj, 1) }
@@ -171,7 +174,7 @@ window.FIMP = (() => {
         const t = rows.map(r => r.map(c => String(c ?? "").replace(/[\t\r\n]+/g, " ").trim()).join("\t")).join("\n");
         const props = (await deText(t)).props;
         if (!props.length) { st.textContent = "No hi he trobat inscripcions. Comprova que l'arxiu tingui les columnes Festival i Status."; e.target.value = ""; return }
-        props.forEach(p => p.font = "Arxiu"); revisa(props, "arxiu");
+        const pl = /festhome/i.test(f.name + t.slice(0, 3000)) ? "Festhome" : /filmfreeway/i.test(f.name + t.slice(0, 3000)) ? "FilmFreeway" : ""; props.forEach(p => { p.font = "Arxiu"; p.plat = pl }); revisa(props, "arxiu");
       } catch (er) { st.textContent = "No s'ha pogut llegir l'arxiu."; e.target.value = "" }
     };
     box.onclick = async e => {
@@ -181,7 +184,7 @@ window.FIMP = (() => {
         try { const r = await delCorreu(); revisa(r.props, "correu", r.aj) }
         catch (er) { b.disabled = false; document.getElementById("fist").textContent = er && er.error === "accio" ? "Cal actualitzar el pont de Google (Ajustos → Pont de Google)." : "No s'ha pogut llegir: " + ((er && er.error) || "error") }
       }
-      if (b.dataset.fk === "txt") { const t = document.getElementById("fitx").value; if (!t.trim()) return H.toast("Enganxa la llista primer"); revisa((await deText(t)).props, "text") }
+      if (b.dataset.fk === "txt") { const t = document.getElementById("fitx").value; if (!t.trim()) return H.toast("Enganxa la llista primer"); const pl = /festhome|mis inscripciones/i.test(t) ? "Festhome" : /filmfreeway|my submissions|judging status/i.test(t) ? "FilmFreeway" : ""; revisa((await deText(t)).props.map(p => Object.assign(p, { plat: pl })), "text") }
     };
   }
   return { obre, _t: { estatDe, festivalDe, deText, PROMO } };

@@ -15,6 +15,7 @@
       { f: "limite", l: "Data límit", tipo: "date" },
       { f: "evento", l: "Data del festival o resolució", tipo: "date" },
       { f: "proyecto", l: "Projecte", tipo: "proyecto" },
+      { f: "plataforma", l: "Plataforma d'inscripció", tipo: "pills", llista: "fest_plat", op: ["FilmFreeway", "Festhome"] },
       { f: "classe", l: "Categoria del festival (si en té)", tipo: "pills", multi: 1, op: ["Categoria A", "Categoria B", "De gènere"] },
       { f: "necessitats", l: "Què demanen (marca el que cal enviar)", tipo: "pills", multi: 1, llista: "fest_nec", op: ["DCP", "ProRes", "H.264", "Subtítols en anglès", "Subtítols en castellà", "Llista de diàlegs", "Tràiler", "Fotos fixes", "Pòster", "Press kit", "Biofilmografia", "Fitxa tècnica i artística", "Còpia de visionat (Vimeo)", "Música lliure de drets"] },
       { f: "enviat", l: "Ja enviat", tipo: "pills", multi: 1, opsDoc: d => [].concat(d.necessitats || []), buit: "Marca primer què demanen." },
@@ -26,15 +27,28 @@
       { f: "projeccions", l: "Projeccions", tipo: "textarea", rows: 2, ph: "Una per línia: dia, hora, sala" },
       { f: "cost", l: "Cost de la inscripció (€)", tipo: "number" },
       { f: "web", l: "Web o bases", tipo: "url" },
-      { f: "tasa", l: "Taxa / plataforma", tipo: "text", ph: "Gratuït, 20 €, FilmFreeway…" },
+      { f: "tasa", l: "Taxa (notes)", tipo: "text", ph: "Gratuït, descompte early bird…" },
       { f: "notas", l: "Notes", tipo: "textarea" }
     ],
     orden: (a, b) => (a.limite || a.evento || "9").localeCompare(b.limite || b.evento || "9") || (a.titulo || "").localeCompare(b.titulo || ""),
     grupos: l => [["Per presentar", l.filter(d => !d.estado || d.estado === "Per presentar")], ["Sense decidir", l.filter(d => d.estado === "Presentat")], ["Premiats", l.filter(d => d.estado === "Seleccionat" && d.premi)], ["Seleccionats", l.filter(d => d.estado === "Seleccionat" && !d.premi)], ["Rebutjats", l.filter(d => d.estado === "Rebutjat")], ["Descartats", l.filter(d => d.estado === "Descartat")]],
-    fila: d => { const nec = (d.necessitats || []).filter(x => !(d.enviat || []).includes(x)); return { t: d.titulo, s: [PS[d.proyecto], d.estado === "Per presentar" && d.limite && "Límit " + H.fecha(d.limite), d.premi || (d.estado !== "Per presentar" && d.estado), [].concat(d.classe || []).join(", "), d.estado !== "Rebutjat" && d.estado !== "Descartat" && nec.length && "Falta: " + nec.join(", ")].filter(Boolean).join(" · "), c: CE[d.estado] } }
+    fila: d => { const nec = (d.necessitats || []).filter(x => !(d.enviat || []).includes(x)); return { t: d.titulo, s: [PS[d.proyecto], d.plataforma, d.estado === "Per presentar" && d.limite && "Límit " + H.fecha(d.limite), d.premi || (d.estado !== "Per presentar" && d.estado), [].concat(d.classe || []).join(", "), d.estado !== "Rebutjat" && d.estado !== "Descartat" && nec.length && "Falta: " + nec.join(", ")].filter(Boolean).join(" · "), c: CE[d.estado] } }
   });
 
   carregaPS(); H.onChange(carregaPS);
+  // Un sol cop: omple la plataforma dels festivals importats abans que existís el camp
+  (async () => {
+    const aj = await H.col("ajust"); if (aj.some(x => x.id === "ajust:migplat")) return;
+    for (const d of await H.col("convocatoria")) {
+      if (d.plataforma) continue;
+      const n = d.notas || "", t = d.tasa || "";
+      const p = /festhome/i.test(t) || /Importat de Festhome/.test(n) ? "Festhome" : /filmfreeway/i.test(t) || /Importat de FilmFreeway/.test(n) ? "FilmFreeway"
+        : /arxiu exportat/.test(n) && !/\((2026-11-12|2026-11-06|2026-11-03)\)/.test(n) ? "FilmFreeway" : /arxiu exportat/.test(n) ? "Festhome" : "";
+      if (!p) continue;
+      d.plataforma = p; if (/^(filmfreeway|festhome)$/i.test(t.trim())) d.tasa = ""; H.put(d, 1);
+    }
+    H.put({ id: "ajust:migplat", fet: 1 }, 1);
+  })();
 
   // ---------- Recorregut per pel·lícula ----------
   const { E } = H, el = document.getElementById("s-festivales");
