@@ -21,7 +21,9 @@ window.FIMP = (() => {
     if (PRE_F.test(t)) return "Presentat";
     return "";
   }
-  const premiDe = t => (String(t).match(/(semi-?finalist|semifinalista|finalist|finalista|honou?rable mention|menci[oó]n? (de honor|d'honor|especial)|award winner|best [a-z ]{3,30}|millor [a-zàèéíòóúç ]{3,30}|mejor [a-záéíóú ]{3,30}|(gran )?premi[oa]? [a-zàèéíòóúç ]{3,30})/i) || [])[0] || "";
+  const premiCru = t => (String(t).match(/(semi-?finalist|semifinalista|finalist|finalista|honou?rable mention|menci[oó]n? (de honor|d'honor|especial)|award winner|best [a-z ]{3,30}|millor [a-zàèéíòóúç ]{3,30}|mejor [a-záéíóú ]{3,30}|(gran )?premi[oa]? [a-zàèéíòóúç ]{3,30})/i) || [])[0] || "";
+  // en català: «Finalist» → «Finalista», etc.; els noms de premis concrets es deixen com venen
+  const premiDe = t => { const p = premiCru(t).trim(); return /^semi-?final/i.test(p) ? "Semifinalista" : /^final/i.test(p) ? "Finalista" : /^honou?rable mention|^menci/i.test(p) ? "Menció d'honor" : /^award winner$/i.test(p) ? "Premiat" : p };
   const net = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\b(festival|film|films|international|internacional|de|del|la|el|of|the|cine|cinema|fest|\d{4})\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
   const semblant = (a, b) => { const x = net(a), y = net(b); return x && y && (x === y || (x.length > 4 && y.includes(x)) || (y.length > 4 && x.includes(y))) };
   // dates: "12/03/2026" és dia/mes (Europa); la resta, com les entengui el navegador
@@ -48,8 +50,7 @@ window.FIMP = (() => {
     return b ? neteja(b[1]) : neteja(t).slice(0, 80);
   }
   async function projecteDe(text) {
-    const ps = await H.col("proyecto"), t = String(text).toLowerCase();
-    const p = ps.filter(p => p.titulo && p.titulo.length > 2 && t.includes(p.titulo.toLowerCase())).sort((a, b) => b.titulo.length - a.titulo.length)[0];
+    const p = H.projecteDe(await H.col("proyecto"), text);
     return p ? p.id : "";
   }
 
@@ -73,7 +74,7 @@ window.FIMP = (() => {
   const COLS = { festival: /^(festival|festival name|festival title|event|event name|evento|esdeveniment|convocatoria|nombre del festival)$/i, proyecto: /^(project|project title|project name|proyecto|projecte|pel[ií]cula|pel·l[ií]cula|film|film title|obra|t[ií]tulo|t[ií]tol)$/i, data: /^(date|fecha|data|submitted|date submitted|submission date|submitted on|fecha de inscripci[oó]n)$/i, estat: /^(status|estado|estat|submission status)$/i, jutjat: /^(judging status|judging|decision|decisi[oó]n|resultado|resultat|selecci[oó]n)$/i, cost: /^(fee|entry fee|submission fee|fee paid|amount|amount paid|price|tarifa|cuota|precio|preu|import)$/i };
   async function deText(text) {
     const ps = await H.col("proyecto"), out = [];
-    const prj = t => { t = String(t || "").toLowerCase(); const p = ps.filter(p => p.titulo && t.includes(p.titulo.toLowerCase())).sort((a, b) => b.titulo.length - a.titulo.length)[0]; return p ? p.id : "" };
+    const prj = t => { const p = H.projecteDe(ps, t); return p ? p.id : "" };
     const afegeix = (festival, projecte, data, ...estats) => {
       const w = estats.filter(Boolean).join(" "), e = estats.map(x => deParaula(x || "")).filter(Boolean).sort((a, b) => RANG[b] - RANG[a])[0];
       festival = neteja(festival); if (!festival || !e) return;

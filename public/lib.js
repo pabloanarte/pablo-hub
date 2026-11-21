@@ -182,5 +182,9 @@ window.H = (() => {
       sec("Festivals", f.filter(x => x.proyecto === pid), x => `${E(x.titulo || "")}${x.estado ? " · " + E(x.estado) : ""}`);
   }
 
-  return { valors, refrescaContactes, llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
+  // Títols d'un projecte: el principal i els alternatius (p. ex. «Rave Hasta Que Acabe» = «Rave To The Grave»)
+  const titols = p => [p && p.titulo, ...String((p && p.altres) || "").split(/[,;\n]/)].map(x => String(x || "").trim()).filter(x => x.length > 2);
+  // Projecte que surt en un text (el títol més llarg que hi aparegui, en qualsevol dels seus títols)
+  const projecteDe = (ps, text) => { const t = String(text || "").toLowerCase(); let o = null, n = 0; ps.forEach(p => titols(p).forEach(x => { if (x.length > n && t.includes(x.toLowerCase())) { o = p; n = x.length } })); return o };
+  return { titols, projecteDe, valors, refrescaContactes, llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
 })();

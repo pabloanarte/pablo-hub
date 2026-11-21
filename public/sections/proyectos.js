@@ -8,6 +8,7 @@
     tabs: { f: "categoria", llista: "proj_cat", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
     campos: [
       { f: "titulo", tipo: "titulo" },
+      { f: "altres", l: "Altres títols (anglès, de treball…), separats per comes", tipo: "text", ph: "p. ex. Rave To The Grave" },
       { f: "categoria", l: "Tipus de projecte", tipo: "pills", llista: "proj_cat", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
       { f: "rol", l: "El meu rol", tipo: "pills", op: ["Direcció", "Ajudant de direcció", "Script"], col: { "Direcció": "#000", "Ajudant de direcció": "#0a84ff", "Script": "#af52de" } },
       { f: "estado", l: "Estat", tipo: "pills", op: EST, col: CE },
