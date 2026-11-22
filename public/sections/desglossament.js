@@ -49,7 +49,7 @@
 
   // ---------- llista ----------
   async function lista() {
-    const v = ++ver, [ds, ps] = await Promise.all([H.col("desg"), H.col("proyecto")]); if (v !== ver) return; doc = null;
+    const v = ++ver, [ds0, ps] = await Promise.all([H.col("desg"), H.col("proyecto")]); if (v !== ver) return; const ds = ds0.filter(H.dePj); doc = null;
     el.innerHTML = `<div class="bar"><span class="em">Puja el guió en PDF (format estàndard) i en sortiran les escenes desglossades.</span><span style="flex:1"></span><label class="b" style="cursor:pointer">Desglossar un guió (PDF)<input type="file" accept=".pdf,application/pdf" data-k="pdf" hidden></label></div>
       ${ds.length ? ds.sort((a, b) => (b.mod || 0) - (a.mod || 0)).map(d => { const p = ps.find(x => x.id === d.proyecto); return `<div class="r" data-k="obre" data-id="${d.id}"><i class="dot" style="background:#ff9f0a"></i><div class="g"><b>${E(d.titulo || "Sense títol")}</b><small>${[p && p.titulo, d.escenes.length + " escenes", vuitens(d.escenes.reduce((a, e) => a + aNum(e.pag), 0)) + " pàg.", new Set(d.escenes.map(e => e.set)).size + " sets"].filter(Boolean).map(E).join(" · ")}</small></div></div>` }).join("") : `<p class="em">Encara no hi ha cap desglossament.</p>`}`;
   }
@@ -104,12 +104,12 @@
     try {
       const escenes = desglossa(await llegeix(f));
       if (!escenes.length) { t.value = ""; return H.toast("No he trobat capçaleres d'escena (INT./EXT.). És un guió en format estàndard?") }
-      const d = { id: H.uid("desg"), titulo: f.name.replace(/\.pdf$/i, "").replace(/^[0-9a-f]{8}-/, "").replace(/_+/g, " "), escenes, mod: Date.now() };
+      const d = { id: H.uid("desg"), proyecto: H.pj() === "-" ? "" : H.pj(), titulo: f.name.replace(/\.pdf$/i, "").replace(/^[0-9a-f]{8}-/, "").replace(/_+/g, " "), escenes, mod: Date.now() };
       await H.put(d, 1); doc = d; vista = "esc"; pinta(); H.toast(escenes.length + " escenes trobades");
     } catch (er) { H.toast("No s'ha pogut llegir el PDF") }
     t.value = "";
   });
-  window.addEventListener("hub-sec", e => { if (e.detail === "desglossament" && !doc) lista() });
+  window.addEventListener("hub-sec", e => { if (e.detail === "desglossament" && (!doc || !H.dePj(doc))) lista() });
   window.DESG = { obre };
   if (!el.hidden) lista();
 })();

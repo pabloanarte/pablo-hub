@@ -27,7 +27,7 @@
   let ver = 0;
   async function lista() {
     doc = null; const v = ++ver;
-    const [gs, ps] = await Promise.all([H.col("gt"), H.col("proyecto")]);
+    const [gs0, ps] = await Promise.all([H.col("gt"), H.col("proyecto")]); const gs = gs0.filter(H.dePj);
     if (v !== ver) return;
     const pn = id => (ps.find(x => x.id === id) || {}).titulo || "";
     el.innerHTML = `<div class="bar"><span style="flex:1"></span><button class="b2" data-k="importar">Importar PDF, Excel o Google Sheets</button><button class="b" data-k="nuevo">+ Guió tècnic</button></div><div class="hl">` +
@@ -77,7 +77,7 @@
   // ---------- eventos ----------
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k, ei = +b.dataset.e, pi = +b.dataset.p;
-    if (k === "nuevo") { const d = { id: H.uid("gt"), titulo: "", escenas: [{ id: uid(), num: "1", intext: "INT", lugar: "", planos: [] }] }; d.escenas[0].planos.push(nuevoPlano(d.escenas[0])); await perDefecte(d); await H.put(d, 1); doc = d; pintar(); el.querySelector(".tt").focus(); return }
+    if (k === "nuevo") { const d = { id: H.uid("gt"), titulo: "", proyecto: H.pj() === "-" ? "" : H.pj(), escenas: [{ id: uid(), num: "1", intext: "INT", lugar: "", planos: [] }] }; d.escenas[0].planos.push(nuevoPlano(d.escenas[0])); await perDefecte(d); await H.put(d, 1); doc = d; pintar(); el.querySelector(".tt").focus(); return }
     if (k === "abre") return abrir(b.dataset.id);
     if (k === "importar") return IMP.dialeg("gt", async escenes => { const d = { id: H.uid("gt"), titulo: "Guió importat", escenas: escenes }; await perDefecte(d); if (escenes.some(e => e.planos.some(p => p.dur))) d.ocultas = d.ocultas.filter(x => x !== "dur"); await H.put(d, 1); doc = d; pintar(); H.toast(escenes.reduce((a, e) => a + e.planos.length, 0) + " plans importats"); const t = el.querySelector(".tt"); t && (t.focus(), t.select()) });
     if (!doc) return;
@@ -184,7 +184,7 @@
     }]);
   }
 
-  window.addEventListener("hub-sec", e => { if (e.detail === "guiones" && !doc) lista() });
+  window.addEventListener("hub-sec", e => { if (e.detail === "guiones" && (!doc || !H.dePj(doc))) lista() });
   // Crea un guió tècnic nou a partir d'unes escenes (p. ex. des del Desglossament)
   async function nou(escenas, titulo, proyecto) {
     const d = { id: H.uid("gt"), titulo: titulo || "Guió tècnic", escenas: escenas.map(e => ({ ...e, sinopsis: e.sinopsis || e.notas || "" })), proyecto: proyecto || "" };

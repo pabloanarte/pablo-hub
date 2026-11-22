@@ -87,7 +87,7 @@
   // ---------- llista ----------
   async function lista() {
     doc = null; const v = ++ver;
-    const [ls, ps] = await Promise.all([H.col("deck"), H.col("proyecto")]); if (v !== ver) return;
+    const [ls0, ps] = await Promise.all([H.col("deck"), H.col("proyecto")]); if (v !== ver) return; const ls = ls0.filter(H.dePj);
     const pn = id => (ps.find(x => x.id === id) || {}).titulo || "";
     el.innerHTML = `<div class="bar"><span style="flex:1"></span><button class="b2" data-k="impdf">Importar un dossier (PDF)</button><button class="b" data-k="nou">+ Nou dossier</button></div>
       <div class="dkl">${ls.slice().sort((a, b) => (b.mod || 0) - (a.mod || 0)).map(d => `<div class="dkc" data-k="obre" data-id="${d.id}"><div class="dkcth">${d.slides.length ? DK.escalada(d, d.slides.find(s => !s.amaga) || d.slides[0], Math.round(Math.min(340, 190 * DK.ratio(d))), { img: imgUrl, mostra: 1 }) : ""}</div><div class="g" style="padding:10px 4px 0"><b>${E(d.titulo || "Sense títol")}</b><small>${E([pn(d.proyecto), (DK.ESTILS[d.estil] || {}).nom, d.ratio === "propi" ? `${d.rw}:${d.rh}` : d.ratio, d.slides.length + (d.slides.length === 1 ? " diapositiva" : " diapositives"), d.compartir && d.compartir.actiu ? "compartit" : ""].filter(Boolean).join(" · "))}</small></div></div>`).join("") || `<p class="em">Encara no hi ha dossiers. Crea'n un amb l'assistent o importa un PDF fet amb InDesign, Canva o el que sigui.</p>`}</div>`;
@@ -99,7 +99,7 @@
     const ps = await H.col("proyecto");
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Nou dossier</h2>
       <label>Tipus</label><div class="seg">${Object.entries(PL).map(([k, p], i) => `<button class="t ${i ? "" : "on"}" data-nk="pl" data-v="${k}">${E(p.nom)}</button>`).join("")}</div>
-      <label>Projecte (per omplir-lo amb el que ja tens)</label><select id="nd-p"><option value="">—</option>${ps.map(p => `<option value="${p.id}">${E(p.titulo || "")}</option>`).join("")}</select>
+      <label>Projecte (per omplir-lo amb el que ja tens)</label><select id="nd-p"><option value="">—</option>${ps.map(p => `<option value="${p.id}" ${p.id === H.pj() ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select>
       <label>Estil</label><div class="dkst">${Object.entries(DK.ESTILS).map(([k, t], i) => `<button class="${i ? "" : "on"}" data-nk="st" data-v="${k}">${DK.escalada({ estil: k, ratio: "16:9" }, { tipus: "portada", titol: "días de sal", subtitol: "llargmetratge", peu: "pablo anarte" }, 150, { mostra: 1 })}<span>${E(t.nom)}</span></button>`).join("")}</div>
       <label>Format</label><select id="nd-f" onchange="document.getElementById('nd-pr').hidden=this.value!=='propi'">${DK.FORMATS.map(f => `<option>${f[0]}</option>`).join("")}<option value="propi">Personalitzat…</option></select>
       <div class="row" id="nd-pr" hidden><input id="nd-rw" value="16" placeholder="Ample" inputmode="decimal"><span>:</span><input id="nd-rh" value="9" placeholder="Alt" inputmode="decimal"></div>
@@ -368,7 +368,7 @@
   el.addEventListener("drop", e => { const t = e.target.closest("[data-dr]"); if (dr == null || !t) return; e.preventDefault(); const to = +t.dataset.dr, [s] = doc.slides.splice(dr, 1); doc.slides.splice(to, 0, s); sel = to; dr = null; refresca(1) });
   document.addEventListener("keydown", e => { if (el.hidden || !doc || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || !document.getElementById("hsh").hidden) return; if (e.key === "ArrowRight" && sel < doc.slides.length - 1) { sel++; pintar() } if (e.key === "ArrowLeft" && sel) { sel--; pintar() } });
 
-  window.addEventListener("hub-sec", e => { if (e.detail === "decks" && !doc) lista() });
+  window.addEventListener("hub-sec", e => { if (e.detail === "decks" && (!doc || !H.dePj(doc))) lista() });
   window.DECKS = { obre };
   lista();
 })();

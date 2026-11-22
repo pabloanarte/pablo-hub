@@ -14,6 +14,7 @@
     "Llista en blanc": []
   };
   async function lista() {
+    if (H.pj() && H.pj() !== "-") return obre(H.pj());
     const v = ++ver, [ps, ds] = await Promise.all([H.col("proyecto"), H.col("dev")]); if (v !== ver) return; p = d = null;
     const dev = ps.filter(x => ["Llarg", "Curt"].includes(x.categoria) && x.rol !== "Ajudant de direcció" && x.rol !== "Script" && !["Distribució", "Acabat"].includes(x.estado));
     const altres = ps.filter(x => !dev.includes(x) && ds.some(y => y.id === "dev:" + x.id.split(":")[1]));
@@ -30,7 +31,7 @@
   const ta = (k, i, f, v, ph = "", rows = 1) => `<textarea rows="${rows}" data-l="${k}" data-i="${i}" data-f="${f}" placeholder="${E(ph)}">${E(v || "")}</textarea>`;
   async function pinta() {
     const vs = d.versions.slice().map((v, i) => [v, i]).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "")), cs = (await H.col("convocatoria")).filter(c => c.proyecto === p.id && c.tipo === "Lab / residència");
-    el.innerHTML = `<div class="bar tb"><button class="b2" data-k="torna">← Desenvolupament</button><b style="font-size:20px">${E(p.titulo || "")}</b><span class="em">${E([p.categoria, p.estado].filter(Boolean).join(" · "))}</span><span style="flex:1"></span><button class="b2" data-k="proj">Fitxa del projecte</button></div>
+    el.innerHTML = `<div class="bar tb">${H.pj() ? "" : `<button class="b2" data-k="torna">← Desenvolupament</button><b style="font-size:20px">${E(p.titulo || "")}</b>`}<span class="em">${E([p.categoria, p.estado].filter(Boolean).join(" · "))}</span><span style="flex:1"></span><button class="b2" data-k="proj">Fitxa del projecte</button></div>
       ${p.logline ? `<p style="font-size:17px;max-width:900px;margin:4px 0 18px">${E(p.logline)}</p>` : ""}
       <div class="card"><h3>Versions</h3><p class="em" style="margin:0 0 8px">Cada versió del tractament, de l'escaleta o del guió, amb l'arxiu i què ha canviat.</p>
         ${vs.length ? `<div class="cits"><table class="ctab"><thead><tr><th style="width:13%">Data</th><th style="width:15%">Tipus</th><th style="width:8%">Versió</th><th>Què ha canviat</th><th style="width:22%">Arxiu</th><th style="width:34px"></th></tr></thead><tbody>${vs.map(([v, i]) => `<tr><td><input type="date" data-l="versions" data-i="${i}" data-f="data" value="${E(v.data || "")}" style="border:0;background:none"></td><td><select data-l="versions" data-i="${i}" data-f="tipus" style="border:0;background:none">${TIPUS.map(t => `<option ${t === v.tipus ? "selected" : ""}>${t}</option>`).join("")}</select></td><td>${ta("versions", i, "versio", v.versio, "v1")}</td><td>${ta("versions", i, "canvis", v.canvis, "Canvis principals")}</td>
@@ -84,7 +85,7 @@
       try { d.versions[+t.dataset.i].arxiu = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f); save(); pinta(); H.toast("Pujat") } catch (er) { H.toast("No s'ha pogut pujar") }
     }
   });
-  window.addEventListener("hub-sec", e => { if (e.detail === "desenvolupament" && !d) lista() });
+  window.addEventListener("hub-sec", e => { if (e.detail === "desenvolupament" && (!p || (H.pj() && H.pj() !== "-" && p.id !== H.pj()) || !H.pj())) lista() });
   window.DEV = { obre };
   if (!el.hidden) lista();
 })();

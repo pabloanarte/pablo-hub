@@ -150,12 +150,18 @@ window.H = (() => {
   // ---------- sección tipo lista (proyectos, reuniones, festivales, brainstorm…) ----------
   // cfg: {sec, tipo, nuevo:"Nueva reunión", tabs:{f, op}, campos, fila:d=>({t,s,c}), orden(a,b), defecto:()=>({}), acciones, extra}
   const reg = {};
+  const nou = tipo => reg[tipo] && reg[tipo].nou();
+  // projecte obert a Projectes (o "-" = sense projecte); serveix per filtrar les seccions d'un projecte
+  const pj = () => window.HUBP ? window.HUBP() : "";
+  const dePj = d => { const p = pj(); return !p || (p === "-" ? !d.proyecto : d.proyecto === p) };
+  const refresca = () => changed();
   async function abrir(tipo, id) { const c = reg[tipo], d = (await col(tipo)).find(x => x.id === id); if (c && d) c.abre(d) }
   function coleccion(cfg) {
     const el = document.getElementById("s-" + cfg.sec); let tab = "", tab2 = "", q = "";
     const opt = d => ({ acciones: cfg.acciones, extra: cfg.extra, alCerrar: () => { if (!d.titulo && !d.texto && !d.apuntes) del(d); pintar() } });
     async function pintar() {
-      const l = await col(cfg.tipo);
+      const pj = cfg.perProj && window.HUBP ? window.HUBP() : "";
+      const l = (await col(cfg.tipo)).filter(d => !pj || (pj === "-" ? !d.proyecto : d.proyecto === pj));
       const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!tab2 || d[cfg.tabs2.f] === tab2) && (!q || valors(d).toLowerCase().includes(q))).sort(cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
       const lista = cfg.grupos ? cfg.grupos(vis) : [["", vis]];
       await llistes();
@@ -169,11 +175,12 @@ window.H = (() => {
       const b = e.target.closest("[data-k]"); if (!b) return;
       if (b.dataset.k === "tab") { tab = b.dataset.v; pintar() }
       if (b.dataset.k === "tab2") { tab2 = b.dataset.v; el.querySelectorAll('[data-k="tab2"]').forEach(x => x.classList.toggle("on", x === b)); pintar() }
-      if (b.dataset.k === "abre") { const d = (await col(cfg.tipo)).find(x => x.id === b.dataset.id); editar(cfg.campos, d, opt(d)) }
-      if (b.dataset.k === "nuevo") { const d = Object.assign({ id: uid(cfg.tipo) }, cfg.defecto ? cfg.defecto() : {}, cfg.tabs && tab ? { [cfg.tabs.f]: tab } : {}, cfg.tabs2 && tab2 ? { [cfg.tabs2.f]: tab2 } : {}); put(d, 1); editar(cfg.campos, d, opt(d)); setTimeout(() => { const i = box().querySelector("input.big"); i && i.focus() }, 50) }
+      if (b.dataset.k === "abre") { const d = (await col(cfg.tipo)).find(x => x.id === b.dataset.id); if (cfg.obre) return cfg.obre(d); editar(cfg.campos, d, opt(d)) }
+      if (b.dataset.k === "nuevo") nou();
     });
+    function nou() { const pj = cfg.perProj && window.HUBP ? window.HUBP() : ""; const d = Object.assign({ id: uid(cfg.tipo) }, cfg.defecto ? cfg.defecto() : {}, cfg.tabs && tab ? { [cfg.tabs.f]: tab } : {}, cfg.tabs2 && tab2 ? { [cfg.tabs2.f]: tab2 } : {}, pj && pj !== "-" ? { proyecto: pj } : {}); put(d, 1); editar(cfg.campos, d, opt(d)); setTimeout(() => { const i = box().querySelector("input.big"); i && i.focus() }, 50) }
     el.querySelector(".hq").addEventListener("input", e => { q = e.target.value.toLowerCase(); pintar() });
-    reg[cfg.tipo] = { abre: d => editar(cfg.campos, d, opt(d)) };
+    reg[cfg.tipo] = { abre: d => editar(cfg.campos, d, opt(d)), nou };
     onChange(() => { if (!el.hidden) pintar() });
     pintar().catch(() => el.querySelector(".hl").innerHTML = `<p class="em">No s'ha pogut carregar.</p>`);
     return { pintar };
@@ -193,5 +200,5 @@ window.H = (() => {
   const titols = p => [p && p.titulo, ...String((p && p.altres) || "").split(/[,;\n]/)].map(x => String(x || "").trim()).filter(x => x.length > 2);
   // Projecte que surt en un text (el títol més llarg que hi aparegui, en qualsevol dels seus títols)
   const projecteDe = (ps, text) => { const t = String(text || "").toLowerCase(); let o = null, n = 0; ps.forEach(p => titols(p).forEach(x => { if (x.length > n && t.includes(x.toLowerCase())) { o = p; n = x.length } })); return o };
-  return { titols, projecteDe, valors, refrescaContactes, llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
+  return { pj, dePj, nou, refresca, titols, projecteDe, valors, refrescaContactes, llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
 })();

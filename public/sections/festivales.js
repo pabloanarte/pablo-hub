@@ -5,7 +5,7 @@
   let PS = {}; // id del projecte → títol, per mostrar-lo a cada festival
   const carregaPS = () => H.col("proyecto").then(l => { const n = {}; l.forEach(p => n[p.id] = p.titulo || ""); const canvi = JSON.stringify(n) !== JSON.stringify(PS); PS = n; if (canvi && col) col.pintar() });
   const col = H.coleccion({
-    sec: "festivales", tipo: "convocatoria", nuevo: "Convocatòria",
+    sec: "festivales", perProj: 1, tipo: "convocatoria", nuevo: "Convocatòria",
     tabs: { f: "tipo", op: ["Festival", "Lab / residència"] },
     defecto: () => ({ estado: "Per presentar", tipo: "Festival" }),
     campos: [

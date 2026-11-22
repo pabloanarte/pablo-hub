@@ -19,7 +19,7 @@ window.Crono = cfg => {
   const dd = s => new Date(s + "T12:00"), dif = (a, b) => Math.round((dd(b) - dd(a)) / 864e5), mas = H.addDays;
 
   async function datos() {
-    const l = (await H.col(tipo)).filter(x => !proy || x.proyecto === proy);
+    const pf = H.pj() ? (H.pj() === "-" ? "" : H.pj()) : proy; const l = (await H.col(tipo)).filter(x => H.pj() === "-" ? !x.proyecto : !pf || x.proyecto === pf);
     return l.map(x => ({ ...x, ini: x.ini || H.today(), fin: x.fin && x.fin >= (x.ini || "") ? x.fin : (x.ini || H.today()) }));
   }
   function rango(l, ppd, ancho) {
@@ -45,7 +45,7 @@ window.Crono = cfg => {
   async function pintar() {
     const ps = await H.col("proyecto"), l = await datos(), ppd = ZOOM[zoom], [a, b] = rango(l, ppd, el.clientWidth - 260); ini0 = a;
     el.innerHTML = `<div class="tabs">${Object.keys(ZOOM).map(z => `<button class="t ${z === zoom ? "on" : ""}" data-k="zoom" data-v="${z}">${{ dias: "Dies", semanas: "Setmanes", meses: "Mesos" }[z]}</button>`).join("")}</div>
-      <div class="bar" style="flex-wrap:wrap"><select data-k="proy" style="width:auto"><option value="">Tots els projectes</option>${ps.map(p => `<option value="${p.id}" ${p.id === proy ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select>
+      <div class="bar" style="flex-wrap:wrap"><select data-k="proy" style="width:auto${H.pj() ? ";display:none" : ""}"><option value="">Tots els projectes</option>${ps.map(p => `<option value="${p.id}" ${p.id === proy ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select>
       <button class="b2" data-k="hoy">Avui</button><span style="flex:1"></span><button class="b2" data-k="plantilla">Plantilla de ${E(cfg.nombre)}</button>${R.selLang()}<button class="b2" data-k="pdf">PDF</button><button class="b2" data-k="xls">Excel</button><button class="b" data-k="nueva">+ Tasca</button></div>
       <div class="lg">${CATS.map(c => `<span><i style="background:${c[1]}"></i>${c[0]}</span>`).join("")}<span style="margin-left:auto">Arrossega una barra per moure-la · estira'n la vora dreta per canviar-ne la durada · toca-la per editar-la</span></div>` +
       (l.length ? chart(l, ppd, a, b) : `<p class="em">Encara no hi ha tasques de ${E(cfg.nombre)}. Afegeix-ne una o carrega la plantilla amb les fases habituals.</p>`);
@@ -58,7 +58,7 @@ window.Crono = cfg => {
     if (k === "zoom") { zoom = b.dataset.v; pintar() }
     if (k === "hoy") { const g = el.querySelector(".gr"); if (g) g.scrollLeft = Math.max(0, (dif(ini0, H.today()) - 7) * ZOOM[zoom]) }
     if (k === "edt") abrir(b.dataset.id);
-    if (k === "nueva") { const d = { id: H.uid(tipo), titulo: "", ini: H.today(), fin: H.addDays(H.today(), 6), estado: "Pendent", proyecto: proy, cat: CATS[0][0] }; await H.put(d, 1); abrir(d.id); setTimeout(() => { const i = document.querySelector("#hshc input.big"); i && i.focus() }, 60) }
+    if (k === "nueva") { const d = { id: H.uid(tipo), titulo: "", ini: H.today(), fin: H.addDays(H.today(), 6), estado: "Pendent", proyecto: H.pj() ? (H.pj() === "-" ? "" : H.pj()) : proy, cat: CATS[0][0] }; await H.put(d, 1); abrir(d.id); setTimeout(() => { const i = document.querySelector("#hshc input.big"); i && i.focus() }, 60) }
     if (k === "plantilla") {
       const ps = await H.col("proyecto");
       H.sheet(`<h2 style="margin-top:0">Plantilla de ${E(cfg.nombre)}</h2><p class="em" style="margin-top:0">Crea les fases habituals encadenades a partir d'una data. Després ajustes les dates arrossegant.</p>

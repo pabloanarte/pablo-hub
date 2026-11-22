@@ -71,6 +71,23 @@ small{color:var(--mut);font-size:12px}.em{color:var(--mut);font-size:14px;margin
 .dvis{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.dvs{position:relative;width:150px;cursor:pointer}.dvs img,.dvs .dvph{width:150px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#1c1c1e}.dvs small{display:block;margin-top:3px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.dvs .x{position:absolute;top:4px;right:4px;background:rgba(255,255,255,.9);border-radius:50%}
 @media(max-width:600px){input.big{font-size:20px}.dvq{max-width:none!important;flex-basis:100%!important}.vgr{grid-template-columns:1fr 1fr;gap:14px}.dvs,.dvs img,.dvs .dvph{width:120px}}
 .arr{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;color:#aeaeb2;font-size:18px;padding:6px 8px 6px 0;line-height:1}.arr:hover{color:#000}.r.arrs{position:relative;z-index:5;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.15);cursor:grabbing}.r.dst{box-shadow:inset 0 3px 0 #000}.r.dsb{box-shadow:inset 0 -3px 0 #000}
+.bbar{display:none}
+.fab{position:fixed;right:28px;bottom:28px;width:54px;height:54px;border-radius:50%;border:0;background:#000;color:#fff;font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:25;display:flex;align-items:center;justify-content:center;padding:0 0 3px}
+.fab:hover{transform:scale(1.05)}.qadd{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.qadd .b2{padding:16px 8px;font-size:15px}
+.ptabs{margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}.ptabs::-webkit-scrollbar{display:none}.ptabs .t{white-space:nowrap}
+#subnav .seg{flex-wrap:wrap}
+@media(max-width:900px){
+ .bbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:26;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--bd);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+ .bbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;font-size:11px;color:#8e8e93;padding:4px 0;cursor:pointer;font-family:inherit}
+ .bbar button.on{color:#000;font-weight:600}.bbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ .main{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important}
+ .fab{right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px));width:50px;height:50px}
+ .mb{display:none!important}
+}
+@media(max-width:600px){.qadd{grid-template-columns:repeat(2,1fr)}}
+.prcap{display:flex;gap:24px;align-items:flex-start}.prpos{width:170px;flex:none;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--soft);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer}.prpos img{width:100%;height:100%;object-fit:cover;display:block}.prpos span{padding:12px;text-align:center;font-weight:700;color:#8e8e93}
+.prlog{font-size:18px;line-height:1.45;margin:0;max-width:720px}.prs .pn{font-size:34px;font-weight:700;line-height:1.1}.prs:hover{border-color:#000}.dash .card{margin-top:0}
+@media(max-width:600px){.prcap{gap:14px}.prpos{width:110px}.prlog{font-size:16px}}
 .hl h2{grid-column:1/-1;margin:12px 0 0}.hl>.em{grid-column:1/-1}
 .hl .r{border:1px solid var(--bd);border-radius:14px;padding:14px 16px;align-items:flex-start;min-height:74px;background:#fff;transition:box-shadow .15s,border-color .15s}
 .hl .r:hover{border-color:#c7c7cc;box-shadow:0 4px 14px rgba(0,0,0,.06);background:#fff}.hl .r .dot{margin-top:5px}
@@ -214,7 +231,7 @@ a.b{text-decoration:none;display:inline-flex;align-items:center}.dck{display:fle
 <div class="app">
 <header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="mb" id="mb">Menú</button></header>
 <main class="main"><div class="w">
-<div class="head"><h1 id="stitle"></h1><p id="sdesc"></p></div>
+<div class="head"><h1 id="stitle"></h1><p id="sdesc"></p></div><div id="subnav" hidden></div>
 <section id="s-contactos" hidden>
 <div id="app"><nav id="nav"><button class="t" data-a="nav" data-v="hoy">Seguiment</button><button class="t" data-a="nav" data-v="contactos">Contactes</button><button class="t" data-a="nav" data-v="plantillas">Plantilles</button><button class="t" data-a="nav" data-v="datos">Dades</button></nav>
 <main id="v"></main></div>

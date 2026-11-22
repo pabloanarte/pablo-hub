@@ -188,6 +188,7 @@ window.DOC = (() => {
   return {
     curs: id => { vista = "cursos"; curs = id; pintar() },
     vis: async id => { vista = "visionats"; curs = null; await pintar(); const d = (await H.col("visionat")).find(x => x.id === id); d && editaVis(d) },
+    nouVis: async () => { vista = "visionats"; curs = null; await pintar(); const i = document.getElementById("dv-url"); i && i.focus() },
     _video: video
   };
 })();

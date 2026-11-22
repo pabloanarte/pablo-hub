@@ -21,7 +21,16 @@
     ],
     orden: (a, b) => EST.indexOf(a.estado) - EST.indexOf(b.estado) || (a.titulo || "").localeCompare(b.titulo || ""),
     cartell: 1,
+    obre: d => window.HUB ? HUB.obreProjecte(d.id) : H.abrir("proyecto", d.id),
     fila: d => ({ img: d.poster && d.poster[0] ? "/api/archivo/" + d.poster[0].id : "", t: d.titulo, s: [d.categoria, d.rol, d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " arxius" : " arxiu")].filter(Boolean).join(" · "), c: CE[d.estado] }),
     extra: d => H.relacionados(d.id)
   });
+  // Documents que no són de cap projecte (dossiers, guions, plans, calendaris…): s'hi entra com si fos un projecte més
+  const el = document.getElementById("s-proyectos"), box = document.createElement("div"); el.querySelector(".hl").after(box);
+  async function orfes() {
+    const l = await Promise.all(["deck", "gt", "pdr", "desg", "pre", "post"].map(t => H.col(t))), n = l.reduce((a, x) => a + x.filter(d => !d.proyecto).length, 0);
+    box.innerHTML = n ? `<p style="margin-top:22px"><button class="b2" data-k="orfes">Documents sense projecte (${n})</button></p>` : "";
+  }
+  box.addEventListener("click", e => { if (e.target.closest('[data-k="orfes"]') && window.HUB) HUB.obreProjecte("-", "decks") });
+  H.onChange(() => { if (!el.hidden) orfes() }); orfes();
 })();
