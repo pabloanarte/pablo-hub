@@ -43,7 +43,7 @@ const SECTIONS = [
  {id:"feines",label:"Diners",desc:"Feines, factures i cobraments",src:"sections/feines.js"},
  {id:"brainstorm",label:"Idees",desc:"Idees soltes",src:"sections/brainstorm.js"},
  {id:"web",label:"pabloanarte.com",desc:"La meva web",src:"sections/web.js"},
- {id:"ajustos",label:"Configuració",desc:"Còpia de seguretat, calendari, dreceres i app",src:"sections/ajustos.js"}
+ {id:"ajustos",label:"Configuració",desc:"Còpia, calendari, dreceres, resum diari, objectius i factures",src:"sections/ajustos.js"}
 ];
 // Menú: 7 apartats (+ web i configuració a baix). Les pestanyes de cada apartat són seccions internes.
 const GRUPS = [

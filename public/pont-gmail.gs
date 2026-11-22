@@ -47,6 +47,8 @@ function resumFil(t) {
 
 const ACCIONS = {
   calendari: () => sincronitzaCal(),
+  vigila: () => vigila(),
+  diari: () => resumDiari(),
   // llista de fils: q amb la sintaxi de Gmail (in:inbox, in:sent, from:…)
   llista(q) {
     const max = Math.min(+q.max || 30, 60);
@@ -124,6 +126,7 @@ function enviaAra(q) {
 
 // Cada 5 minuts: envia el que toca. Si un enviament falla 3 cops, es queda aturat amb l'error a la llista.
 function enviaProgramats() {
+  try { feinesPeriodiques() } catch (e) { } // resum de les 8:30 i vigilant de convocatòries
   const lock = LockService.getScriptLock(); if (!lock.tryLock(20000)) return;
   try {
     const ps = PropertiesService.getScriptProperties(), p = ps.getProperties(), ara = new Date();
@@ -239,4 +242,44 @@ function sincronitzaCal() {
     (r2.creats || []).forEach((u, i) => { if (u && nousG[i]) { nousG[i].setTag("hub", u); nousG[i].setTag("h", "") } });
     return { ok: 1, alHub: canvis.length + nous.length + esborrats.length, aGoogle: posats, protegits: segur ? 0 : falten.length };
   } finally { lock.releaseLock() }
+}
+
+// ---------- Feines periòdiques (van amb l'activador de cada 5 minuts) ----------
+// Resum d'avui per correu a les 8:30 (hora de Madrid) i, els dilluns a partir de les 9, revisió de les convocatòries vigilades.
+function feinesPeriodiques() {
+  const p = PropertiesService.getScriptProperties(), ara = new Date();
+  const dia = Utilities.formatDate(ara, "Europe/Madrid", "yyyy-MM-dd"), hm = Utilities.formatDate(ara, "Europe/Madrid", "HH:mm"), dsem = Utilities.formatDate(ara, "Europe/Madrid", "u");
+  if (hm >= "08:30" && hm < "13:00" && p.getProperty("RESUM_DIA") !== dia) { p.setProperty("RESUM_DIA", dia); resumDiari() }
+  if (dsem === "1" && hm >= "09:00" && p.getProperty("VIGILA_DIA") !== dia) { p.setProperty("VIGILA_DIA", dia); vigila() }
+}
+function cridaHub(ruta, cos) {
+  const clau = PropertiesService.getScriptProperties().getProperty("CLAU");
+  const o = { headers: { "x-clau": clau }, muteHttpExceptions: true };
+  if (cos) { o.method = "post"; o.contentType = "application/json"; o.payload = JSON.stringify(cos) }
+  const r = UrlFetchApp.fetch(HUB + ruta, o);
+  if (r.getResponseCode() !== 200) throw new Error("El hub no respon (" + r.getResponseCode() + ")");
+  return JSON.parse(r.getContentText());
+}
+// Envia't el resum d'avui (si no hi ha res d'avui, no s'envia)
+function resumDiari() {
+  const n = GmailApp.search("from:(filmfreeway.com OR festhome.com) -category:promotions -category:social newer_than:1d", 0, 50).length;
+  const r = cridaHub("/api/pont/diari", { festivals: n });
+  if (r.buit) return { ok: 1, buit: 1 };
+  GmailApp.sendEmail(Session.getEffectiveUser().getEmail(), r.assumpte, "Obre aquest correu amb format per veure el resum.", { htmlBody: r.html, name: "PABLO hub" });
+  return { ok: 1 };
+}
+// Mira si han canviat les pàgines de les convocatòries (només el text que parla de dates, bases o inscripcions)
+function vigila() {
+  const l = cridaHub("/api/pont/vigila").llista || [], res = [];
+  l.forEach(x => {
+    try {
+      const t = UrlFetchApp.fetch(x.url, { muteHttpExceptions: true, followRedirects: true, headers: { "user-agent": "Mozilla/5.0 (PABLO hub)" } });
+      if (t.getResponseCode() >= 400) return res.push({ id: x.id, err: "La pàgina respon " + t.getResponseCode() });
+      const txt = t.getContentText().replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<!--[\s\S]*?-->/gi, " ").replace(/<[^>]+>/g, "\n").replace(/&nbsp;/g, " ").replace(/&[a-z]+;|&#\d+;/gi, " ");
+      const rel = txt.split(/\n+/).map(s => s.replace(/\s+/g, " ").trim()).filter(s => s.length > 3 && /(20\d\d|convocat|bases|plazo|termini|inscrip|deadline|applica|call for|abiert|obert|solicitud|sol·licitud)/i.test(s)).join(" | ").slice(0, 20000);
+      res.push({ id: x.id, hash: Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, rel, Utilities.Charset.UTF_8)), extracte: rel.slice(0, 600) });
+    } catch (e) { res.push({ id: x.id, err: String(e && e.message || e).slice(0, 100) }) }
+  });
+  cridaHub("/api/pont/vigila", { resultats: res });
+  return { ok: 1, revisades: res.length };
 }

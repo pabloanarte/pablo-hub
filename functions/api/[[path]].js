@@ -36,6 +36,10 @@ export async function onRequest({ request, env, params }) {
     if (p === "importar" && m === "GET") return importar(request);
     if (p === "oembed" && m === "GET") return oembed(request, j);
     if (p.startsWith("correu/")) return correu(p.slice(7), m, request, db, j);
+    if (p.startsWith("public/arxiu/")) { const [, , id, sig] = p.split("/"); if (!id || !sig || sig !== await signa(db, id)) return new Response("No", { status: 404 }); return archivo("archivo/" + id, "GET", request, env, j) }
+    if (p === "arxius-publics" && m === "POST") { const b = await request.json().catch(() => ({})), o = {}, base = new URL(request.url).origin; for (const id of (b.ids || []).slice(0, 100)) if (/^[a-z0-9]{6,40}$/.test(id)) o[id] = base + "/api/public/arxiu/" + id + "/" + await signa(db, id); return j(o) }
+    if (p === "pont/diari" && m === "POST") return pontDiari(request, db, j);
+    if (p === "pont/vigila") return pontVigila(m, request, db, j);
     if (p.startsWith("public/")) return publica(p, request, env, db, j);
     if (p === "copia") return copia(m, request, db, j);
     if (p === "pont/copia" && m === "POST") return pontCopia(request, db, j);
@@ -160,9 +164,9 @@ async function correu(accio, m, request, db, j) {
     return j({ ok: 1 });
   }
   if (!cfg) return j({ error: "config" }, 503);
-  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia", "festivals", "calendari"].includes(accio)) return j({ error: "no" }, 404);
+  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia", "festivals", "calendari", "vigila", "diari"].includes(accio)) return j({ error: "no" }, 404);
   // el que envia o cancel·la només per POST amb JSON (un enllaç o un formulari d'una altra web no ho pot fer)
-  if (["envia", "cancela", "resum", "copia", "calendari"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
+  if (["envia", "cancela", "resum", "copia", "calendari", "vigila", "diari"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
   const q = m === "GET" ? Object.fromEntries(new URL(request.url).searchParams) : await request.json();
   const { clau, ...o } = await pont(cfg, { ...q, accio }); // la clau no surt mai cap al navegador
   return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200); // 401 faria tornar a demanar la contrasenya del hub
@@ -288,6 +292,31 @@ async function drecera(t, request, db) {
   const tok = JSON.parse(r.data).token; if (!tok || t.length !== tok.length || !igual(t, tok)) return txt("no", 404);
   const q = new URL(request.url).searchParams; let u = q.get("u") || "";
   if (request.method === "POST") { const b = await request.text(); try { const o = JSON.parse(b); u = o.u || o.url || u } catch (e) { u = b || u } }
+  const avuiM = diaMadrid();
+  // «Apunta al hub» (Siri): ?x=text → tasca per avui; si comença per «idea», va a Idees
+  if (q.get("x") !== null) {
+    let x = String(q.get("x") || "").trim().slice(0, 300); if (!x) return txt("No ha arribat cap text.", 400);
+    const idea = /^idea[\s,:.-]+/i.test(x); x = x.replace(/^(idea|tasca)[\s,:.-]+/i, "").trim(); x = x[0].toUpperCase() + x.slice(1);
+    const id = (idea ? "idea:" : "tarea:") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(idea ? { titulo: x, fecha: avuiM, texto: "" } : { titulo: x, fecha: avuiM, hecha: false, proyecto: "" }), Date.now()).run();
+    return txt(idea ? `✓ Idea apuntada: ${x}` : `✓ Tasca per avui: ${x}`);
+  }
+  // «Guardar visionat» (des de YouTube o Vimeo): ?v=enllaç
+  if (q.get("v") !== null) {
+    let v = String(q.get("v") || ""); try { v = decodeURIComponent(v) } catch (e) { }
+    const mu = v.match(/https?:\/\/[^\s]+/); if (!mu || !/(youtube\.com|youtu\.be|vimeo\.com)/i.test(mu[0])) return txt("Ha de ser un enllaç de YouTube o Vimeo." + (v ? " He rebut: " + v.slice(0, 160) : ""), 400);
+    const url = mu[0];
+    const { results: vs } = await db.prepare("SELECT data FROM docs WHERE id LIKE 'visionat:%'").all();
+    const idv = s => (s.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{11})/) || s.match(/vimeo\.com\/(?:video\/)?(\d+)/) || [])[1] || s;
+    if (vs.some(r => { try { return idv(JSON.parse(r.data).url || "") === idv(url) } catch (e) { return false } })) return txt("Aquest vídeo ja és a Visionats.");
+    let meta = {};
+    try { const api = /vimeo/i.test(url) ? "https://vimeo.com/api/oembed.json?url=" : "https://www.youtube.com/oembed?format=json&url="; const rr = await fetch(api + encodeURIComponent(url)); if (rr.ok) meta = await rr.json() } catch (e) { }
+    const yt = (url.match(/(?:v=|youtu\.be\/|shorts\/)([\w-]{11})/) || [])[1];
+    const d = { titulo: String(meta.title || "").slice(0, 200), url, autor: String(meta.author_name || "").slice(0, 120), thumb: meta.thumbnail_url || (yt ? `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` : ""), durada: +meta.duration || 0, exercici: [], nivell: [], notas: "" };
+    const id = "visionat:" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(d), Date.now()).run();
+    return txt(`✓ Guardat a Visionats${d.titulo ? ": " + d.titulo : ""}. Tria-li l'exercici al hub.`);
+  }
   // el que arribi (també codificat, o enganxat a la resta de l'adreça si no ve dins de «u»)
   let tot = String(u) + " " + new URL(request.url).search;
   for (let i = 0; i < 3; i++) { try { const d = decodeURIComponent(tot); if (d === tot) break; tot = d } catch (e) { break } }
@@ -312,6 +341,85 @@ async function drecera(t, request, db) {
   const n = { id, nombre: "@" + usr, persona: "", tipo: tipus || "Artista", estado: "Contactat", motivos: [], email: "", ig: "@" + usr, tel: "", web: "", dir: "", man: "", manId: "", notas: "Afegit des de la drecera d'Instagram.", msgs: [{ d: avui, v: "Instagram", t: "" }] };
   await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(n), Date.now()).run();
   return txt(`✓ @${usr} afegit a Contactes com a contactat avui`);
+}
+// ---------- enllaços públics d'arxius (material per als alumnes, resum diari) ----------
+async function signa(db, id) {
+  let r = await db.prepare("SELECT data FROM docs WHERE id='secret:arxius'").first(), k = r ? JSON.parse(r.data).k : "";
+  if (!k) { k = [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, "0")).join(""); await db.prepare("INSERT INTO docs(id,data,updated) VALUES('secret:arxius',?1,?2) ON CONFLICT(id) DO NOTHING").bind(JSON.stringify({ k }), Date.now()).run(); r = await db.prepare("SELECT data FROM docs WHERE id='secret:arxius'").first(); k = JSON.parse(r.data).k }
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(k), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sg = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("arxiu:" + id));
+  return [...new Uint8Array(sg)].slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function clauPont(request, db) {
+  const r = await db.prepare("SELECT data FROM docs WHERE id='secret:correu'").first(), cfg = r ? JSON.parse(r.data) : null, clau = request.headers.get("x-clau") || "";
+  return !!(cfg && cfg.clau && clau.length === cfg.clau.length && igual(clau, cfg.clau));
+}
+const diaMadrid = (d = new Date()) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
+const sumaDies = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) };
+
+// ---------- resum diari (el pont l'envia per correu cap a les 8:30): només el que és d'avui ----------
+async function pontDiari(request, db, j) {
+  if (!await clauPont(request, db)) return j({ error: "no" }, 403);
+  const b = await request.json().catch(() => ({})) || {};
+  const avui = diaMadrid(), base = new URL(request.url).origin;
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'curs:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'convocatoria:%' OR id LIKE 'proyecto:%' OR id LIKE 'visionat:%' OR id = 'ajust:vigila' OR id = 'ajust:objectius' OR (id LIKE 'c\_%' ESCAPE '\')").all();
+  const D = {}; for (const r of results) { try { const o = JSON.parse(r.data); o.id = r.id; const t = r.id.startsWith("c_") ? "c" : r.id.split(":")[0]; (D[t] = D[t] || []).push(o) } catch (e) { } }
+  const L = t => D[t] || [], esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const pn = id => (L("proyecto").find(x => x.id === id) || {}).titulo || "";
+  const secs = [];
+  const sec = (t, files) => { if (files.length) secs.push(`<h3 style="font-size:15px;margin:22px 0 8px">${esc(t)}</h3>` + files.map(f => `<div style="padding:6px 0;border-bottom:1px solid #eee">${f}</div>`).join("")) };
+  // agenda d'avui, per hores
+  const ag = [];
+  L("reunion").filter(x => x.fecha === avui).forEach(x => ag.push([x.hora || "", `<b>Reunió: ${esc(x.titulo)}</b>${x.lugar ? " · " + esc(x.lugar) : ""}${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
+  for (const c of L("curs")) for (const s of (Array.isArray(c.setmanes) ? c.setmanes : [])) if (s && s.data === avui) {
+    const mats = [];
+    for (const a of (s.arxius || [])) mats.push(`<a href="${base}/api/public/arxiu/${a.id}/${await signa(db, a.id)}">${esc(a.nombre)}</a>`);
+    for (const vid of (s.vis || [])) { const v = L("visionat").find(x => x.id === vid); if (v) mats.push(`<a href="${esc(v.url)}">${esc(v.titulo || "Visionat")}</a>`) }
+    ag.push([s.hora || "", `<b>Classe: ${esc(c.titulo)}</b>${s.hora ? ` · ${esc(s.hora)}${s.horafi ? "–" + esc(s.horafi) : ""}` : ""}${c.centre ? " · " + esc(c.centre) : ""}${s.tema ? `<br>${esc(s.tema)}` : ""}${mats.length ? `<br><span style="color:#666">Material:</span> ${mats.join(" · ")}` : ""}`]);
+  }
+  L("pdr").forEach(x => (x.dias || []).forEach((d, i) => { if (d && d.fecha === avui) ag.push([(String(d.calls || "").match(/\d{1,2}:\d{2}/) || [""])[0], `<b>Rodatge: ${esc(x.titulo || pn(x.proyecto) || "Pla de rodatge")}</b> · jornada ${i + 1}${d.calls ? " · " + esc(d.calls) : ""}`]) }));
+  L("feina").filter(x => x.ini === avui && x.estado !== "Pressupostat").forEach(x => ag.push(["", `<b>Comença la feina: ${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""}`]));
+  L("convocatoria").filter(x => x.evento === avui && ["Seleccionat", "Presentat"].includes(x.estado)).forEach(x => ag.push(["", `<b>Festival: ${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
+  sec("Agenda", ag.sort((a, b) => (a[0] || "99").localeCompare(b[0] || "99")).map(x => (x[0] ? `<span style="display:inline-block;min-width:52px;color:#666">${esc(x[0])}</span>` : "") + x[1]));
+  sec("Tasques per avui", L("tarea").filter(x => !x.hecha && x.fecha === avui).map(x => esc(x.titulo) + (x.proyecto ? ` <span style="color:#666">· ${esc(pn(x.proyecto))}</span>` : "")));
+  // terminis: avui, i avisos a 2 i 7 dies
+  const ter = [];
+  L("convocatoria").filter(x => (!x.estado || x.estado === "Per presentar") && x.limite).forEach(x => {
+    const n = x.limite === avui ? 0 : x.limite === sumaDies(avui, 2) ? 2 : x.limite === sumaDies(avui, 7) ? 7 : -1;
+    if (n >= 0) ter.push(`<b>${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""} · ${n === 0 ? "<b style=\"color:#d70015\">el termini acaba avui</b>" : `falten ${n} dies (${esc(x.limite.split("-").reverse().join("/"))})`}`);
+  });
+  sec("Terminis", ter);
+  // seguiments que toquen avui (7 dies sense resposta)
+  const seg = L("c").filter(c => c.estado === "Contactat" && Array.isArray(c.msgs) && c.msgs.length > 0 && c.msgs.length < 3 && c.msgs[c.msgs.length - 1].d === sumaDies(avui, -7));
+  sec("Toca fer seguiment", seg.map(c => `<b>${esc(c.nombre)}</b>${c.persona ? " · " + esc(c.persona) : ""} · li vas escriure fa 7 dies per ${esc(c.msgs[c.msgs.length - 1].v || "missatge")}`));
+  // cobraments: fa 30 dies de la factura
+  sec("Per reclamar", L("feina").filter(x => x.estado === "Facturat" && x.facturat === sumaDies(avui, -30)).map(x => `<b>${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""} · fa 30 dies de la factura ${esc(x.factura || "")}`));
+  // convocatòries vigilades que han canviat avui
+  const vg = (L("ajust").find(x => x.id === "ajust:vigila") || {}).llista || [];
+  sec("Convocatòries amb novetats", vg.filter(x => x.canvi === avui).map(x => `<a href="${esc(x.url)}"><b>${esc(x.nom)}</b></a> ha canviat la seva pàgina`));
+  if (b.festivals > 0) sec("Festivals", [`${b.festivals} ${b.festivals === 1 ? "avís nou" : "avisos nous"} de FilmFreeway o Festhome. Obre Avui al hub per confirmar-los.`]);
+  const nom = new Date().toLocaleDateString("ca-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Madrid" });
+  const html = `<div style="font-family:Helvetica,Arial,sans-serif;color:#000;max-width:600px;font-size:15px;line-height:1.5"><h2 style="font-size:22px;margin:0 0 4px">${esc(nom[0].toUpperCase() + nom.slice(1))}</h2>${secs.join("")}<p style="margin-top:26px"><a href="${base}" style="color:#000">Obrir el hub</a></p></div>`;
+  return j({ buit: !secs.length, assumpte: "Avui · " + nom, html });
+}
+
+// ---------- vigilant de convocatòries: el pont revisa les pàgines un cop per setmana ----------
+async function pontVigila(m, request, db, j) {
+  if (!await clauPont(request, db)) return j({ error: "no" }, 403);
+  const r = await db.prepare("SELECT data FROM docs WHERE id='ajust:vigila'").first(), v = r ? JSON.parse(r.data) : { llista: [] };
+  if (m === "GET") return j({ llista: (v.llista || []).map(x => ({ id: x.id, url: x.url })) });
+  const b = await request.json().catch(() => ({})) || {}, avui = diaMadrid();
+  for (const x of (b.resultats || [])) {
+    const e = (v.llista || []).find(y => y.id === x.id); if (!e) continue;
+    e.revisat = avui;
+    if (x.err) { e.error = String(x.err).slice(0, 120); continue }
+    delete e.error;
+    if (x.hash && e.hash && x.hash !== e.hash) { e.canvi = avui; e.vist = false }
+    if (x.hash) e.hash = x.hash; if (x.extracte) e.extracte = String(x.extracte).slice(0, 600);
+  }
+  v.id = "ajust:vigila";
+  await db.prepare("INSERT INTO docs(id,data,updated) VALUES('ajust:vigila',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify(v), Date.now()).run();
+  return j({ ok: 1 });
 }
 function igual(a, b) { let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0 }
 

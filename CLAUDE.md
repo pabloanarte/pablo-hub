@@ -36,3 +36,10 @@ Hub personal de Pablo Anarte. Cloudflare Pages (proyecto pablo-hub, carpeta de s
 
 ## Probar en local
 `npx wrangler pages dev public --d1 DB=local --kv ARCHIVOS --binding HUB_PASSWORD=prueba GITHUB_TOKEN=x`
+
+## Estructura (nov. 2026)
+- Menú: Avui, Agenda (tasques + reunions), Gent (contactes + equip), Projectes, Correu, Docència, Diners; a sota pabloanarte.com i Configuració. `hub.js` té `GRUPS`, pestanyes de projecte `PTABS` (resum, desenvolupament, dossiers, preproducció, guió i pla, postproducció, festivals, equip, arxius) i `HUB.obreProjecte(id, pt)`. `H.pj()`/`H.dePj(d)` filtren pel projecte obert; `sections/projecte.js` fa Resum, Equip (`p.equip`) i Arxius. Mòbil: barra inferior i botó + (afegir ràpid).
+- Avui (`sections/inicio.js`): recordatoris de terminis (avui, 2 i 7 dies), novetats de festivals del Gmail (`FIMP.pendents`, aplicar amb `FIMP.revisaCorreu`), seguiments amb el missatge ja escrit (`CONT.plantilla`, `CONT.registraIG`), «Ha respost» automàtic quan algú respon per correu, contactes nous de la setmana contra l'objectiu, classes d'avui i demà amb material, escriptura (`ajust:escriptura` log `{proj,d,p}`), factures per reclamar (Facturat fa 30 dies, camp `facturat`) i convocatòries vigilades amb canvis.
+- Configuració: objectius (`ajust:objectius`: contactes, pagines, escriptura), vigilant (`ajust:vigila.llista`), dades de factura (`ajust:factura`: nom, nif, adreca, email, tel, iban, iva, irpf, prefix, seguent), dreceres `?u=` (Instagram), `?x=` (Apunta al hub, tasca d'avui o idea) i `?v=` (visionat).
+- Resum diari: el pont (`feinesPeriodiques` dins `enviaProgramats`) l'envia un cop al dia a partir de les 8:30 (hora de Madrid) amb `/api/pont/diari`; només coses d'avui. El vigilant corre els dilluns via `/api/pont/vigila`. Enllaços públics signats als arxius: `/api/arxius-publics` → `/api/public/arxiu/<id>/<sig>`.
+- Diners: acció «Fer la factura (PDF)» (numerada, IVA i IRPF). Docència: camp `correus` del curs i «Enviar el material» d'una sessió (còpia oculta via el pont).

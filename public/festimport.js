@@ -55,8 +55,8 @@ window.FIMP = (() => {
   }
 
   // ---------- 1) correu ----------
-  async function delCorreu() {
-    const r = await H.api("GET", "correu/festivals?dies=730");
+  async function delCorreu(dies) {
+    const r = await H.api("GET", "correu/festivals?dies=" + (dies || 730));
     const aj = (await H.col("ajust")).find(x => x.id === "ajust:festmail") || { id: "ajust:festmail", vistos: [] };
     const nous = r.missatges.filter(m => !aj.vistos.includes(m.id)).sort((a, b) => a.data.localeCompare(b.data));
     const out = [];
@@ -119,7 +119,8 @@ window.FIMP = (() => {
   const marcats = l => { const n = l.filter(p => p.on).length; return n === 1 ? "1 marcat" : n + " marcats" };
   // ---------- revisió ----------
   let PLAT = ["FilmFreeway", "Festhome"];
-  async function revisa(props, origen, aj) {
+  // uneix duplicats, busca si ja hi són i calcula què canviaria (sense pintar res)
+  async function prepara(props) {
     const cs = await H.col("convocatoria"), ps = await H.col("proyecto");
     await H.llistes(); PLAT = H.opsDe({ llista: "fest_plat", op: ["FilmFreeway", "Festhome"] });
     // dins la mateixa tanda, el mateix festival i pel·lícula és una sola proposta (es queda l'estat més avançat)
@@ -134,6 +135,10 @@ window.FIMP = (() => {
       p.canvis = !c || c.estado !== p.estado || (p.premi && !c.premi) || (p.proyecto && !c.proyecto) || (p.cost && !c.cost) || (p.plat && !c.plataforma);
       p.on = p.canvis && !p.dubte;
     });
+    return { props, cs, ps };
+  }
+  async function revisa(props0, origen, aj) {
+    const pr = await prepara(props0), cs = pr.cs, ps = pr.ps; let props = pr.props;
     const fila = (p, i) => `<div class="fip ${p.on ? "" : "fio"}" id="fip${i}"><label class="ck" style="margin:0"><input type="checkbox" data-fi="${i}" ${p.on ? "checked" : ""}></label>
       <div class="g"><div class="ls"><input data-fv="festival" data-i="${i}" value="${E(p.festival)}" style="flex:2;min-width:160px;font-weight:700"><select data-fv="proyecto" data-i="${i}" style="flex:1;min-width:140px"><option value="">— Projecte —</option>${ps.map(x => `<option value="${x.id}" ${x.id === p.proyecto ? "selected" : ""}>${E(x.titulo || "")}</option>`).join("")}</select><select data-fv="plat" data-i="${i}" style="width:auto"><option value="">— Plataforma —</option>${PLAT.concat(p.plat && !PLAT.includes(p.plat) ? [p.plat] : []).map(x => `<option ${x === p.plat ? "selected" : ""}>${E(x)}</option>`).join("")}</select><select data-fv="estado" data-i="${i}" style="width:auto">${EST.map(e => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select></div>
       <small>${E(p.font)}${p.data ? " · " + H.fecha(p.data) : ""} · ${p.ja ? `ja hi és (${E(p.ja.estado || "")})${p.canvis ? " → s'actualitzarà" : ", sense canvis"}${p.baixa ? " (un avís antic no rebaixa l'estat)" : ""}` : "es crearà nova"}${p.premi ? " · premi: " + E(p.premi) : ""}${p.cost ? " · " + p.cost + " €" : ""}${p.dubte ? ' · <b style="color:#ff9f0a">no he entès l\'estat: revisa\'l</b>' : ""} · <span class="mut">${E(p.resum.slice(0, 90))}</span></small></div></div>`;
@@ -187,5 +192,8 @@ window.FIMP = (() => {
       if (b.dataset.fk === "txt") { const t = document.getElementById("fitx").value; if (!t.trim()) return H.toast("Enganxa la llista primer"); const pl = /festhome|mis inscripciones/i.test(t) ? "Festhome" : /filmfreeway|my submissions|judging status/i.test(t) ? "FilmFreeway" : ""; revisa((await deText(t)).props.map(p => Object.assign(p, { plat: pl })), "text") }
     };
   }
-  return { obre, _t: { estatDe, festivalDe, deText, PROMO } };
+  // per a Avui: avisos nous dels últims dies que canviarien alguna cosa (sense obrir res)
+  async function pendents(dies) { const r = await delCorreu(dies || 21); const pr = await prepara(r.props); return { r, n: pr.props.filter(p => p.canvis).length, props: pr.props.filter(p => p.canvis) } }
+  const revisaCorreu = r => revisa(r.props, "correu", r.aj);
+  return { obre, pendents, revisaCorreu, _t: { estatDe, festivalDe, deText, PROMO } };
 })();

@@ -118,6 +118,8 @@ window.CONT={
  desprograma:pid=>{C.forEach(c=>{if(!M(c).some(m=>m.prog===pid))return;c.msgs=M(c).filter(m=>m.prog!==pid);if(!c.msgs.length&&c.estado==="Contactat")c.estado="Pendent";save(c)});render()},
  estat:(id,e)=>{const c=C.find(x=>x.id===id);if(!c)return;c.estado=e;save(c);render()},
  tots:()=>C,
+ plantilla:(id,via)=>{const c=C.find(x=>x.id===id);return c?tplFor(c,via||(c.email?"Email":"Instagram")):""},
+ registraIG:(id)=>{const c=C.find(x=>x.id===id);if(!c)return;c.msgs=M(c).concat({d:today(),v:"Instagram",t:""});if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);render()},
  color:e=>EC[e||"Pendent"]||"#c7c7cc"
 };
 function cmp(c,via){via=via||({"Productora":"Email","Artista":"Instagram"})[c.tipo]||(c.email?"Email":c.ig?"Instagram":"Telèfon");cv=via;

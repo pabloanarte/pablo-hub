@@ -56,7 +56,7 @@ window.DOC = (() => {
     const inp = (f, l, t = "text", ph = "") => `<div style="flex:1;min-width:150px"><label>${l}</label><input type="${t}" data-c="${f}" value="${E(c[f] || "")}" placeholder="${E(ph)}"></div>`;
     const sessio = x => { const n = s.indexOf(x) + 1, vv = (x.vis || []).map(id => vs.find(y => y.id === id)).filter(Boolean);
       return `<div class="card dses${x === act ? " on" : ""}" data-s="${x.id}">
-        <div class="ls"><b style="font-size:16px;white-space:nowrap">Sessió ${n}</b><input type="date" data-sf="data" value="${E(x.data || "")}" style="width:auto"><span class="dhor"><input type="time" data-sf="hora" value="${E(x.hora || "")}" title="Hora d'inici" style="width:auto">–<input type="time" data-sf="horafi" value="${E(x.horafi || "")}" title="Hora d'acabar" style="width:auto"></span><span style="flex:1"></span><button class="x" data-k="qses" title="Treure la sessió">×</button></div>
+        <div class="ls"><b style="font-size:16px;white-space:nowrap">Sessió ${n}</b><input type="date" data-sf="data" value="${E(x.data || "")}" style="width:auto"><span class="dhor"><input type="time" data-sf="hora" value="${E(x.hora || "")}" title="Hora d'inici" style="width:auto">–<input type="time" data-sf="horafi" value="${E(x.horafi || "")}" title="Hora d'acabar" style="width:auto"></span><span style="flex:1"></span>${(x.arxius || []).length || vv.length ? `<button class="b2" data-k="envmat" style="font-size:13px">Enviar el material</button>` : ""}<button class="x" data-k="qses" title="Treure la sessió">×</button></div>
         <input data-sf="tema" value="${E(x.tema || "")}" placeholder="Tema o exercici de la sessió" style="margin-top:8px;font-weight:600">
         <div class="dpdf">${(x.arxius || []).map(a => `<span class="chip"><a href="/api/archivo/${E(a.id)}" target="_blank">${E(a.nombre)}</a> <button data-k="qpdf" data-a="${E(a.id)}" title="Treure">×</button></span>`).join("")}<label class="b2" style="cursor:pointer;font-size:13px">+ PDF<input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.key,.pages,image/*" data-k="pujar" hidden></label></div>
         ${vv.length ? `<div class="dvis">${vv.map(y => `<div class="dvs" data-k="vveu" data-id="${y.id}" title="${E(y.notas || "")}">${y.thumb ? `<img src="${E(y.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=dvph>${PLAY.replace(/"/g, "&quot;")}</span>'">` : `<span class="dvph">${PLAY}</span>`}<small>${E(y.titulo || "Sense títol (" + ((video(y.url) || {}).pl || "enllaç") + ")")}</small><button class="x" data-k="qvis" data-id="${y.id}" title="Treure de la sessió">×</button></div>`).join("")}</div>` : ""}
@@ -65,6 +65,7 @@ window.DOC = (() => {
     el.innerHTML = cap() + `<div class="bar tb"><button class="b2" data-k="torna">← Cursos</button><span style="flex:1"></span><button class="del" data-k="qcurs">Eliminar el curs</button></div>
       <input class="big" data-c="titulo" value="${E(c.titulo || "")}" placeholder="Nom del curs" style="margin-bottom:10px">
       <div class="ls" style="align-items:flex-end;gap:12px">${inp("centre", "Centre o escola", "text", "ESCAC, institut, centre cívic…")}${inp("tipus", "Tipus de classe", "text", "Taller, assignatura, curs intensiu…")}${inp("nivell", "Alumnes", "text", "1r de grau, 4t d'ESO, adults…")}${inp("inici", "Inici", "date")}${inp("fi", "Final", "date")}</div>
+      <label>Correus dels alumnes</label><textarea data-c="correus" rows="2" placeholder="Separats per comes o un per línia. Reben el material en còpia oculta.">${E(c.correus || "")}</textarea>
       <label>Notes del curs</label><textarea data-c="notas" rows="3" placeholder="Horari, aula, contacte del centre, programa…">${E(c.notas || "")}</textarea>
       <h2 style="margin-top:22px">Sessions <span>${s.length}</span></h2>
       ${s.map(sessio).join("") || `<p class="em">Afegeix la primera sessió.</p>`}
@@ -149,6 +150,7 @@ window.DOC = (() => {
     if (k === "nses") { const s = ses(c), u = s[s.length - 1]; c.setmanes = (c.setmanes || []).concat({ id: Date.now().toString(36), data: u && u.data ? H.addDays(u.data, 7) : (c.inici || H.today()), hora: u ? u.hora || "" : "", horafi: u ? u.horafi || "" : "", tema: "", arxius: [], vis: [], notes: "" }); await H.put(c, 1); await pintar(); const l = el.querySelectorAll('input[data-sf="tema"]'); return l.length && l[l.length - 1].focus() }
     const x = sessioDe(c, b); if (!x) return;
     if (k === "qses") { if (!confirm("Treure aquesta sessió" + ((x.arxius || []).length ? " i els seus PDF" : "") + "?")) return; (x.arxius || []).forEach(a => H.api("DELETE", "archivo/" + a.id).catch(() => { })); c.setmanes = c.setmanes.filter(y => y !== x); H.put(c, 1); return pintar() }
+    if (k === "envmat") return enviaMaterial(c.id, x.id);
     if (k === "qpdf") { if (!confirm("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.a).catch(() => { }); x.arxius = (x.arxius || []).filter(a => a.id !== b.dataset.a); H.put(c, 1); return pintar() }
     if (k === "qvis") { x.vis = (x.vis || []).filter(id => id !== b.dataset.id); H.put(c, 1); return pintar() }
   });
@@ -183,11 +185,29 @@ window.DOC = (() => {
     p.outerHTML = `<div class="dvp dvf"><iframe src="${E(p.dataset.e)}${p.dataset.e.includes("?") ? "&" : "?"}autoplay=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
   });
 
+  // Enviar el material d'una sessió als alumnes (còpia oculta), amb enllaços públics als PDF
+  async function enviaMaterial(cid, sid) {
+    const c = (await H.col("curs")).find(x => x.id === cid), x = c && (c.setmanes || []).find(y => y.id === sid); if (!x) return;
+    const vs = (await H.col("visionat")), vv = (x.vis || []).map(id => vs.find(y => y.id === id)).filter(Boolean);
+    const cc = String(c.correus || "").split(/[\s,;]+/).filter(e => /@/.test(e));
+    if (!cc.length) { H.toast("Primer posa els correus dels alumnes al curs"); DOC.curs(cid); hubShow("docencia"); return }
+    if (window.CORREU && !(await CORREU.connectat())) return H.toast("Connecta el correu a Correu primer");
+    let ls = {}; try { if ((x.arxius || []).length) ls = await H.api("POST", "arxius-publics", { ids: x.arxius.map(a => a.id) }) } catch (e) { }
+    const n = (c.setmanes || []).filter(y => y.data).sort((a, b) => a.data.localeCompare(b.data)).indexOf(x) + 1;
+    const ass = `${c.titulo || "Curs"}${n ? " · sessió " + n : ""}${x.tema ? ": " + x.tema : ""}`;
+    const items = [...(x.arxius || []).map(a => [a.nombre, ls[a.id]]).filter(a => a[1]), ...vv.map(v => [v.titulo || "Visionat", v.url])];
+    const text = `Hola,\n\nUs passo el material${x.data ? " de la sessió del " + H.fecha(x.data) : ""}:\n\n${items.map(([t, u]) => "- " + t + ": " + u).join("\n")}\n\nPablo`;
+    const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#000"><p>Hola,</p><p>Us passo el material${x.data ? " de la sessió del " + E(H.fecha(x.data)) : ""}:</p><ul>${items.map(([t, u]) => `<li><a href="${E(u)}">${E(t)}</a></li>`).join("")}</ul><p>Pablo</p></div>`;
+    if (!confirm(`Enviar «${ass}» a ${cc.length} ${cc.length > 1 ? "alumnes" : "alumne"} en còpia oculta?\n\n${items.map(i => "· " + i[0]).join("\n")}`)) return;
+    try { await H.api("POST", "correu/envia", { a: "pablo.anarte.film@gmail.com", bcc: cc.join(","), assumpte: ass, cos: text, html, quan: "" }); x.enviat = H.today(); await H.put(c, 1); H.toast("Material enviat") }
+    catch (e) { H.toast("No s'ha pogut enviar") }
+  }
   H.onChange(() => { if (!el.hidden && !el.contains(document.activeElement)) pintar() });
   pintar().catch(() => el.innerHTML = cap() + `<p class="em">No s'ha pogut carregar.</p>`);
   return {
     curs: id => { vista = "cursos"; curs = id; pintar() },
     vis: async id => { vista = "visionats"; curs = null; await pintar(); const d = (await H.col("visionat")).find(x => x.id === id); d && editaVis(d) },
+    enviaMaterial,
     nouVis: async () => { vista = "visionats"; curs = null; await pintar(); const i = document.getElementById("dv-url"); i && i.focus() },
     _video: video
   };
