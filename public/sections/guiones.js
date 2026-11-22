@@ -46,7 +46,7 @@
   }
   function pintar() {
     const cs = vis(), sets = [...new Set(doc.escenas.map(e => e.lugar).concat(planos().map(p => p.set)).filter(Boolean))];
-    H.col("proyecto").then(ps => { const s = el.querySelector("#gt-proy"); if (s) s.innerHTML = `<option value="">Sense projecte</option>` + ps.map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("") });
+    H.col("proyecto").then(ps => { const s = el.querySelector("#gt-proy"); if (s) s.innerHTML = `<option value="">Sense projecte</option>` + ps.filter(p => H.meu(p) || p.id === doc.proyecto).map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("") });
     const pl = planos();
     el.innerHTML = `<div class="bar tb"><button class="b2" data-k="volver">← Guions</button><input class="tt" data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol del guió" style="max-width:320px;font-weight:700">
       <select id="gt-proy" data-d="proyecto" style="width:auto"></select><input data-d="version" value="${E(doc.version || "")}" placeholder="Versió" style="width:110px">

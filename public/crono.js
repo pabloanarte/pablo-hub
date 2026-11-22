@@ -60,7 +60,7 @@ window.Crono = cfg => {
     if (k === "edt") abrir(b.dataset.id);
     if (k === "nueva") { const d = { id: H.uid(tipo), titulo: "", ini: H.today(), fin: H.addDays(H.today(), 6), estado: "Pendent", proyecto: H.pj() ? (H.pj() === "-" ? "" : H.pj()) : proy, cat: CATS[0][0] }; await H.put(d, 1); abrir(d.id); setTimeout(() => { const i = document.querySelector("#hshc input.big"); i && i.focus() }, 60) }
     if (k === "plantilla") {
-      const ps = await H.col("proyecto");
+      const ps = (await H.col("proyecto")).filter(p => H.meu(p) || p.id === proy);
       H.sheet(`<h2 style="margin-top:0">Plantilla de ${E(cfg.nombre)}</h2><p class="em" style="margin-top:0">Crea les fases habituals encadenades a partir d'una data. Després ajustes les dates arrossegant.</p>
         <label>Projecte</label><select id="pl-p"><option value="">—</option>${ps.map(p => `<option value="${p.id}" ${p.id === proy ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select>
         <label>Comença el</label><input type="date" id="pl-f" value="${H.today()}">` + cfg.plantilla.map((t, i) => `<label class="ck"><input type="checkbox" data-pl="${i}" checked> ${E(t[0])} <small>· ${E(t[1])} · ${t[2]} ${t[2] === 1 ? "dia" : "dies"}</small></label>`).join("") + `<button class="b" data-k="plcrear" style="margin-top:14px">Crear tasques</button>`);

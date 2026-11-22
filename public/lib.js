@@ -80,11 +80,11 @@ window.H = (() => {
         const ops = c.opsDoc ? c.opsDoc(d) : opsDe(c), edita = c.llista && ed && ed.editL === c.llista;
         if (edita) return lb + `<div class="seg">${ops.map((o, i) => `<span class="chip">${E(o)} <button data-k="lldel" data-l="${c.llista}" data-i="${i}" title="Eliminar de la llista">×</button></span>`).join("")}</div><div class="row"><input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nova opció… (Retorn)"><button class="b2" data-k="llfet">Fet</button></div><small>Treure una opció de la llista no la treu d'on ja estigui posada.</small>`;
         const sel = c.multi ? (Array.isArray(v) ? v : v ? [v] : []) : [v], es = o => sel.includes(o);
-        return lb + `<div class="seg">${ops.concat(sel.filter(x => x && !ops.includes(x))).map(o => `<button class="t ${es(o) ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] && !/^#(8e8e93|c7c7cc)$/i.test(c.col[o]) ? ` style="${es(o) ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nova opció i Retorn" autofocus>` : ""}`;
+        return lb + `<div class="seg">${ops.concat(sel.filter(x => x && !ops.includes(x))).map(o => `<button class="t ${es(o) ? "on" : ""}" data-k="pill" data-f="${c.f}" data-v="${E(o)}"${c.col && c.col[o] && !/^#(8e8e93|c7c7cc)$/i.test(c.col[o]) ? ` style="${es(o) ? `background:${c.col[o]};color:#fff` : ""}"` : ""}>${E(o)}</button>`).join("")}${c.llista ? `<button class="t" data-k="llnou" data-l="${c.llista}" style="background:#fff;border:1px dashed #c7c7cc">+ Altres</button><button class="t" data-k="lled" data-l="${c.llista}" style="background:none;color:#8e8e93">Editar llista</button>` : ""}</div>${c.llista && ed && ed.nouL === c.llista ? `<input class="pnou" data-l="${c.llista}" data-f="${c.f}" placeholder="Nova opció i Retorn" autofocus>` : ""}` + (c.ajuda ? `<small style="display:block;margin-top:6px">${E(c.ajuda)}</small>` : "");
       }
       case "url": return lb + `<div class="row"><input data-f="${c.f}" value="${E(v)}" placeholder="https://"><a class="ln" target="_blank" rel="noopener" href="${E(url(v))}" ${v ? "" : "hidden"}>Obrir</a></div>`;
       case "links": return lb + `<textarea data-f="${c.f}" rows="2" placeholder="Un enllaç per línia">${E(v)}</textarea><div class="ls">${String(v).split("\n").filter(x => x.trim()).map(x => `<a class="ln" target="_blank" rel="noopener" href="${E(url(x.trim()))}">${E(x.trim().replace(/^https?:\/\/(www\.)?/, "").slice(0, 40))}</a>`).join("")}</div>`;
-      case "proyecto": return lb + `<select data-f="${c.f}"><option value="">—</option>${ps.slice().sort((a, b) => (a.titulo || "").localeCompare(b.titulo || "")).map(p => `<option value="${p.id}" ${v === p.id ? "selected" : ""}>${E(p.titulo || "Sense títol")}</option>`).join("")}</select>`;
+      case "proyecto": return lb + `<select data-f="${c.f}"><option value="">—</option>${ps.filter(p => c.tots || meu(p) || p.id === v).sort((a, b) => (a.titulo || "").localeCompare(b.titulo || "")).map(p => `<option value="${p.id}" ${v === p.id ? "selected" : ""}>${E(p.titulo || "Sense títol")}</option>`).join("")}</select>`;
       case "contactos": {
         const sel = Array.isArray(v) ? v : [], nom = id => (cs.find(x => x.id === id) || {}).nombre || "?";
         return lb + `<div class="ls">${sel.map(id => `<span class="chip">${E(nom(id))} <button data-k="quita" data-f="${c.f}" data-v="${id}">×</button></span>`).join("")}</div>
@@ -156,29 +156,61 @@ window.H = (() => {
   const dePj = d => { const p = pj(); return !p || (p === "-" ? !d.proyecto : d.proyecto === p) };
   const refresca = () => changed();
   async function abrir(tipo, id) { const c = reg[tipo], d = (await col(tipo)).find(x => x.id === id); if (c && d) c.abre(d) }
+  // Canviar l'ordre a mà (camp «ord»): arrossegant per la nansa ⠿ o amb ↑ ↓
+  let OR = null;
+  function ordena(l, cfg, despres) {
+    OR = { l, cfg, despres };
+    const pinta = () => sheet(`<h2 style="margin-top:4px">Canviar l'ordre</h2><p class="em" style="margin-top:0">Arrossega per la nansa ⠿ o fes servir les fletxes. Es desa sol.</p><div id="ordl">${OR.l.map((d, i) => `<div class="r" data-ix="${i}"><span class="arr" title="Arrossega per canviar l'ordre">⠿</span><div class="g"><b>${E(d.titulo || "Sense títol")}</b><small>${E([d.categoria, d.estado].filter(Boolean).join(" · "))}</small></div><button class="t" data-k="osube" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="t" data-k="obaja" data-i="${i}" ${i < OR.l.length - 1 ? "" : "disabled"}>↓</button></div>`).join("")}</div>`, () => { OR = null; despres() });
+    OR.pinta = pinta; pinta();
+  }
+  const desaOrdre = () => { OR.l.forEach((d, i) => { if (d.ord !== i) { d.ord = i; put(d) } }); OR.pinta() };
+  (() => { const c = document.getElementById("hshc"); if (!c) return;
+    c.addEventListener("click", e => { const b = e.target.closest('[data-k="osube"],[data-k="obaja"]'); if (!b || !OR || b.disabled) return; const i = +b.dataset.i, j = b.dataset.k === "osube" ? i - 1 : i + 1;[OR.l[i], OR.l[j]] = [OR.l[j], OR.l[i]]; desaOrdre() });
+    c.addEventListener("pointerdown", e => {
+      const h = e.target.closest(".arr"); if (!h || !OR || e.button > 0) return;
+      const row = h.closest(".r[data-ix]"); if (!row) return;
+      e.preventDefault(); h.setPointerCapture(e.pointerId);
+      const from = +row.dataset.ix, altres = [...row.parentElement.querySelectorAll(".r[data-ix]")].filter(r => r !== row);
+      let y0 = e.clientY, s0 = c.scrollTop, to = from, yA = e.clientY;
+      row.classList.add("arrs");
+      const marca = () => { row.style.transform = `translateY(${yA - y0 + c.scrollTop - s0}px)`; to = altres.filter(r => { const b = r.getBoundingClientRect(); return yA > b.top + b.height / 2 }).length; altres.forEach((r, n) => { r.classList.toggle("dst", n === to); r.classList.toggle("dsb", to === altres.length && n === altres.length - 1) }) };
+      const mou = ev => { yA = ev.clientY; marca() };
+      const roda = setInterval(() => { const v = yA < 90 ? -12 : yA > innerHeight - 70 ? 12 : 0; if (v) { c.scrollBy(0, v); marca() } }, 30);
+      const fi = () => { clearInterval(roda); h.removeEventListener("pointermove", mou); h.removeEventListener("pointerup", fi); h.removeEventListener("pointercancel", fi);
+        row.classList.remove("arrs"); row.style.transform = ""; altres.forEach(r => r.classList.remove("dst", "dsb"));
+        if (to !== from) { OR.l.splice(to, 0, OR.l.splice(from, 1)[0]); desaOrdre() } };
+      h.addEventListener("pointermove", mou); h.addEventListener("pointerup", fi); h.addEventListener("pointercancel", fi);
+    });
+  })();
+  // Projectes «meus»: els que dirigeixo o escric (o sense rol posat). Els d'ajudant de direcció o script només surten a «Com a equip».
+  const rols = p => Array.isArray(p.rol) ? p.rol : p.rol ? [p.rol] : [];
+  const meu = p => { const r = rols(p); return !r.length || r.includes("Direcció") || r.includes("Guió") };
   function coleccion(cfg) {
-    const el = document.getElementById("s-" + cfg.sec); let tab = "", tab2 = "", q = "";
+    const el = document.getElementById("s-" + cfg.sec); let VIS = [], tab = "", tab2 = cfg.tabs2 && cfg.tabs2.sense ? cfg.tabs2.op[0] : "", q = "";
+    const en2 = (d, v) => !v || (cfg.tabs2.fn ? cfg.tabs2.fn(d, v) : d[cfg.tabs2.f] === v);
     const opt = d => ({ acciones: cfg.acciones, extra: cfg.extra, alCerrar: () => { if (!d.titulo && !d.texto && !d.apuntes) del(d); pintar() } });
     async function pintar() {
       const pj = cfg.perProj && window.HUBP ? window.HUBP() : "";
       const l = (await col(cfg.tipo)).filter(d => !pj || (pj === "-" ? !d.proyecto : d.proyecto === pj));
-      const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!tab2 || d[cfg.tabs2.f] === tab2) && (!q || valors(d).toLowerCase().includes(q))).sort(cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
+      const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!cfg.tabs2 || en2(d, tab2)) && (!q || valors(d).toLowerCase().includes(q))).sort(cfg.ordenable ? ((a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9) || (cfg.orden ? cfg.orden(a, b) : 0)) : cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
+      VIS = vis;
       const lista = cfg.grupos ? cfg.grupos(vis) : [["", vis]];
       await llistes();
       if (cfg.tabs) { const ops = opsDe(cfg.tabs); el.querySelector(".tabsw").innerHTML = `<div class="tabs"><button class="t ${tab ? "" : "on"}" data-k="tab" data-v="">Tots<small></small></button>${ops.map(o => `<button class="t ${tab === o ? "on" : ""}" data-k="tab" data-v="${E(o)}">${E(o)} <small></small></button>`).join("")}</div>` }
-      el.querySelectorAll('[data-k="tab"] small').forEach(x => { const v = x.parentNode.dataset.v, n = v ? l.filter(d => d[cfg.tabs.f] === v).length : l.length; x.textContent = n ? n : "" });
+      el.querySelectorAll('[data-k="tab"] small').forEach(x => { const v = x.parentNode.dataset.v, l2 = cfg.tabs2 ? l.filter(d => en2(d, tab2)) : l, n = v ? l2.filter(d => d[cfg.tabs.f] === v).length : l2.length; x.textContent = n ? n : "" });
       el.querySelector(".hl").classList.toggle("hlc", !!cfg.cartell); el.querySelector(".hl").innerHTML = vis.length ? lista.filter(g => g[1].length).map(([g, ds]) => (g ? `<h2>${E(g)} <span>${ds.length}</span></h2>` : "") + ds.map(d => { const r = cfg.fila(d); if (cfg.cartell) return `<div class="pcar" data-k="abre" data-id="${d.id}"><div class="pcim">${r.img ? `<img src="${r.img}" alt="" loading="lazy">` : `<span>${E(r.t || "Sense títol")}</span>`}</div><div class="g"><b><i class="dot" style="background:${r.c || "#c7c7cc"}"></i>${E(r.t || "Sense títol")}</b><small>${E(r.s || "")}</small></div></div>`; return `<div class="r" data-k="abre" data-id="${d.id}"><i class="dot" style="background:${r.c || "#c7c7cc"}"></i><div class="g"><b>${E(r.t || "Sense títol")}</b><small>${E(r.s || "")}</small></div></div>` }).join("")).join("") : `<p class="em">Encara no hi ha res. Prem «+ ${E(cfg.nuevo)}» per començar.</p>`;
     }
     el.innerHTML = `<div class="tabsw"></div>` +
-      `${cfg.tabs2 ? `<div class="seg" style="margin:0 0 12px"><button class="t on" data-k="tab2" data-v="">Tots</button>${cfg.tabs2.op.map(o => `<button class="t" data-k="tab2" data-v="${E(o)}">${E(o)}</button>`).join("")}</div>` : ""}<div class="bar"><input class="hq" placeholder="Cerca…"><span style="flex:1"></span><button class="b" data-k="nuevo">+ ${E(cfg.nuevo)}</button></div><div class="hl"><p class="em">Carregant…</p></div>`;
+      `${cfg.tabs2 ? `<div class="seg" style="margin:0 0 12px">${cfg.tabs2.sense ? "" : `<button class="t on" data-k="tab2" data-v="">Tots</button>`}${cfg.tabs2.op.map(o => `<button class="t ${o === tab2 ? "on" : ""}" data-k="tab2" data-v="${E(o)}">${E(o)}</button>`).join("")}</div>` : ""}<div class="bar"><input class="hq" placeholder="Cerca…"><span style="flex:1"></span>${cfg.ordenable ? `<button class="b2" data-k="ordena">Canviar l'ordre</button>` : ""}<button class="b" data-k="nuevo">+ ${E(cfg.nuevo)}</button></div><div class="hl"><p class="em">Carregant…</p></div>`;
     el.addEventListener("click", async e => {
       const b = e.target.closest("[data-k]"); if (!b) return;
       if (b.dataset.k === "tab") { tab = b.dataset.v; pintar() }
       if (b.dataset.k === "tab2") { tab2 = b.dataset.v; el.querySelectorAll('[data-k="tab2"]').forEach(x => x.classList.toggle("on", x === b)); pintar() }
       if (b.dataset.k === "abre") { const d = (await col(cfg.tipo)).find(x => x.id === b.dataset.id); if (cfg.obre) return cfg.obre(d); editar(cfg.campos, d, opt(d)) }
       if (b.dataset.k === "nuevo") nou();
+      if (b.dataset.k === "ordena") ordena(VIS.slice(), cfg, pintar);
     });
-    function nou() { const pj = cfg.perProj && window.HUBP ? window.HUBP() : ""; const d = Object.assign({ id: uid(cfg.tipo) }, cfg.defecto ? cfg.defecto() : {}, cfg.tabs && tab ? { [cfg.tabs.f]: tab } : {}, cfg.tabs2 && tab2 ? { [cfg.tabs2.f]: tab2 } : {}, pj && pj !== "-" ? { proyecto: pj } : {}); put(d, 1); editar(cfg.campos, d, opt(d)); setTimeout(() => { const i = box().querySelector("input.big"); i && i.focus() }, 50) }
+    function nou() { const pj = cfg.perProj && window.HUBP ? window.HUBP() : ""; const d = Object.assign({ id: uid(cfg.tipo) }, cfg.defecto ? cfg.defecto() : {}, cfg.tabs && tab ? { [cfg.tabs.f]: tab } : {}, cfg.tabs2 && tab2 ? (cfg.tabs2.nou ? cfg.tabs2.nou(tab2) : { [cfg.tabs2.f]: tab2 }) : {}, pj && pj !== "-" ? { proyecto: pj } : {}); put(d, 1); editar(cfg.campos, d, opt(d)); setTimeout(() => { const i = box().querySelector("input.big"); i && i.focus() }, 50) }
     el.querySelector(".hq").addEventListener("input", e => { q = e.target.value.toLowerCase(); pintar() });
     reg[cfg.tipo] = { abre: d => editar(cfg.campos, d, opt(d)), nou };
     onChange(() => { if (!el.hidden) pintar() });
@@ -200,5 +232,5 @@ window.H = (() => {
   const titols = p => [p && p.titulo, ...String((p && p.altres) || "").split(/[,;\n]/)].map(x => String(x || "").trim()).filter(x => x.length > 2);
   // Projecte que surt en un text (el títol més llarg que hi aparegui, en qualsevol dels seus títols)
   const projecteDe = (ps, text) => { const t = String(text || "").toLowerCase(); let o = null, n = 0; ps.forEach(p => titols(p).forEach(x => { if (x.length > n && t.includes(x.toLowerCase())) { o = p; n = x.length } })); return o };
-  return { pj, dePj, nou, refresca, titols, projecteDe, valors, refrescaContactes, llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
+  return { meu, rols, pj, dePj, nou, refresca, titols, projecteDe, valors, refrescaContactes, llistes, opsDe, MIG, E, api, today, addDays, fecha, uid, url, col, put, del, contactos, onChange, toast, sheet, cerrar, editar, coleccion, abrir, relacionados };
 })();

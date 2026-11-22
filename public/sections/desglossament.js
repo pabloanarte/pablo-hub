@@ -62,7 +62,7 @@
     return Object.entries(g).sort((a, b) => b[1].pag - a[1].pag);
   }
   async function pinta() {
-    const ps = await H.col("proyecto"), tot = doc.escenes.reduce((a, e) => a + aNum(e.pag), 0);
+    const ps = (await H.col("proyecto")).filter(p => H.meu(p) || p.id === doc.proyecto), tot = doc.escenes.reduce((a, e) => a + aNum(e.pag), 0);
     el.innerHTML = `<div class="bar tb"><button class="b2" data-k="torna">← Desglossaments</button><input data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol" style="max-width:320px;font-weight:700"><select data-d="proyecto" style="width:auto"><option value="">Sense projecte</option>${ps.map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select><span style="flex:1"></span><button class="b2" data-k="pdfx">PDF</button><button class="b" data-k="gt">Crear el guió tècnic</button></div>
       <div class="kpi" style="grid-template-columns:repeat(4,1fr);margin:6px 0 14px"><div><b>${doc.escenes.length}</b><small>Escenes</small></div><div><b>${vuitens(tot)}</b><small>Pàgines</small></div><div><b>${new Set(doc.escenes.map(e => e.set)).size}</b><small>Sets</small></div><div><b>${resum("pers").length}</b><small>Personatges</small></div></div>
       <div class="seg" style="margin-bottom:12px">${[["esc", "Escenes"], ["set", "Per set"], ["pers", "Per personatge"]].map(([k, l]) => `<button class="t ${vista === k ? "on" : ""}" data-k="vis" data-v="${k}">${l}</button>`).join("")}</div>

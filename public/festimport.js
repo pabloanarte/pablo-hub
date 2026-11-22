@@ -51,7 +51,7 @@ window.FIMP = (() => {
     return b ? neteja(b[1]) : neteja(t).slice(0, 80);
   }
   async function projecteDe(text) {
-    const p = H.projecteDe(await H.col("proyecto"), text);
+    const p = H.projecteDe((await H.col("proyecto")).filter(H.meu), text);
     return p ? p.id : "";
   }
 
@@ -74,7 +74,7 @@ window.FIMP = (() => {
   // ---------- 2) enganxar la llista ----------
   const COLS = { festival: /^(festival|festival name|festival title|event|event name|evento|esdeveniment|convocatoria|nombre del festival)$/i, proyecto: /^(project|project title|project name|proyecto|projecte|pel[ií]cula|pel·l[ií]cula|film|film title|obra|t[ií]tulo|t[ií]tol)$/i, data: /^(date|fecha|data|submitted|date submitted|submission date|submitted on|fecha de inscripci[oó]n)$/i, estat: /^(status|estado|estat|submission status)$/i, jutjat: /^(judging status|judging|decision|decisi[oó]n|resultado|resultat|selecci[oó]n)$/i, cost: /^(fee|entry fee|submission fee|fee paid|amount|amount paid|price|tarifa|cuota|precio|preu|import)$/i };
   async function deText(text) {
-    const ps = await H.col("proyecto"), out = [];
+    const ps = (await H.col("proyecto")).filter(H.meu), out = [];
     const prj = t => { const p = H.projecteDe(ps, t); return p ? p.id : "" };
     const afegeix = (festival, projecte, data, ...estats) => {
       const w = estats.filter(Boolean).join(" "), e = estats.map(x => deParaula(x || "")).filter(Boolean).sort((a, b) => RANG[b] - RANG[a])[0];

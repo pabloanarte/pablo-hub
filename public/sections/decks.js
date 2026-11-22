@@ -96,7 +96,7 @@
 
   // ---------- nou dossier ----------
   async function nou() {
-    const ps = await H.col("proyecto");
+    const ps = (await H.col("proyecto")).filter(H.meu);
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Nou dossier</h2>
       <label>Tipus</label><div class="seg">${Object.entries(PL).map(([k, p], i) => `<button class="t ${i ? "" : "on"}" data-nk="pl" data-v="${k}">${E(p.nom)}</button>`).join("")}</div>
       <label>Projecte (per omplir-lo amb el que ja tens)</label><select id="nd-p"><option value="">—</option>${ps.map(p => `<option value="${p.id}" ${p.id === H.pj() ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select>
@@ -122,7 +122,7 @@
     if (!doc) return; ++ver;
     if (doc.slides.some(s => s.tipus === "paleta" && s.auto) && !doc._pal) tmp(doc, "_pal", await DK.paleta(totesImgs().map(imgUrl)));
     tmp(doc, "_imgs", totesImgs());
-    const ps = await H.col("proyecto");
+    const ps = (await H.col("proyecto")).filter(p => H.meu(p) || p.id === doc.proyecto);
     el.innerHTML = `<div class="bar tb"><button class="b2" data-k="volver">← Dossiers</button><input data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol del dossier" style="flex:1;min-width:180px;max-width:360px;font-weight:700"><select data-d="proyecto" style="width:auto"><option value="">Sense projecte</option>${ps.map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select><span style="flex:1"></span><button class="b2" data-k="rev">Revisió de disseny</button><button class="b2" data-k="share">${doc.compartir && doc.compartir.actiu ? "Compartit ✓" : "Compartir"}</button><button class="b" data-k="down">Descarregar</button></div>
       <div class="bar tb sec"><button class="b2" data-k="assist">Dades per categories</button><button class="b2" data-k="addpdf">Afegir pàgines d'un PDF</button><button class="b2" data-k="dup">Duplicar (p. ex. per traduir)</button><span style="flex:1"></span><button class="del" data-k="del">Eliminar dossier</button></div>
       <div class="dkcols"><div class="dkmain"><div id="dkprev"></div><div class="dknav"><button class="b2" data-k="prev" ${sel ? "" : "disabled"}>‹</button><span>${doc.slides.length ? sel + 1 : 0} / ${doc.slides.length}</span><button class="b2" data-k="next" ${sel < doc.slides.length - 1 ? "" : "disabled"}>›</button></div>

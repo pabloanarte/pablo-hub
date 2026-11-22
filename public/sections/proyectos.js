@@ -4,14 +4,16 @@
   const CE = { "Idea": "#8e8e93", "Desenvolupament": "#ff9f0a", "Finançament": "#af52de", "Preproducció": "#5ac8fa", "Rodatge": "#ff375f", "Postproducció": "#0a84ff", "Distribució": "#30b27a", "Acabat": "#000" };
   H.coleccion({
     sec: "proyectos", tipo: "proyecto", nuevo: "Projecte",
-    tabs2: { f: "rol", op: ["Direcció", "Ajudant de direcció", "Script"] },
+    // Pestanyes: els meus projectes (direcció o guió) i a part els que he fet com a equip (ajudant de direcció, script)
+    tabs2: { f: "rol", sense: 1, op: ["Direcció i guió", "Com a equip"], fn: (d, v) => v === "Com a equip" ? !H.meu(d) : H.meu(d), nou: v => ({ rol: v === "Com a equip" ? ["Ajudant de direcció"] : ["Direcció"] }) },
+    ordenable: 1,
     tabs: { f: "categoria", llista: "proj_cat", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
     campos: [
       { f: "titulo", tipo: "titulo" },
       { f: "altres", l: "Altres títols (anglès, de treball…), separats per comes", tipo: "text", ph: "p. ex. Rave To The Grave" },
       { f: "poster", l: "Pòster", tipo: "archivos", unic: 1, ajuda: "Vertical, com un cartell. JPG o PNG, màxim 25 MB." },
       { f: "categoria", l: "Tipus de projecte", tipo: "pills", llista: "proj_cat", op: ["Llarg", "Curt", "Videoclip", "Publicitat"] },
-      { f: "rol", l: "El meu rol", tipo: "pills", op: ["Direcció", "Ajudant de direcció", "Script"], col: { "Direcció": "#000", "Ajudant de direcció": "#0a84ff", "Script": "#af52de" } },
+      { f: "rol", l: "El meu rol", tipo: "pills", multi: 1, op: ["Direcció", "Guió", "Ajudant de direcció", "Script"], col: { "Direcció": "#000", "Guió": "#000", "Ajudant de direcció": "#0a84ff", "Script": "#af52de" }, ajuda: "Si només hi ets d'ajudant de direcció o script, va a «Com a equip» i no surt als dossiers, festivals ni a la resta del hub." },
       { f: "estado", l: "Estat", tipo: "pills", op: EST, col: CE },
       { f: "anio", l: "Any", tipo: "number" },
       { f: "logline", l: "Logline", tipo: "textarea", rows: 2 },
@@ -22,7 +24,7 @@
     orden: (a, b) => EST.indexOf(a.estado) - EST.indexOf(b.estado) || (a.titulo || "").localeCompare(b.titulo || ""),
     cartell: 1,
     obre: d => window.HUB ? HUB.obreProjecte(d.id) : H.abrir("proyecto", d.id),
-    fila: d => ({ img: d.poster && d.poster[0] ? "/api/archivo/" + d.poster[0].id : "", t: d.titulo, s: [d.categoria, d.rol, d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " arxius" : " arxiu")].filter(Boolean).join(" · "), c: CE[d.estado] }),
+    fila: d => ({ img: d.poster && d.poster[0] ? "/api/archivo/" + d.poster[0].id : "", t: d.titulo, s: [d.categoria, H.rols(d).join(", "), d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " arxius" : " arxiu")].filter(Boolean).join(" · "), c: CE[d.estado] }),
     extra: d => H.relacionados(d.id)
   });
   // Documents que no són de cap projecte (dossiers, guions, plans, calendaris…): s'hi entra com si fos un projecte més
