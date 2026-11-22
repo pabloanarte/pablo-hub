@@ -148,7 +148,7 @@
         <div class="ls" style="gap:12px">${finp("adreca", "Adreça fiscal")}</div>
         <div class="ls" style="gap:12px">${finp("email", "Correu", "email", "pablo.anarte.film@gmail.com")}${finp("tel", "Telèfon", "tel")}</div>
         <div class="ls" style="gap:12px">${finp("iban", "IBAN")}</div>
-        <div class="ls" style="gap:12px">${finp("iva", "IVA per defecte (%)", "number", "21")}${finp("irpf", "IRPF per defecte (%)", "number", "15")}</div>
+        <div class="ls" style="gap:12px">${finp("iva", "IVA per defecte (%)", "number", "0")}${finp("irpf", "IRPF per defecte (%)", "number", "15")}</div>
         <div class="ls" style="gap:12px">${finp("prefix", "Prefix del número", "text", "2026-")}${finp("seguent", "Següent número", "number", "1")}</div>
       </div>`;
   }

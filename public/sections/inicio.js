@@ -65,7 +65,7 @@
     posa("iclas", card("Classes", "docencia", l.map(({ c, x }) => { const vv = (x.vis || []).map(id => vs.find(v => v.id === id)).filter(Boolean);
       return `<div class="m" style="padding:8px 0"><b>${x.data === hoy ? "Avui" : "Demà"}${x.hora ? " · " + E(x.hora) + (x.horafi ? "–" + E(x.horafi) : "") : ""} · ${E(c.titulo || "Curs")}</b>${x.tema ? `<div>${E(x.tema)}</div>` : ""}
         <div class="ls" style="margin-top:6px">${(x.arxius || []).map(a => `<a class="ln" href="/api/archivo/${E(a.id)}" target="_blank">${E(a.nombre)}</a>`).join("")}${vv.map(v => `<a class="ln" href="${E(v.url)}" target="_blank">▶ ${E(v.titulo || "Visionat")}</a>`).join("")}${!(x.arxius || []).length && !vv.length ? `<span class="em">Encara no hi ha material${x.data === dm ? " per demà" : ""}.</span>` : ""}</div>
-        <div class="ls" style="margin-top:6px"><button class="b2" data-cls="${c.id}">Obrir el curs</button>${(x.arxius || []).length || vv.length ? `<button class="b2" data-env="${c.id}|${x.id}">Enviar el material</button>` : ""}</div></div>` }).join("")));
+        <div class="ls" style="margin-top:6px"><button class="b2" data-cls="${c.id}">Obrir el curs</button></div></div>` }).join("")));
   }
   // Escriptura: pàgines aquesta setmana
   async function escriptura() {
@@ -131,7 +131,6 @@
     const sg = e.target.closest("[data-seg]"); if (sg) return seguiment(sg.dataset.seg);
     if (e.target.closest("[data-fest]")) { fcache = null; return FIMP.revisaCorreu((await FIMP.pendents(21)).r) }
     const cl = e.target.closest("[data-cls]"); if (cl) { hubShow("docencia"); return window.DOC && DOC.curs(cl.dataset.cls) }
-    const en = e.target.closest("[data-env]"); if (en) { const [cid, sid] = en.dataset.env.split("|"); return window.DOC && DOC.enviaMaterial && DOC.enviaMaterial(cid, sid) }
     const es = e.target.closest("[data-esc]"); if (es) { const v = +document.getElementById("iescp").value; if (!(v >= 0) || document.getElementById("iescp").value === "") return document.getElementById("iescp").focus(); const o = (await aj("ajust:escriptura")) || { id: "ajust:escriptura", log: [] }; o.log = (o.log || []).filter(x => !(x.proj === es.dataset.esc && x.d === today())).concat({ proj: es.dataset.esc, d: today(), p: v }); await H.put(o, 1); H.toast("Apuntat"); return }
     const vn = e.target.closest("[data-vnova],[data-vvist]"); if (vn) { const v = await aj("ajust:vigila"), x = v && v.llista.find(y => y.id === (vn.dataset.vnova || vn.dataset.vvist)); if (!x) return; x.vist = true; await H.put(v, 1);
       if (vn.dataset.vnova) { const d = { id: H.uid("convocatoria"), titulo: x.nom, tipo: "Lab / residència", estado: "Per presentar", web: x.url }; await H.put(d, 1); hubShow("festivales"); H.abrir("convocatoria", d.id) } return }

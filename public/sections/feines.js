@@ -45,7 +45,7 @@
     if (["Confirmat", "Fet", "Pressupostat"].includes(d.estado)) d.estado = "Facturat";
     await H.put(d, 1);
     const pc = (v, def) => v === "" || v == null ? +def || 0 : +v;
-    const iva = pc(d.iva, cfg.iva === "" || cfg.iva == null ? 21 : cfg.iva), irpf = pc(d.irpf, cfg.irpf === "" || cfg.irpf == null ? 15 : cfg.irpf), qi = base * iva / 100, qr = base * irpf / 100, tot = base + qi - qr;
+    const iva = pc(d.iva, cfg.iva === "" || cfg.iva == null ? 0 : cfg.iva), irpf = pc(d.irpf, cfg.irpf === "" || cfg.irpf == null ? 15 : cfg.irpf), qi = base * iva / 100, qr = base * irpf / 100, tot = base + qi - qr;
     const lin = +d.jornades && +d.tarifa && !+d.total ? `${d.jornades} ${+d.jornades === 1 ? "jornada" : "jornades"} × ${eur(+d.tarifa)}` : "";
     const nl = t => E(t || "").replace(/\n/g, "<br>");
     const td = "padding:8px 0;border-bottom:1px solid #ddd";
@@ -57,7 +57,7 @@
       <tr><td style="${td}">${E(d.rol || "")}${d.titulo ? " · " + E(d.titulo) : ""}${d.ini ? `<br><span style="color:#666">${E(H.fecha(d.ini))}${d.fin && d.fin !== d.ini ? " – " + E(H.fecha(d.fin)) : ""}${lin ? " · " + lin : ""}</span>` : lin ? `<br><span style="color:#666">${lin}</span>` : ""}</td><td style="text-align:right;${td}">${eur(base)}</td></tr></table>
       <table style="width:60%;margin-left:40%;border-collapse:collapse;margin-top:6mm">
         <tr><td style="padding:4px 0">Base imposable</td><td style="text-align:right">${eur(base)}</td></tr>
-        <tr><td style="padding:4px 0">IVA ${iva}%</td><td style="text-align:right">${eur(qi)}</td></tr>
+        ${iva ? `<tr><td style="padding:4px 0">IVA ${iva}%</td><td style="text-align:right">${eur(qi)}</td></tr>` : ""}
         ${irpf ? `<tr><td style="padding:4px 0">Retenció IRPF ${irpf}%</td><td style="text-align:right">−${eur(qr)}</td></tr>` : ""}
         <tr><td style="padding:8px 0;border-top:2px solid #000;font-weight:700">Total</td><td style="text-align:right;border-top:2px solid #000;font-weight:700">${eur(tot)}</td></tr></table>
       ${cfg.iban ? `<div style="margin-top:14mm">Pagament per transferència a l'IBAN <b>${E(cfg.iban)}</b></div>` : ""}</div>`, false);
