@@ -328,8 +328,15 @@ async function drecera(t, request, db) {
   const avui = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
   const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'c\\_%' ESCAPE '\\'").all();
   const tipus = ["Productora", "Artista", "Mànager"].includes(q.get("t")) ? q.get("t") : "";
+  const resp = q.get("r") !== null; // «Ha respost al hub»: ?r=1&u=perfil
   let c = null;
   for (const x of results) { try { const o = JSON.parse(x.data); if (norm(o.ig) === usr) { c = { ...o, id: x.id }; break } } catch (e) { } }
+  if (c && resp) {
+    const ja = c.estado === "Ha respost"; c.estado = "Ha respost"; if (tipus && !c.tipo) c.tipo = tipus;
+    c.resp = avui;
+    await db.prepare("UPDATE docs SET data=?1,updated=?2 WHERE id=?3").bind(JSON.stringify(c), Date.now(), c.id).run();
+    return txt(ja ? `${c.nombre || "@" + usr} ja estava com a «Ha respost»` : `✓ ${c.nombre || "@" + usr}: ha respost`);
+  }
   if (c) {
     const msgs = Array.isArray(c.msgs) ? c.msgs : [];
     if (!msgs.some(x => x && x.d === avui && x.v === "Instagram")) msgs.push({ d: avui, v: "Instagram", t: "" });
@@ -338,9 +345,9 @@ async function drecera(t, request, db) {
     return txt(`✓ ${c.nombre || "@" + usr}: contactat avui`);
   }
   const id = "c_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const n = { id, nombre: "@" + usr, persona: "", tipo: tipus || "Artista", estado: "Contactat", motivos: [], email: "", ig: "@" + usr, tel: "", web: "", dir: "", man: "", manId: "", notas: "Afegit des de la drecera d'Instagram.", msgs: [{ d: avui, v: "Instagram", t: "" }] };
+  const n = { id, nombre: "@" + usr, persona: "", tipo: tipus || "Artista", estado: resp ? "Ha respost" : "Contactat", motivos: [], email: "", ig: "@" + usr, tel: "", web: "", dir: "", man: "", manId: "", notas: "Afegit des de la drecera d'Instagram.", msgs: resp ? [] : [{ d: avui, v: "Instagram", t: "" }], ...(resp ? { resp: avui } : {}) };
   await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(n), Date.now()).run();
-  return txt(`✓ @${usr} afegit a Contactes com a contactat avui`);
+  return txt(resp ? `✓ @${usr} afegit a Contactes com a «Ha respost»` : `✓ @${usr} afegit a Contactes com a contactat avui`);
 }
 // ---------- enllaços públics d'arxius (material per als alumnes, resum diari) ----------
 async function signa(db, id) {

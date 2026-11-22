@@ -15,6 +15,7 @@
       <div class="card"><h3>Dreceres de l'iPhone</h3>
         <p class="em" style="margin-top:0">Tres dreceres per a l'app <b>Atajos</b>. Totes fan servir el mateix enllaç secret, amb un final diferent:</p>
         <div class="m"><b>Contactat al hub</b> (Instagram): acaba en <code>?u=</code> <button class="b2" data-k="drcpu" style="margin-left:6px">Copiar</button></div>
+        <div class="m"><b>Ha respost al hub</b> (Instagram): acaba en <code>?r=1&amp;u=</code> <button class="b2" data-k="drcpr" style="margin-left:6px">Copiar</button></div>
         <div class="m"><b>Apunta al hub</b> (Siri): acaba en <code>?x=</code> <button class="b2" data-k="drcpx" style="margin-left:6px">Copiar</button></div>
         <div class="m"><b>Guardar visionat</b> (YouTube o Vimeo): acaba en <code>?v=</code> <button class="b2" data-k="drcpv" style="margin-left:6px">Copiar</button></div>
         <details style="margin-top:10px"><summary class="em" style="cursor:pointer">«Apunta al hub» amb Siri</summary><ol class="pasos">
@@ -24,6 +25,10 @@
           <li>Acció <b>«Texto»</b>: enganxa l'enllaç que acaba en <b>?x=</b> i, just darrere, toca <b>«Texto codificado»</b> (o «URL codificada») a la tira de sobre el teclat.</li>
           <li>Acció <b>«Abrir URL»</b> amb <b>«Texto»</b>. Desa.</li>
           <li>El que dictis queda com a tasca per avui. Si comences per «idea…», va a Idees.</li></ol></details>
+        <details style="margin-top:8px"><summary class="em" style="cursor:pointer">«Ha respost al hub» quan et contesten per Instagram</summary><ol class="pasos">
+          <li>Fes un duplicat de «Contactat al hub» (mantén-la premuda → «Duplicar») i posa-li de nom <b>Ha respost al hub</b>.</li>
+          <li>On hi ha l'enllaç (el bloc <b>«Texto»</b>, o «Abrir URL» si el vas posar allà), canvia el final <b>?u=</b> per <b>?r=1&amp;u=</b>. La burbuja «Direcciones URL» es queda darrere.</li>
+          <li>Quan algú et contesti: al seu perfil, ⋯ → «Compartir este perfil» → «Ha respost al hub». Passa a «Ha respost» i deixa de sortir als seguiments.</li></ol></details>
         <details style="margin-top:8px"><summary class="em" style="cursor:pointer">«Guardar visionat» des de YouTube o Vimeo</summary><ol class="pasos">
           <li>Fes un duplicat de «Contactat al hub» (mantén-la premuda → «Duplicar») i posa-li de nom <b>Guardar visionat</b>.</li>
           <li>On hi ha l'enllaç (el bloc <b>«Texto»</b>, o «Abrir URL» si el vas posar allà), canvia el final <b>?u=</b> per <b>?v=</b>. La burbuja «Direcciones URL» es queda darrere.</li>
@@ -161,6 +166,7 @@
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
     const cp = async (fi, txt) => { try { await navigator.clipboard.writeText(txt); H.toast("Copiat") } catch (er) { prompt("Copia l'enllaç:", txt) } };
+    if (k === "drcpr") { const u = (document.getElementById("dru") || {}).value || ""; return cp(0, u.replace(/\?u=$/, "?r=1&u=")) }
     if (k === "drcpx" || k === "drcpv" || k === "drcpu") { const u = (document.getElementById("dru") || {}).value || ""; return cp(0, k === "drcpu" ? u : u.replace(/\?u=$/, k === "drcpx" ? "?x=" : "?v=")) }
     if (k === "diari" || k === "vigila") {
       const st = document.getElementById(k === "diari" ? "diaris" : "vgs"); st.textContent = "Un moment…"; b.disabled = true;
