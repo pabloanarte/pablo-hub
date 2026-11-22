@@ -42,11 +42,11 @@
           <div class="ls" style="margin-top:14px"><button class="b" data-k="edita">Editar la fitxa</button>${(p.altres || "").trim() ? `<span class="em">També: ${E(p.altres)}</span>` : ""}</div>
         </div></div>
       <div class="dash" style="margin-top:20px">
-        <div class="card w2"><h3>Properes dates</h3>${prop.length ? prop.map(d => `<div class="m"><b style="display:inline-block;min-width:92px">${E(H.fecha(d[0]))}</b><span class="em">${E(d[1])}</span> · ${E(d[2] || "")}</div>`).join("") : `<p class="em">Res als propers dos mesos.</p>`}</div>
+        <div class="card w2"><h3>Properes dates</h3>${prop.length ? prop.map(d => `<div class="m pdt"><b>${E(H.fecha(d[0]))}</b><span><span class="em">${E(d[1])}</span> · ${E(d[2] || "")}</span></div>`).join("") : `<p class="em">Res als propers dos mesos.</p>`}</div>
         ${targ("festivales", "Festivals", fp.length, fp.length ? `${sel.length} ${sel.length === 1 ? "selecció" : "seleccions"}${prem.length ? ` · ${prem.length} ${prem.length === 1 ? "premi" : "premis"}` : ""}${pend.length ? ` · ${pend.length} sense decidir` : ""}` : "Encara cap inscripció")}
         ${["Llarg", "Curt"].includes(p.categoria) ? targ("desenvolupament", "Desenvolupament", vers.length, vers[0] ? `última: ${[vers[0].tipus, vers[0].versio].filter(Boolean).join(" ")}${vers[0].data ? " · " + H.fecha(vers[0].data) : ""}` : "Cap versió apuntada") : ""}
         ${targ("decks", "Dossiers", de(dks).length, de(dks).map(x => x.titulo).filter(Boolean).slice(0, 2).join(", ") || "Cap dossier encara")}
-        ${targ("guio", "Guió i pla", gt.length + plans.length, [de(ds).length && de(ds).length + " desglossaments", gt.length && gt.length + " guions tècnics", jorn && jorn + " jornades"].filter(Boolean).join(" · ") || "Res encara")}
+        ${targ("guio", "Guió i pla", gt.length + plans.length, [de(ds).length && de(ds).length + (de(ds).length === 1 ? " desglossament" : " desglossaments"), gt.length && gt.length + (gt.length === 1 ? " guió tècnic" : " guions tècnics"), jorn && jorn + (jorn === 1 ? " jornada" : " jornades")].filter(Boolean).join(" · ") || "Res encara")}
         ${targ("equip", "Equip", eq.length, eq.slice(0, 3).map(x => (pers.find(y => y.id === x.id) || {}).titulo).filter(Boolean).join(", ") || "Ningú encara")}
       </div>
       ${p.notas ? `<div class="card" style="margin-top:16px"><h3>Notes</h3><div style="white-space:pre-wrap;line-height:1.5">${E(p.notas)}</div></div>` : ""}`;

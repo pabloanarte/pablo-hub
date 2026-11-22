@@ -14,18 +14,19 @@
       </div>
       <div class="card"><h3>Dreceres de l'iPhone</h3>
         <p class="em" style="margin-top:0">Tres dreceres per a l'app <b>Atajos</b>. Totes fan servir el mateix enllaç secret, amb un final diferent:</p>
-        <div class="m"><b>Contactat al hub</b> (Instagram): acaba en <code>?u=</code></div>
-        <div class="m"><b>Apunta al hub</b> (Siri): acaba en <code>?x=</code> <button class="t" data-k="drcpx" style="margin-left:6px">Copiar</button></div>
-        <div class="m"><b>Guardar visionat</b> (YouTube o Vimeo): acaba en <code>?v=</code> <button class="t" data-k="drcpv" style="margin-left:6px">Copiar</button></div>
+        <div class="m"><b>Contactat al hub</b> (Instagram): acaba en <code>?u=</code> <button class="b2" data-k="drcpu" style="margin-left:6px">Copiar</button></div>
+        <div class="m"><b>Apunta al hub</b> (Siri): acaba en <code>?x=</code> <button class="b2" data-k="drcpx" style="margin-left:6px">Copiar</button></div>
+        <div class="m"><b>Guardar visionat</b> (YouTube o Vimeo): acaba en <code>?v=</code> <button class="b2" data-k="drcpv" style="margin-left:6px">Copiar</button></div>
         <details style="margin-top:10px"><summary class="em" style="cursor:pointer">«Apunta al hub» amb Siri</summary><ol class="pasos">
           <li>Atajos → <b>+</b> → nom <b>Apunta al hub</b> (és el que diràs a Siri: «Oye Siri, apunta al hub»).</li>
           <li>Acció <b>«Dictar texto»</b>.</li>
-          <li>Acció <b>«Texto»</b>: enganxa l'enllaç que acaba en <b>?x=</b> i, just darrere, toca <b>«Texto dictado»</b> a la tira de sobre el teclat.</li>
+          <li>Acció <b>«Codificar URL»</b> amb <b>«Texto dictado»</b> (així els espais i els accents arriben bé).</li>
+          <li>Acció <b>«Texto»</b>: enganxa l'enllaç que acaba en <b>?x=</b> i, just darrere, toca <b>«Texto codificado»</b> (o «URL codificada») a la tira de sobre el teclat.</li>
           <li>Acció <b>«Abrir URL»</b> amb <b>«Texto»</b>. Desa.</li>
-          <li>Ho que dictis queda com a tasca per avui. Si comences per «idea…», va a Idees.</li></ol></details>
+          <li>El que dictis queda com a tasca per avui. Si comences per «idea…», va a Idees.</li></ol></details>
         <details style="margin-top:8px"><summary class="em" style="cursor:pointer">«Guardar visionat» des de YouTube o Vimeo</summary><ol class="pasos">
           <li>Fes un duplicat de «Contactat al hub» (mantén-la premuda → «Duplicar») i posa-li de nom <b>Guardar visionat</b>.</li>
-          <li>Al bloc <b>«Texto»</b>, canvia el final <b>?u=</b> per <b>?v=</b> (la burbuja «Direcciones URL» es queda darrere).</li>
+          <li>On hi ha l'enllaç (el bloc <b>«Texto»</b>, o «Abrir URL» si el vas posar allà), canvia el final <b>?u=</b> per <b>?v=</b>. La burbuja «Direcciones URL» es queda darrere.</li>
           <li>A YouTube o Vimeo: Compartir → «Guardar visionat». Queda a Docència → Visionats amb títol i miniatura; després hi tries l'exercici.</li></ol></details>
         <h3 style="margin-top:18px">Drecera d'Instagram</h3>
         <p class="em">Quan escriguis a algú per Instagram per feina: al seu perfil, ⋯ → «Compartir este perfil» → «Contactat al hub». Si ja és a Contactes, queda marcat com a contactat avui; si no, s'hi afegeix.</p>
@@ -160,7 +161,7 @@
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
     const cp = async (fi, txt) => { try { await navigator.clipboard.writeText(txt); H.toast("Copiat") } catch (er) { prompt("Copia l'enllaç:", txt) } };
-    if (k === "drcpx" || k === "drcpv") { const u = (document.getElementById("dru") || {}).value || ""; return cp(0, u.replace(/\?u=$/, k === "drcpx" ? "?x=" : "?v=")) }
+    if (k === "drcpx" || k === "drcpv" || k === "drcpu") { const u = (document.getElementById("dru") || {}).value || ""; return cp(0, k === "drcpu" ? u : u.replace(/\?u=$/, k === "drcpx" ? "?x=" : "?v=")) }
     if (k === "diari" || k === "vigila") {
       const st = document.getElementById(k === "diari" ? "diaris" : "vgs"); st.textContent = "Un moment…"; b.disabled = true;
       try { const r = await H.api("POST", "correu/" + k, {}); st.textContent = k === "diari" ? (r.buit ? "Avui no hi ha res, no s'ha enviat." : "Enviat. Mira el correu.") : `Fet: ${r.revisades || 0} pàgines revisades.`; if (k === "vigila") setTimeout(pintar, 800) }

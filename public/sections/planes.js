@@ -37,7 +37,7 @@
 
   // ---------- generador desde guion técnico ----------
   async function generar(gtId) {
-    const gs = await H.col("gt");
+    const gs = (await H.col("gt")).filter(g => g.id === gtId || H.dePj(g));
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Crear pla de rodatge</h2>
       <p class="em" style="margin-top:0">Ordeno els plans per set, després per eix de càmera (angulació/posició) i de pla obert a tancat, reparteixo les jornades i hi afegeixo canvis de set, dinar i wrap. Després pots ajustar-ho tot a mà.</p>
       <label>Guió tècnic</label><select id="g-gt">${gs.map(g => `<option value="${g.id}" ${g.id === gtId ? "selected" : ""}>${E(g.titulo || "Sense títol")}</option>`).join("")}</select>
@@ -206,7 +206,7 @@
   function exportarPDF() {
     R.pdf(doc.dias.map((d, di) => {
       const hs = horas(d), bl = bloques(d, hs), [t, s] = cab(d, di);
-      return `<div class="pz" style="${di < doc.dias.length - 1 ? "page-break-after:always" : ""}"><p style="text-align:center;margin:0;font-size:9px">${R.t("pdr")}</p><div class="band" style="background:#000;color:#fff;font-size:16px;font-style:italic">${E(t)}</div><div class="band" style="background:#fff">${E(s)}</div>${doc.ad ? `<p style="font-size:9px;margin:2px 0">${R.t("ad")}: ${E(doc.ad)}</p>` : ""}` +
+      return `<div class="pz" style="${di < doc.dias.length - 1 ? "page-break-after:always" : ""}"><p style="text-align:center;margin:0;font-size:9px">${R.t("pdr")}</p><div class="band" style="background:#000;color:#fff;font-size:16px">${E(t)}</div><div class="band" style="background:#fff">${E(s)}</div>${doc.ad ? `<p style="font-size:9px;margin:2px 0">${R.t("ad")}: ${E(doc.ad)}</p>` : ""}` +
         (d.calls || "").split("\n").filter(x => x.trim()).map(c => `<div class="band" style="background:${BANDA.call}">${E(c)}</div>`).join("") + `<div class="band" style="background:${BANDA.ready}">${R.t("ready")}: ${E(d.ready || "")}</div>` +
         `<table><thead><tr><th>${R.t("horario")}</th><th>${R.t("hora")}</th>${COLS.map(c => `<th>${E(lb(c))}</th>`).join("")}<th>✓</th></tr></thead><tbody>` +
         d.filas.map((f, i) => f.tipo !== "plano" ? `<tr><td colspan="${COLS.length + 3}" class="band" style="background:${BANDA[f.tipo]};${f.tipo === "wrap" ? "color:#fff" : ""}">${hb(f, hs[i])}${E(txt(f))}</td></tr>`

@@ -45,10 +45,13 @@ function resumFil(t) {
   };
 }
 
+// respostes automàtiques (fora de l'oficina, vacances…): no compten com a resposta
+const AUTO = /(out of office|fuera de la oficina|fora de l'oficina|automatic reply|auto-?reply|respuesta autom|resposta autom|r[ée]ponse automatique|absence|vacaciones|vacances|delivery status|undeliverable|no se ha podido entregar)/i;
 const ACCIONS = {
   calendari: () => sincronitzaCal(),
   vigila: () => vigila(),
-  diari: () => resumDiari(),
+  // «Enviar-me'l ara»: compta com el resum del dia (no n'arribarà un altre a les 8:30)
+  diari: () => { const r = resumDiari(); if (r && !r.buit) PropertiesService.getScriptProperties().setProperty("RESUM_DIA", Utilities.formatDate(new Date(), "Europe/Madrid", "yyyy-MM-dd")); return r },
   // llista de fils: q amb la sintaxi de Gmail (in:inbox, in:sent, from:…)
   llista(q) {
     const max = Math.min(+q.max || 30, 60);
@@ -100,7 +103,7 @@ const ACCIONS = {
     const cs = (q.correus || []).map(x => String(x).toLowerCase()).filter(x => /@/.test(x)).slice(0, 150), de = {}, a = {};
     for (let i = 0; i < cs.length; i += 30) {
       const g = cs.slice(i, i + 30).join(" OR ");
-      GmailApp.search("from:(" + g + ") newer_than:120d", 0, 100).forEach(t => t.getMessages().forEach(m => { const k = adreça(m.getFrom()); const d = m.getDate().toISOString(); if (cs.indexOf(k) >= 0 && (!de[k] || de[k] < d)) de[k] = d }));
+      GmailApp.search("from:(" + g + ") newer_than:120d", 0, 100).forEach(t => t.getMessages().forEach(m => { const k = adreça(m.getFrom()); const d = m.getDate().toISOString(); if (AUTO.test(m.getSubject() || "")) return; if (cs.indexOf(k) >= 0 && (!de[k] || de[k] < d)) de[k] = d }));
       GmailApp.search("in:sent to:(" + g + ") newer_than:365d", 0, 100).forEach(t => t.getMessages().forEach(m => { const d = m.getDate().toISOString(); m.getTo().split(",").map(adreça).forEach(k => { if (cs.indexOf(k) >= 0 && (!a[k] || a[k] < d)) a[k] = d }) }));
     }
     return { de, a, nollegits: GmailApp.getInboxUnreadCount() };
@@ -245,12 +248,17 @@ function sincronitzaCal() {
 }
 
 // ---------- Feines periòdiques (van amb l'activador de cada 5 minuts) ----------
-// Resum d'avui per correu a les 8:30 (hora de Madrid) i, els dilluns a partir de les 9, revisió de les convocatòries vigilades.
+// Resum d'avui per correu a les 8:30 (hora de Madrid) i, els dilluns a partir de les 8, revisió de les convocatòries vigilades.
 function feinesPeriodiques() {
   const p = PropertiesService.getScriptProperties(), ara = new Date();
   const dia = Utilities.formatDate(ara, "Europe/Madrid", "yyyy-MM-dd"), hm = Utilities.formatDate(ara, "Europe/Madrid", "HH:mm"), dsem = Utilities.formatDate(ara, "Europe/Madrid", "u");
-  if (hm >= "08:30" && hm < "13:00" && p.getProperty("RESUM_DIA") !== dia) { p.setProperty("RESUM_DIA", dia); resumDiari() }
-  if (dsem === "1" && hm >= "09:00" && p.getProperty("VIGILA_DIA") !== dia) { p.setProperty("VIGILA_DIA", dia); vigila() }
+  // el vigilant va primer (dilluns a partir de les 8:00) perquè els canvis surtin al resum de les 8:30
+  if (dsem === "1" && hm >= "08:00" && p.getProperty("VIGILA_DIA") !== dia) { p.setProperty("VIGILA_DIA", dia); try { vigila() } catch (e) { } }
+  // el dia només es marca com a fet quan el resum ha sortit bé; si falla, ho torna a provar al cap de 5 minuts (fins a les 13:00)
+  if (hm >= "08:30" && hm < "13:00" && p.getProperty("RESUM_DIA") !== dia) {
+    const lk = LockService.getUserLock(); if (!lk.tryLock(1000)) return; // si ja n'hi ha un enviant-se, no en surten dos
+    try { if (p.getProperty("RESUM_DIA") !== dia) { resumDiari(); p.setProperty("RESUM_DIA", dia) } } finally { lk.releaseLock() }
+  }
 }
 function cridaHub(ruta, cos) {
   const clau = PropertiesService.getScriptProperties().getProperty("CLAU");

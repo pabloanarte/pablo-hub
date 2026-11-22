@@ -78,6 +78,7 @@ async function pintaSub() {
   document.getElementById("sdesc").textContent = p ? [p.categoria, p.rol, p.estado].filter(Boolean).join(" · ") : "Documents que no són de cap projecte";
   sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${PTABS.filter(t => P !== "-" || !["resum", "equip", "arxius", "desenvolupament"].includes(t[0])).map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
    (PT === "guio" ? `<div class="seg" style="margin:0 0 14px">${GUIO.map(t => `<button class="t ${ACT === t[0] ? "on" : ""}" data-sec="${t[0]}">${t[1]}</button>`).join("")}</div>` : "");
+  { const on = sub.querySelector(".ptabs .on"); if (on) { const t = on.parentElement; t.scrollLeft = on.offsetLeft - (t.clientWidth - on.offsetWidth) / 2 } }
   sub.hidden = false; return;
  }
  const gr = GRUPS.find(x => x.id === g) || GRUPS[0];
@@ -88,7 +89,7 @@ function show(id, o) {
  o = o || {};
  if (!SECTIONS.some(s => s.id === id)) id = "inicio";
  if (o.proj !== undefined) P = o.proj;
- else if (!o.dins) P = ""; // anar a qualsevol altra part del hub tanca el projecte obert
+ else if (!o.dins && !(P && GUIO.some(t => t[0] === id))) P = ""; // anar a qualsevol altra part del hub tanca el projecte obert (dins de «Guió i pla» s'hi queda)
  ACT = id;
  const s = SECTIONS.find(x => x.id === id);
  SECTIONS.forEach(x => { document.getElementById("s-" + x.id).hidden = x.id !== id });
@@ -162,7 +163,7 @@ async function contar() {
 document.getElementById("gq").addEventListener("keydown", async e => {
  if (e.key !== "Enter" || !e.target.value.trim()) return;
  const q = e.target.value.trim().toLowerCase(), E = H.E, txt = d => H.valors(d).toLowerCase();
- const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Brainstorm"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["feina", "Feines"], ["desg", "Desglossament", "desglossament"], ["curs", "Cursos"], ["visionat", "Visionats"]];
+ const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Idees"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["feina", "Diners"], ["desg", "Desglossament", "desglossament"], ["curs", "Cursos"], ["visionat", "Visionats"]];
  const ls = await Promise.all(T.map(([t]) => H.col(t))), cs = await H.contactos();
  const data = (t, d) => t === "convocatoria" ? (d.limite ? "Límit " + H.fecha(d.limite) : "") : t === "pre" || t === "post" ? H.fecha(d.ini) : t === "pdr" ? (d.dias && d.dias[0] && d.dias[0].fecha ? H.fecha(d.dias[0].fecha) : "") : d.fecha ? H.fecha(d.fecha) : "";
  let h = `<h2 style="margin-top:0">Resultats de «${E(q)}»</h2>`, n = 0;

@@ -37,14 +37,15 @@
   // Factura numerada en PDF amb IVA i IRPF. Les dades fiscals són a Configuració → «Dades per a les factures».
   async function factura(d) {
     const cfg = (await H.col("ajust")).find(x => x.id === "ajust:factura") || { id: "ajust:factura" };
-    if (!cfg.nom || !cfg.nif) { H.toast("Primer omple les teves dades a Configuració → Dades per a les factures"); return hubShow("ajustos") }
+    if (!cfg.nom || !cfg.nif) { H.toast("Primer omple les teves dades a Configuració → Dades per a les factures"); H.cerrar(); return hubShow("ajustos") }
+    if (!String(d.client || d.productora || "").trim()) return H.toast("Posa les dades del client (o la productora) per a la factura");
     const base = total(d); if (!base) return H.toast("Posa la tarifa i les jornades, o el total");
-    if (!d.factura) { const n = +cfg.seguent || 1; d.factura = (cfg.prefix ?? (H.today().slice(0, 4) + "-")) + String(n).padStart(3, "0"); cfg.seguent = n + 1; await H.put(cfg, 1) }
+    if (!d.factura) { const n = +cfg.seguent || 1; d.factura = (String(cfg.prefix || "").trim() || H.today().slice(0, 4) + "-") + String(n).padStart(3, "0"); cfg.seguent = n + 1; await H.put(cfg, 1) }
     if (!d.facturat) d.facturat = H.today();
     if (["Confirmat", "Fet", "Pressupostat"].includes(d.estado)) d.estado = "Facturat";
     await H.put(d, 1);
     const pc = (v, def) => v === "" || v == null ? +def || 0 : +v;
-    const iva = pc(d.iva, cfg.iva ?? 21), irpf = pc(d.irpf, cfg.irpf ?? 15), qi = base * iva / 100, qr = base * irpf / 100, tot = base + qi - qr;
+    const iva = pc(d.iva, cfg.iva === "" || cfg.iva == null ? 21 : cfg.iva), irpf = pc(d.irpf, cfg.irpf === "" || cfg.irpf == null ? 15 : cfg.irpf), qi = base * iva / 100, qr = base * irpf / 100, tot = base + qi - qr;
     const lin = +d.jornades && +d.tarifa && !+d.total ? `${d.jornades} ${+d.jornades === 1 ? "jornada" : "jornades"} × ${eur(+d.tarifa)}` : "";
     const nl = t => E(t || "").replace(/\n/g, "<br>");
     const td = "padding:8px 0;border-bottom:1px solid #ddd";

@@ -296,7 +296,7 @@ async function drecera(t, request, db) {
   // «Apunta al hub» (Siri): ?x=text → tasca per avui; si comença per «idea», va a Idees
   if (q.get("x") !== null) {
     let x = String(q.get("x") || "").trim().slice(0, 300); if (!x) return txt("No ha arribat cap text.", 400);
-    const idea = /^idea[\s,:.-]+/i.test(x); x = x.replace(/^(idea|tasca)[\s,:.-]+/i, "").trim(); x = x[0].toUpperCase() + x.slice(1);
+    const idea = /^idea[\s,:.-]+/i.test(x); x = x.replace(/^(idea|tasca)[\s,:.-]+/i, "").trim(); if (!x) return txt("No ha arribat cap text.", 400); x = x[0].toUpperCase() + x.slice(1);
     const id = (idea ? "idea:" : "tarea:") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(idea ? { titulo: x, fecha: avuiM, texto: "" } : { titulo: x, fecha: avuiM, hecha: false, proyecto: "" }), Date.now()).run();
     return txt(idea ? `✓ Idea apuntada: ${x}` : `✓ Tasca per avui: ${x}`);
@@ -362,7 +362,7 @@ async function pontDiari(request, db, j) {
   if (!await clauPont(request, db)) return j({ error: "no" }, 403);
   const b = await request.json().catch(() => ({})) || {};
   const avui = diaMadrid(), base = new URL(request.url).origin;
-  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'curs:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'convocatoria:%' OR id LIKE 'proyecto:%' OR id LIKE 'visionat:%' OR id = 'ajust:vigila' OR id = 'ajust:objectius' OR (id LIKE 'c\_%' ESCAPE '\')").all();
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'curs:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'convocatoria:%' OR id LIKE 'proyecto:%' OR id LIKE 'visionat:%' OR id = 'ajust:vigila' OR id = 'ajust:objectius' OR substr(id,1,2)='c_'").all();
   const D = {}; for (const r of results) { try { const o = JSON.parse(r.data); o.id = r.id; const t = r.id.startsWith("c_") ? "c" : r.id.split(":")[0]; (D[t] = D[t] || []).push(o) } catch (e) { } }
   const L = t => D[t] || [], esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const pn = id => (L("proyecto").find(x => x.id === id) || {}).titulo || "";
@@ -375,7 +375,7 @@ async function pontDiari(request, db, j) {
     const mats = [];
     for (const a of (s.arxius || [])) mats.push(`<a href="${base}/api/public/arxiu/${a.id}/${await signa(db, a.id)}">${esc(a.nombre)}</a>`);
     for (const vid of (s.vis || [])) { const v = L("visionat").find(x => x.id === vid); if (v) mats.push(`<a href="${esc(v.url)}">${esc(v.titulo || "Visionat")}</a>`) }
-    ag.push([s.hora || "", `<b>Classe: ${esc(c.titulo)}</b>${s.hora ? ` · ${esc(s.hora)}${s.horafi ? "–" + esc(s.horafi) : ""}` : ""}${c.centre ? " · " + esc(c.centre) : ""}${s.tema ? `<br>${esc(s.tema)}` : ""}${mats.length ? `<br><span style="color:#666">Material:</span> ${mats.join(" · ")}` : ""}`]);
+    ag.push([s.hora || "", `<b>Classe: ${esc(c.titulo)}</b>${s.horafi ? ` · fins a les ${esc(s.horafi)}` : ""}${c.centre ? " · " + esc(c.centre) : ""}${s.tema ? `<br>${esc(s.tema)}` : ""}${mats.length ? `<br><span style="color:#666">Material:</span> ${mats.join(" · ")}` : ""}`]);
   }
   L("pdr").forEach(x => (x.dias || []).forEach((d, i) => { if (d && d.fecha === avui) ag.push([(String(d.calls || "").match(/\d{1,2}:\d{2}/) || [""])[0], `<b>Rodatge: ${esc(x.titulo || pn(x.proyecto) || "Pla de rodatge")}</b> · jornada ${i + 1}${d.calls ? " · " + esc(d.calls) : ""}`]) }));
   L("feina").filter(x => x.ini === avui && x.estado !== "Pressupostat").forEach(x => ag.push(["", `<b>Comença la feina: ${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""}`]));
@@ -393,7 +393,7 @@ async function pontDiari(request, db, j) {
   const seg = L("c").filter(c => c.estado === "Contactat" && Array.isArray(c.msgs) && c.msgs.length > 0 && c.msgs.length < 3 && c.msgs[c.msgs.length - 1].d === sumaDies(avui, -7));
   sec("Toca fer seguiment", seg.map(c => `<b>${esc(c.nombre)}</b>${c.persona ? " · " + esc(c.persona) : ""} · li vas escriure fa 7 dies per ${esc(c.msgs[c.msgs.length - 1].v || "missatge")}`));
   // cobraments: fa 30 dies de la factura
-  sec("Per reclamar", L("feina").filter(x => x.estado === "Facturat" && x.facturat === sumaDies(avui, -30)).map(x => `<b>${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""} · fa 30 dies de la factura ${esc(x.factura || "")}`));
+  sec("Per reclamar", L("feina").filter(x => x.estado === "Facturat" && x.facturat && x.facturat <= sumaDies(avui, -30) && (x.facturat === sumaDies(avui, -30) || new Date(avui).getUTCDay() === 1)).map(x => `<b>${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""} · factura ${esc(x.factura || "")} del ${esc(x.facturat.split("-").reverse().join("/"))}, encara per cobrar`));
   // convocatòries vigilades que han canviat avui
   const vg = (L("ajust").find(x => x.id === "ajust:vigila") || {}).llista || [];
   sec("Convocatòries amb novetats", vg.filter(x => x.canvi === avui).map(x => `<a href="${esc(x.url)}"><b>${esc(x.nom)}</b></a> ha canviat la seva pàgina`));
@@ -417,8 +417,11 @@ async function pontVigila(m, request, db, j) {
     if (x.hash && e.hash && x.hash !== e.hash) { e.canvi = avui; e.vist = false }
     if (x.hash) e.hash = x.hash; if (x.extracte) e.extracte = String(x.extracte).slice(0, 600);
   }
-  v.id = "ajust:vigila";
-  await db.prepare("INSERT INTO docs(id,data,updated) VALUES('ajust:vigila',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify(v), Date.now()).run();
+  // es torna a llegir just abans de desar perquè no es perdi una pàgina afegida o treta mentre el pont revisava
+  const r2 = await db.prepare("SELECT data FROM docs WHERE id='ajust:vigila'").first(), v2 = r2 ? JSON.parse(r2.data) : { llista: [] };
+  v2.llista = (v2.llista || []).map(y => { const e = (v.llista || []).find(z => z.id === y.id && z.url === y.url); return e ? { ...y, revisat: e.revisat, error: e.error, hash: e.hash, canvi: e.canvi, vist: e.vist, extracte: e.extracte } : y });
+  v2.id = "ajust:vigila";
+  await db.prepare("INSERT INTO docs(id,data,updated) VALUES('ajust:vigila',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify(v2), Date.now()).run();
   return j({ ok: 1 });
 }
 function igual(a, b) { let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0 }
