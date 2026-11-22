@@ -1,6 +1,7 @@
 // Inicio: resumen de todas las secciones.
 (() => {
   const { E, today, addDays, fecha } = H, el = document.getElementById("s-inicio");
+  const mes = (n, go) => n > 0 ? `<a class="mes" data-go="${go}">+${n} més</a>` : "";
   const card = (t, ir, body, cls = "") => `<div class="card ${cls}"><h3>${t}${ir ? `<a data-go="${ir}">Veure-ho tot →</a>` : ""}</h3>${body}</div>`;
   const vacio = t => `<p class="em" style="margin:6px 0">${t}</p>`;
   const PE = { "Idea": "#8e8e93", "Desenvolupament": "#ff9f0a", "Finançament": "#af52de", "Preproducció": "#5ac8fa", "Rodatge": "#ff375f", "Postproducció": "#0a84ff", "Distribució": "#30b27a" };
@@ -23,17 +24,17 @@
     const kpi = [["Tasques per avui", urg.length, "tareas", urg.some(x => x.fecha < hoy) ? "#ff3b30" : ""], ["Reunions (14 dies)", reu.length, "reuniones"], ["Dates límit (14 dies)", lim.filter(x => x.limite <= d14).length, "festivales", lim.some(x => x.limite <= d7) ? "#ff3b30" : ""], ["Seguiments pendents", seg.length, "contactos"], ["Contactes per contactar", porC, "contactos"], ["Projectes en marxa", vivos.length, "proyectos"]];
 
     el.innerHTML = `<div class="kpi">${kpi.map(([l, n, go, col]) => `<div data-go="${go}"><b style="${col && n ? "color:" + col : ""}">${n}</b><small>${l}</small></div>`).join("")}</div><div class="dash">` +
-      card("Per avui", "tareas", (urg.length ? urg.map(tf).join("") : vacio("Res urgent avui.")) + (prox.length ? `<h2>Aquesta setmana</h2>` + prox.map(tf).join("") : "") + `<input id="inew" placeholder="Nova tasca per avui… (Retorn)" style="margin-top:10px">`) +
-      card("Agenda", "reuniones", reu.length ? reu.map(x => `<div class="r" data-k="reunion" data-id="${x.id}"><i class="dot" style="background:#0a84ff"></i><div class="g"><b>${E(x.titulo || "Reunió")}</b><small>${E([fecha(x.fecha), x.hora, x.lugar, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div></div>`).join("") : vacio("Cap reunió les properes dues setmanes.")) +
-      card("Dates límit", "festivales", lim.length ? lim.slice(0, 8).map(x => { const n = Math.round((new Date(x.limite) - new Date(hoy)) / 864e5); return `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 7 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;${n <= 7 ? "color:#ff3b30" : ""}">${n === 0 ? "avui" : n === 1 ? "demà" : "en " + n + " dies"}</small></div>` }).join("") : vacio("No hi ha convocatòries obertes amb data.")) +
-      card("Contactes", "contactos", setmana(c) + `<div class="st" style="grid-template-columns:repeat(4,1fr)">${[["Per contactar", porC], ["Contactats", c.filter(x => M(x).length > 0 || ["Contactat", "Ha respost", "Reunió"].includes(x.estado)).length], ["Han respost", c.filter(x => x.estado === "Ha respost").length], ["Reunió", c.filter(x => x.estado === "Reunió").length]].map(([l, n]) => `<div><b>${n}</b><small>${l}</small></div>`).join("")}</div>` +
-        (seg.length ? `<h2>Toca fer seguiment</h2>` + seg.slice(0, 6).map(x => `<div class="r"><i class="dot" style="background:#0a84ff"></i><div class="g" data-ct="${x.id}"><b>${E(x.nombre)}</b><small>Últim missatge fa ${dias(M(x).at(-1).d)} dies per ${E(M(x).at(-1).v || "missatge")}</small></div><button class="b2" data-seg="${x.id}">${x.email ? "Escriure" : "Copiar el missatge"}</button></div>`).join("") : "")) +
+      card("Per avui", "tareas", (urg.length ? urg.slice(0, 5).map(tf).join("") + mes(urg.length - 5, "tareas") : vacio("Res urgent avui.")) + (prox.length ? `<h2>Aquesta setmana</h2>` + prox.slice(0, 3).map(tf).join("") + mes(prox.length - 3, "tareas") : "") + `<input id="inew" placeholder="Nova tasca per avui… (Retorn)" style="margin-top:10px">`) +
+      card("Agenda", "reuniones", reu.length ? reu.slice(0, 5).map(x => `<div class="r" data-k="reunion" data-id="${x.id}"><i class="dot" style="background:#0a84ff"></i><div class="g"><b>${E(x.titulo || "Reunió")}</b><small>${E([fecha(x.fecha), x.hora, x.lugar, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div></div>`).join("") : vacio("Cap reunió les properes dues setmanes.")) +
+      card("Dates límit", "festivales", lim.length ? lim.slice(0, 5).map(x => { const n = Math.round((new Date(x.limite) - new Date(hoy)) / 864e5); return `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 7 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;${n <= 7 ? "color:#ff3b30" : ""}">${n === 0 ? "avui" : n === 1 ? "demà" : "en " + n + " dies"}</small></div>` }).join("") : vacio("No hi ha convocatòries obertes amb data.")) +
+      card("Contactes", "contactos", setmana(c) +
+        (seg.length ? `<h2>Toca fer seguiment</h2>` + seg.slice(0, 5).map(x => `<div class="r"><i class="dot" style="background:#0a84ff"></i><div class="g" data-ct="${x.id}"><b>${E(x.nombre)}</b><small>Últim missatge fa ${dias(M(x).at(-1).d)} dies per ${E(M(x).at(-1).v || "missatge")}</small></div><button class="b2" data-seg="${x.id}">${x.email ? "Escriure" : "Copiar el missatge"}</button></div>`).join("") + mes(seg.length - 5, "contactos") : "")) +
       (() => { const av = lim.map(x => [x, Math.round((new Date(x.limite) - new Date(hoy)) / 864e5)]).filter(([, n]) => n === 0 || n === 2 || n === 7); return av.length ? card("Recordatoris de terminis", "", av.map(([x, n]) => `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 2 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto), x.estado].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;color:${n <= 2 ? "#ff3b30" : "#ff9f0a"}">${n === 0 ? "acaba avui" : "queden " + n + " dies"}</small></div>`).join("")) : "" })() +
       `<div id="ifest" hidden></div><div id="iclas" hidden></div><div id="iesc" hidden></div><div id="icob" hidden></div><div id="ivig" hidden></div><div id="icop" hidden></div><div id="icor" hidden></div>` +
-      card("Projectes en marxa", "proyectos", vivos.length ? vivos.map(x => `<div class="r" data-pj="${x.id}"><i class="dot" style="background:${PE[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.categoria, x.estado].filter(Boolean).join(" · "))}</small></div><small>${(n => n ? n + (n > 1 ? " tasques" : " tasca") : "")(pend.filter(y => y.proyecto === x.id).length)}</small></div>`).join("") : vacio("Afegeix els teus projectes a la secció Projectes.")) +
+      card("Projectes en marxa", "proyectos", vivos.length ? vivos.slice(0, 5).map(x => `<div class="r" data-pj="${x.id}"><i class="dot" style="background:${PE[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.categoria, x.estado].filter(Boolean).join(" · "))}</small></div><small>${(n => n ? n + (n > 1 ? " tasques" : " tasca") : "")(pend.filter(y => y.proyecto === x.id).length)}</small></div>`).join("") + mes(vivos.length - 5, "proyectos") : vacio("Afegeix els teus projectes a la secció Projectes.")) +
       card("Últimes idees", "brainstorm", i.length ? i.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")).slice(0, 5).map(x => `<div class="r" data-k="idea" data-id="${x.id}"><i class="dot" style="background:#ffcc00"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E((x.texto || "").split("\n")[0].slice(0, 90))}</small></div></div>`).join("") : vacio("Apunta aquí qualsevol idea solta.")) +
       `</div>`;
-    correu(c); copiaAvis(); festivals(); classes(); escriptura(); cobrar(); vigila();
+    mur(); correu(c); copiaAvis(); festivals(); classes(); escriptura(); cobrar(); vigila();
   }
   const aj = async id => (await H.col("ajust")).find(x => x.id === id);
   const dilluns = d => { const x = new Date(d + "T12:00:00"); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); return x.toISOString().slice(0, 10) };
@@ -42,6 +43,25 @@
   function setmana(c) {
     const ini = dilluns(today()), n = c.filter(x => (x.msgs || []).length && x.msgs[0].d >= ini).length, obj = +OB.contactes || 10, pc = Math.min(100, Math.round(n / obj * 100));
     return `<div style="margin:-2px 0 12px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>${n} de ${obj} contactes nous aquesta setmana</b><span class="em" style="white-space:nowrap;margin:0">${n >= obj ? "Fet ✓" : `en falten ${obj - n}`}</span></div><div class="pbar"><i style="width:${pc}%"></i></div></div>`;
+  }
+  // Avui en columnes que s'omplen soles (sense forats) i ordenat per urgència
+  const ORDRE = ["Per avui", "Agenda", "Classes", "Recordatoris de terminis", "Dates límit", "Novetats de festivals", "Contactes", "Per reclamar", "Correu", "Convocatòries amb novetats", "Escriptura", "Projectes en marxa", "Últimes idees", "Còpia de seguretat"];
+  const lloc = c => { const t = (c.querySelector("h3") || {}).textContent || ""; const i = ORDRE.findIndex(o => t.startsWith(o)); return i < 0 ? 50 : i };
+  let ro = null, mo = null, ocupat = false;
+  function mur() {
+    const d = el.querySelector(".dash"); if (!d) return;
+    const col = () => { if (ocupat) return; ocupat = true;
+      const cs = [...d.children].filter(x => x.classList.contains("card"));
+      const ord = cs.slice().sort((a, b) => lloc(a) - lloc(b));
+      if (ord.some((c, i) => c !== cs[i])) ord.forEach(c => d.appendChild(c));
+      ord.forEach(c => { c.style.gridRowEnd = "span " + Math.ceil((c.getBoundingClientRect().height + 16) / 4) });
+      ocupat = false };
+    if (ro) ro.disconnect(); if (mo) mo.disconnect();
+    ro = new ResizeObserver(() => requestAnimationFrame(col));
+    [...d.children].forEach(c => c.classList.contains("card") && ro.observe(c));
+    mo = new MutationObserver(ms => { ms.forEach(m => m.addedNodes.forEach(n => n.classList && n.classList.contains("card") && ro.observe(n))); requestAnimationFrame(col) });
+    mo.observe(d, { childList: true });
+    col();
   }
   const posa = (id, html) => { const b = document.getElementById(id); if (b) { if (html) b.outerHTML = html; else b.remove() } };
   // Novetats de festivals (avisos de FilmFreeway i Festhome al Gmail que encara no són al hub)

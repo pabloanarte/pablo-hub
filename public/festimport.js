@@ -55,6 +55,20 @@ window.FIMP = (() => {
     return p ? p.id : "";
   }
 
+  // Avís de FilmFreeway «X has updated the Judging Status of your submission P to ESTAT.»
+  // Si no diu l'estat (correu automàtic sense «to …»), és un «Not Selected»: FilmFreeway només amaga el resultat quan és negatiu.
+  function filmfreeway(t) {
+    t = String(t || "").replace(/\s+/g, " ");
+    const m = t.match(/^(.*?)\s*has updated the judging status of your submission\s*(.*?)(?:\s+to\s+([^.!\n]{2,40}))?[.!]/i);
+    if (!m) return null;
+    const festival = neteja(m[1].split(/notify you that|congratulations!?|dear [^,]{1,40},|hello [^,]{1,40},|hi [^,]{1,40},/i).pop().trim());
+    const nou = (m[3] || "").trim();
+    const estado = nou ? deParaula(nou) || (/consideration|review|pending|undecided/i.test(nou) ? "Presentat" : "") : "Rebutjat";
+    return { festival, proj: m[2].trim(), estado, premi: estado === "Premiat" ? (/award winner/i.test(nou) ? "" : nou) : estado === "Seleccionat" && !/^selected$/i.test(nou) ? premiDe(nou) || nou : "", cru: nou || "sense estat (no seleccionat)" };
+  }
+  // «A message from X»: missatge lliure del festival; només se'n treu el nom i, si de cas, l'estat queda en dubte
+  const missatgeDe = a => (String(a || "").match(/^(?:re:\s*)?a message from\s+(.+)$/i) || [])[1];
+
   // ---------- 1) correu ----------
   async function delCorreu(dies) {
     const r = await H.api("GET", "correu/festivals?dies=" + (dies || 730));
@@ -63,6 +77,17 @@ window.FIMP = (() => {
     const out = [];
     for (const m of nous) {
       if (PROMO.test(m.assumpte)) continue;
+      const font = /festhome/i.test(m.de) ? "Festhome" : "FilmFreeway", ff = filmfreeway(m.cos);
+      if (ff && ff.festival && ff.estado) {
+        out.push({ mid: m.id, font, festival: ff.festival, proyecto: (await projecteDe(ff.proj + " " + m.assumpte)) || (await projecteDe(m.cos)), estado: ff.estado, premi: ff.premi, dubte: false, data: dia(m.data), resum: `${ff.festival} → ${ff.cru}` });
+        continue;
+      }
+      const msg = missatgeDe(m.assumpte);
+      if (msg) {
+        const e = estatDe(m.cos.slice(0, 1200));
+        if (e) out.push({ mid: m.id, font, festival: neteja(msg), proyecto: await projecteDe(m.assumpte + " " + m.cos), estado: e, premi: "", dubte: true, data: dia(m.data), resum: "Missatge del festival (revisa'l): " + m.cos.slice(0, 140) });
+        continue;
+      }
       const est = estatDe(m.assumpte) || estatDe(m.cos.slice(0, 1200));
       const dubte = !est;
       if (dubte && !/submi|inscrip|selec|status|estado|estat|decision|resultado|resultat/i.test(m.assumpte)) continue;
@@ -196,5 +221,5 @@ window.FIMP = (() => {
   // per a Avui: avisos nous dels últims dies que canviarien alguna cosa (sense obrir res)
   async function pendents(dies) { const r = await delCorreu(dies || 21); const pr = await prepara(r.props); return { r, n: pr.props.filter(p => p.canvis).length, props: pr.props.filter(p => p.canvis) } }
   const revisaCorreu = r => revisa(r.props, "correu", r.aj);
-  return { obre, pendents, revisaCorreu, _t: { estatDe, festivalDe, deText, PROMO } };
+  return { llegeix: filmfreeway, obre, pendents, revisaCorreu, _t: { estatDe, festivalDe, deText, PROMO } };
 })();

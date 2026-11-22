@@ -4,7 +4,8 @@
   const fa = s => { if (!s) return "mai"; const d = Math.floor((Date.now() - new Date(s)) / 864e5); return d <= 0 ? "avui" : d === 1 ? "ahir" : `fa ${d} dies` };
   async function pintar() {
     const [a, cal, cor, gc, dr] = await Promise.all([H.col("ajust").then(l => l.find(x => x.id === "ajust:copia") || {}), H.api("GET", "calendari").catch(() => ({})), H.api("GET", "correu/config").catch(() => ({})), H.col("ajust").then(l => l.find(x => x.id === "ajust:gcal") || {}), H.api("GET", "drecera").catch(() => ({}))]);
-    el.innerHTML = `<div class="dash" style="grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))">
+    RES = { "Còpia de seguretat": "Última: " + fa(a.ultima), "Dreceres de l'iPhone": dr.url ? "Instagram, Ha respost, Siri i visionats" : "Encara no has creat l'enllaç", "Google Calendar (editable)": cor.connectat ? (gc.ultima ? "Sincronitzat el " + new Date(gc.ultima).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Encara no s'ha sincronitzat") : "Cal connectar el correu", "Calendari al mòbil (només lectura)": "Ja no cal amb Google Calendar", "El hub com a app": "Instal·lar-lo a l'iPhone, Android o Mac", "Pont de Google": cor.connectat ? "Connectat" : "No connectat", "Resum d'avui per correu": cor.connectat ? "Cada dia a les 8:30" : "Cal connectar el correu" };
+    el.innerHTML = `<div class="cfg">
       <div class="card"><h3>Còpia de seguretat</h3>
         <p>Última còpia: <b>${fa(a.ultima)}</b>${a.on === "drive" ? " (al Drive)" : a.on ? " (descarregada)" : ""}.</p>
         <p class="em">Tot el que hi ha al hub (contactes, projectes, guions, plans, dossiers…) en un sol arxiu. Els arxius pujats (fotos, vídeos) es queden al servidor i no hi van inclosos.</p>
@@ -61,7 +62,7 @@
           <li>iPhone: Ajustes → Calendario → Cuentas → el teu compte de Google (pablo.anarte.film@gmail.com) amb «Calendarios» activat. A l'app Calendario → Calendarios, marca «PABLO hub». Si no hi surt, obre calendar.google.com/calendar/syncselect i marca'l.</li>
           <li>Si tenies subscrit el calendari de la targeta «Calendari al mòbil», treu-lo perquè no surti tot repetit.</li></ol></details>` : `<p class="em">Primer connecta el correu (secció Correu): el calendari de Google va pel mateix pont.</p>`}
       </div>
-      <div class="card"><details><summary style="cursor:pointer;font-weight:700;font-size:15px">Calendari al mòbil (només lectura)</summary><p class="em">Ja no cal si fas servir Google Calendar (a sobre). Queda aquí per si mai el necessites.</p>
+      <div class="card"><h3>Calendari al mòbil (només lectura)</h3><p class="em">Ja no cal si fas servir Google Calendar. Queda aquí per si mai el necessites.</p>
         <p class="em">Tasques, reunions, classes, dates límit i festivals, jornades de rodatge i feines, al calendari del teu iPhone o de Google. S'actualitza sol (cada hora, aproximadament). Només s'hi veuen, no s'hi editen.</p>
         <input readonly value="${E(cal.url || "")}" id="calu" style="font-size:13px">
         <div class="ls" style="margin-top:8px"><button class="b" data-k="calcp">Copiar l'enllaç</button><a class="b2" href="${E((cal.url || "").replace(/^https?:/, "webcal:"))}">Afegir a l'iPhone / Mac</a><button class="b2" data-k="calnou">Canviar l'enllaç</button></div>
@@ -69,7 +70,7 @@
           <li><b>iPhone o Mac:</b> obre aquesta pàgina al mateix aparell i prem «Afegir a l'iPhone / Mac» → «Subscriure's». O bé Ajustes → Calendario → Cuentas → Añadir cuenta → Otra → Añadir calendario suscrito, i enganxa l'enllaç.</li>
           <li><b>Google Calendar:</b> a l'ordinador, calendar.google.com → «Otros calendarios» (+) → «Desde URL» → enganxa l'enllaç.</li>
           <li>L'enllaç és privat: qui el tingui veu les dates. Si el comparteixes per error, prem «Canviar l'enllaç» i torna'l a afegir.</li></ol></details>
-      </details></div>
+      </div>
       <div id="ajx" style="display:contents"></div>
       <div class="card"><h3>El hub com a app</h3>
         <p class="em">S'obre a pantalla completa, amb icona pròpia, com una app.</p>
@@ -123,6 +124,25 @@
     ["ICEC (ajuts audiovisuals)", "https://icec.gencat.cat/"]
   ];
   const aj = async id => (await H.col("ajust")).find(x => x.id === id);
+  // Configuració com els ajustos de l'iPhone: una columna, cada apartat plegat amb una línia de resum
+  let RES = {}; const OBERTS = new Set();
+  const ORDRE = ["Resum d'avui per correu", "Objectius", "Dreceres de l'iPhone", "Google Calendar (editable)", "Vigilant de convocatòries", "Dades per a les factures", "Còpia de seguretat", "Pont de Google", "El hub com a app", "Calendari al mòbil (només lectura)"];
+  function plega() {
+    const cont = el.querySelector(".cfg"); if (!cont) return;
+    const cs = [...el.querySelectorAll(".card")];
+    cs.forEach(c => {
+      if (c.dataset.pl) return; c.dataset.pl = 1;
+      const h = c.querySelector(":scope > h3"); if (!h) return;
+      const t = h.textContent.trim(); c.dataset.t = t;
+      const b = document.createElement("div"); b.className = "plb";
+      while (h.nextSibling) b.appendChild(h.nextSibling);
+      c.appendChild(b);
+      h.outerHTML = `<button class="plh" data-pl="${E(t)}"><span><b>${E(t)}</b><small>${E(RES[t] || "")}</small></span><i>›</i></button>`;
+      if (OBERTS.has(t)) c.classList.add("obert");
+    });
+    cs.sort((x, y) => (ORDRE.indexOf(x.dataset.t) + 1 || 99) - (ORDRE.indexOf(y.dataset.t) + 1 || 99)).forEach(c => cont.appendChild(c));
+  }
+  el.addEventListener("click", e => { const b = e.target.closest(".plh"); if (!b) return; const c = b.closest(".card"), t = b.dataset.pl; c.classList.toggle("obert"); c.classList.contains("obert") ? OBERTS.add(t) : OBERTS.delete(t) });
   async function extra(cor) {
     const box = document.getElementById("ajx"); if (!box) return;
     let [ob, vg, fc] = await Promise.all([aj("ajust:objectius"), aj("ajust:vigila"), aj("ajust:factura")]);
@@ -131,6 +151,8 @@
     const ps = (await H.col("proyecto")).filter(p => (["Llarg", "Curt"].includes(p.categoria) && H.meu(p)) || p.id === ob.escriptura);
     const inp = (k, l, o, t = "text", ph = "") => `<div style="flex:1;min-width:140px"><label>${l}</label><input data-o="${k}" type="${t}" value="${E(o[k] ?? "")}" placeholder="${E(ph)}"></div>`;
     const finp = (k, l, t = "text", ph = "") => `<div style="flex:1;min-width:160px"><label>${l}</label><input data-fc="${k}" type="${t}" value="${E(fc[k] ?? "")}" placeholder="${E(ph)}"></div>`;
+    const vl = vg.llista || [];
+    Object.assign(RES, { "Objectius": `${ob.contactes || 10} contactes i ${ob.pagines || 7} pàgines per setmana`, "Vigilant de convocatòries": `${vl.length} ${vl.length === 1 ? "pàgina" : "pàgines"}${vl.some(x => x.canvi && !x.vist) ? " · " + vl.filter(x => x.canvi && !x.vist).length + " amb canvis" : ""}`, "Dades per a les factures": fc.nom ? `${fc.nom} · IVA ${fc.iva === "" || fc.iva == null ? 0 : fc.iva} % · IRPF ${fc.irpf === "" || fc.irpf == null ? 15 : fc.irpf} %` : "Encara sense dades" });
     box.innerHTML = `
       <div class="card"><h3>Resum d'avui per correu</h3>
         <p class="em" style="margin-top:0">Cada dia cap a les <b>8:30</b> t'arriba un correu amb només el que és d'avui: classes (amb el material), reunions, rodatges, tasques, terminis que acaben avui o d'aquí a 2 i 7 dies, seguiments que toquen, factures per reclamar, novetats de convocatòries i avisos de festivals. Si un dia no hi ha res, no s'envia.</p>
@@ -156,6 +178,7 @@
         <div class="ls" style="gap:12px">${finp("iva", "IVA per defecte (%)", "number", "0")}${finp("irpf", "IRPF per defecte (%)", "number", "15")}</div>
         <div class="ls" style="gap:12px">${finp("prefix", "Prefix del número", "text", "2026-")}${finp("seguent", "Següent número", "number", "1")}</div>
       </div>`;
+    plega();
   }
   el.addEventListener("input", async e => {
     const t = e.target;
