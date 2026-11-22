@@ -35,7 +35,7 @@
       ${p.logline ? `<p style="font-size:17px;max-width:900px;margin:4px 0 18px">${E(p.logline)}</p>` : ""}
       <div class="card"><h3>Versions</h3><p class="em" style="margin:0 0 8px">Cada versió del tractament, de l'escaleta o del guió, amb l'arxiu i què ha canviat.</p>
         ${vs.length ? `<div class="cits"><table class="ctab"><thead><tr><th style="width:13%">Data</th><th style="width:15%">Tipus</th><th style="width:8%">Versió</th><th>Què ha canviat</th><th style="width:22%">Arxiu</th><th style="width:34px"></th></tr></thead><tbody>${vs.map(([v, i]) => `<tr><td><input type="date" data-l="versions" data-i="${i}" data-f="data" value="${E(v.data || "")}" style="border:0;background:none"></td><td><select data-l="versions" data-i="${i}" data-f="tipus" style="border:0;background:none">${TIPUS.map(t => `<option ${t === v.tipus ? "selected" : ""}>${t}</option>`).join("")}</select></td><td>${ta("versions", i, "versio", v.versio, "v1")}</td><td>${ta("versions", i, "canvis", v.canvis, "Canvis principals")}</td>
-          <td>${v.arxiu ? `<a class="ln" href="/api/archivo/${E(v.arxiu.id)}" target="_blank">${E(v.arxiu.nombre)}</a> <button class="x" data-k="qarx" data-i="${i}" title="Treure l'arxiu">×</button>` : `<label class="b2" style="cursor:pointer;font-size:13px">Pujar<input type="file" data-k="arx" data-i="${i}" hidden></label>`}</td><td><button class="x" data-k="treu" data-l="versions" data-i="${i}" title="Treure">×</button></td></tr>`).join("")}</tbody></table></div>` : ""}
+          <td>${v.arxiu ? `<a class="ln" href="/api/archivo/${E(v.arxiu.id)}" target="_blank">${E(v.arxiu.nombre)}</a>${v.pag ? ` <small>${v.pag} pàg.${(() => { const ant = d.versions.filter(y => y !== v && y.pag && (y.tipus || "Guió") === (v.tipus || "Guió") && (y.data || "") < (v.data || "")).sort((a, b) => (b.data || "").localeCompare(a.data || ""))[0]; const dif = ant ? v.pag - ant.pag : 0; return ant && dif ? ` (${dif > 0 ? "+" : ""}${dif})` : "" })()}</small>` : ""} <button class="x" data-k="qarx" data-i="${i}" title="Treure l'arxiu">×</button>` : `<label class="b2" style="cursor:pointer;font-size:13px">Pujar<input type="file" data-k="arx" data-i="${i}" hidden></label>`}</td><td><button class="x" data-k="treu" data-l="versions" data-i="${i}" title="Treure">×</button></td></tr>`).join("")}</tbody></table></div>` : ""}
         <button class="b2" data-k="nova" data-l="versions" style="margin-top:8px">+ Versió</button></div>
       <div class="card"><h3>Lectures i notes</h3><p class="em" style="margin:0 0 8px">Qui ho ha llegit, sobre quina versió, què t'ha dit i què en fas.</p>
         ${d.lectures.length ? `<div class="cits"><table class="ctab"><thead><tr><th style="width:13%">Data</th><th style="width:15%">Qui</th><th style="width:10%">Versió</th><th>Notes rebudes</th><th style="width:26%">Què en faig</th><th style="width:34px"></th></tr></thead><tbody>${d.lectures.map((l, i) => `<tr><td><input type="date" data-l="lectures" data-i="${i}" data-f="data" value="${E(l.data || "")}" style="border:0;background:none"></td><td>${ta("lectures", i, "qui", l.qui, "Nom")}</td><td>${ta("lectures", i, "versio", l.versio, "Guió v2")}</td><td>${ta("lectures", i, "notes", l.notes, "", 2)}</td><td>${ta("lectures", i, "accio", l.accio, "", 2)}</td><td><button class="x" data-k="treu" data-l="lectures" data-i="${i}" title="Treure">×</button></td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -57,7 +57,7 @@
     if (k === "proj") return H.abrir("proyecto", p.id);
     if (k === "nova") { d[b.dataset.l].push(b.dataset.l === "versions" ? { tipus: "Guió", data: H.today(), versio: "", canvis: "" } : { data: H.today(), qui: "", versio: "", notes: "", accio: "" }); save(); pinta() }
     if (k === "treu" && confirm("Treure aquesta fila?")) { const v = d[b.dataset.l][i]; if (v && v.arxiu) H.api("DELETE", "archivo/" + v.arxiu.id).catch(() => {}); d[b.dataset.l].splice(i, 1); save(); pinta() }
-    if (k === "qarx" && confirm("Treure l'arxiu d'aquesta versió?")) { H.api("DELETE", "archivo/" + d.versions[i].arxiu.id).catch(() => {}); delete d.versions[i].arxiu; save(); pinta() }
+    if (k === "qarx" && confirm("Treure l'arxiu d'aquesta versió?")) { H.api("DELETE", "archivo/" + d.versions[i].arxiu.id).catch(() => {}); delete d.versions[i].arxiu; delete d.versions[i].pag; save(); pinta() }
     if (k === "ncv") {
       const v = document.getElementById("dv-pl").value;
       if (v.startsWith("conv:")) { const c = (await H.col("convocatoria")).find(x => x.id === v.slice(5)); d.convs.push({ nom: c.titulo || "", limit: c.limite || "", docs: PLANT["Laboratori o residència (genèric)"].map(n => ({ nom: n, fet: false })) }) }
@@ -82,7 +82,17 @@
     if (t.dataset.k === "arx" && t.files[0]) {
       const f = t.files[0]; if (f.size > 25 * 1024 * 1024) return H.toast("Passa de 25 MB");
       H.toast("Pujant " + f.name + "…");
-      try { d.versions[+t.dataset.i].arxiu = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f); save(); pinta(); H.toast("Pujat") } catch (er) { H.toast("No s'ha pogut pujar") }
+      const v = d.versions[+t.dataset.i];
+      try { v.arxiu = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f) } catch (er) { return H.toast("No s'ha pogut pujar") }
+      // si és un PDF, compta les pàgines i, si és el guió, les apunta al progrés d'escriptura (Avui)
+      if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+        try { const pdfjs = await import("/vendor/pdf.min.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdf.worker.min.mjs"; v.pag = (await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise).numPages } catch (er) { }
+        if (v.pag && (v.tipus || "Guió") === "Guió") {
+          const es = (await H.col("ajust")).find(x => x.id === "ajust:escriptura") || { id: "ajust:escriptura", log: [] }, dia = v.data || H.today();
+          es.log = (es.log || []).filter(x => !(x.proj === p.id && x.d === dia)).concat({ proj: p.id, d: dia, p: v.pag, versio: v.versio || "" }); H.put(es, 1);
+        }
+      }
+      save(); pinta(); H.toast(v.pag ? `Pujat · ${v.pag} pàgines` : "Pujat")
     }
   });
   window.addEventListener("hub-sec", e => { if (e.detail === "desenvolupament" && (!p || (H.pj() && H.pj() !== "-" && p.id !== H.pj()) || !H.pj())) lista() });
