@@ -19,8 +19,8 @@
     const porC = c.filter(x => !x.estado || x.estado === "Pendent").length;
     const pn = id => (p.find(x => x.id === id) || {}).titulo || "";
     const tf = x => `<div class="r"><input type="checkbox" class="ick" data-id="${x.id}"><div class="g" data-k="tarea" data-id="${x.id}"><b>${E(x.titulo || "Sense títol")}</b><small>${E([x.fecha < hoy ? "Endarrerida · " + fecha(x.fecha) : x.fecha === hoy ? "Avui" : fecha(x.fecha), pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div></div>`;
-    const kpi = [["Tasques per avui", urg.length, "tareas", urg.some(x => x.fecha < hoy) ? "#ff3b30" : ""], ["Reunions (14 dies)", reu.length, "reuniones"], ["Dates límit (14 dies)", lim.filter(x => x.limite <= d14).length, "festivales", lim.some(x => x.limite <= d7) ? "#ff3b30" : ""], ["Seguiments pendents", seg.length, "contactos"], ["Contactes per contactar", porC, "contactos"], ["Projectes en marxa", p.filter(x => x.estado && x.estado !== "Acabat").length, "proyectos"]];
-    const vivos = p.filter(x => x.estado && x.estado !== "Acabat" && H.meu(x)).sort((a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9));
+    const vivos = p.filter(x => x.estado && x.estado !== "Acabat" && H.meu(x)).sort((a, b) => (a.ord ?? -1) - (b.ord ?? -1));
+    const kpi = [["Tasques per avui", urg.length, "tareas", urg.some(x => x.fecha < hoy) ? "#ff3b30" : ""], ["Reunions (14 dies)", reu.length, "reuniones"], ["Dates límit (14 dies)", lim.filter(x => x.limite <= d14).length, "festivales", lim.some(x => x.limite <= d7) ? "#ff3b30" : ""], ["Seguiments pendents", seg.length, "contactos"], ["Contactes per contactar", porC, "contactos"], ["Projectes en marxa", vivos.length, "proyectos"]];
 
     el.innerHTML = `<div class="kpi">${kpi.map(([l, n, go, col]) => `<div data-go="${go}"><b style="${col && n ? "color:" + col : ""}">${n}</b><small>${l}</small></div>`).join("")}</div><div class="dash">` +
       card("Per avui", "tareas", (urg.length ? urg.map(tf).join("") : vacio("Res urgent avui.")) + (prox.length ? `<h2>Aquesta setmana</h2>` + prox.map(tf).join("") : "") + `<input id="inew" placeholder="Nova tasca per avui… (Retorn)" style="margin-top:10px">`) +

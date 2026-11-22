@@ -75,7 +75,7 @@ async function pintaSub() {
   const ps = await H.col("proyecto"), p = ps.find(x => x.id === P);
   PNOM = P === "-" ? "Sense projecte" : (p && p.titulo) || "Sense títol";
   document.getElementById("stitle").textContent = PNOM;
-  document.getElementById("sdesc").textContent = p ? [p.categoria, p.rol, p.estado].filter(Boolean).join(" · ") : "Documents que no són de cap projecte";
+  document.getElementById("sdesc").textContent = p ? [p.categoria, H.rols(p).join(", "), p.estado].filter(Boolean).join(" · ") : "Documents que no són de cap projecte";
   sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${PTABS.filter(t => P !== "-" || !["resum", "equip", "arxius", "desenvolupament"].includes(t[0])).map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
    (PT === "guio" ? `<div class="seg" style="margin:0 0 14px">${GUIO.map(t => `<button class="t ${ACT === t[0] ? "on" : ""}" data-sec="${t[0]}">${t[1]}</button>`).join("")}</div>` : "");
   { const on = sub.querySelector(".ptabs .on"); if (on) { const t = on.parentElement; t.scrollLeft = on.offsetLeft - (t.clientWidth - on.offsetWidth) / 2 } }

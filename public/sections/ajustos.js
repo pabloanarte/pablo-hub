@@ -123,7 +123,7 @@
     let [ob, vg, fc] = await Promise.all([aj("ajust:objectius"), aj("ajust:vigila"), aj("ajust:factura")]);
     if (!vg) { vg = { id: "ajust:vigila", llista: VIGILA.map(([nom, url], i) => ({ id: "v" + i, nom, url })) }; H.put(vg, 1) }
     ob = ob || {}; fc = fc || {};
-    const ps = (await H.col("proyecto")).filter(p => ["Llarg", "Curt"].includes(p.categoria) || p.id === ob.escriptura);
+    const ps = (await H.col("proyecto")).filter(p => (["Llarg", "Curt"].includes(p.categoria) && H.meu(p)) || p.id === ob.escriptura);
     const inp = (k, l, o, t = "text", ph = "") => `<div style="flex:1;min-width:140px"><label>${l}</label><input data-o="${k}" type="${t}" value="${E(o[k] ?? "")}" placeholder="${E(ph)}"></div>`;
     const finp = (k, l, t = "text", ph = "") => `<div style="flex:1;min-width:160px"><label>${l}</label><input data-fc="${k}" type="${t}" value="${E(fc[k] ?? "")}" placeholder="${E(ph)}"></div>`;
     box.innerHTML = `

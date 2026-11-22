@@ -38,7 +38,7 @@
         <div class="prpos" data-k="edita" title="Editar la fitxa">${img ? `<img src="${img}" alt="">` : `<span>${E(p.titulo || "Sense títol")}</span>`}</div>
         <div style="min-width:0;flex:1">
           ${p.logline ? `<p class="prlog">${E(p.logline)}</p>` : `<p class="em">Encara no té logline.</p>`}
-          <div class="ls" style="margin:10px 0 0">${[p.categoria, p.rol, p.estado, p.anio].filter(Boolean).map(x => `<span class="chip">${E(x)}</span>`).join("")}</div>
+          <div class="ls" style="margin:10px 0 0">${[p.categoria, ...H.rols(p), p.estado, p.anio].filter(Boolean).map(x => `<span class="chip">${E(x)}</span>`).join("")}</div>
           <div class="ls" style="margin-top:14px"><button class="b" data-k="edita">Editar la fitxa</button>${(p.altres || "").trim() ? `<span class="em">També: ${E(p.altres)}</span>` : ""}</div>
         </div></div>
       <div class="dash" style="margin-top:20px">

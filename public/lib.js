@@ -9,7 +9,7 @@ window.H = (() => {
   const addDays = (s, n) => { const d = new Date(s + "T12:00"); d.setDate(d.getDate() + n); return iso(d) };
   const fecha = (s, largo) => s ? new Date(s + "T12:00").toLocaleDateString("ca-ES", largo ? { weekday: "long", day: "numeric", month: "long" } : { weekday: "short", day: "numeric", month: "short" }) : "";
   const uid = t => t + ":" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const valors = o => o == null ? "" : typeof o === "object" ? Object.entries(o).filter(([k]) => !["id", "img", "thumb", "url"].includes(k) && k[0] !== "_").map(([, v]) => valors(v)).join(" ") : String(o);
+  const valors = o => o == null ? "" : typeof o === "object" ? Object.entries(o).filter(([k]) => !["id", "img", "thumb", "url", "ord"].includes(k) && k[0] !== "_").map(([, v]) => valors(v)).join(" ") : String(o);
   const url = u => u ? (/^https?:/.test(u) ? u : "https://" + u) : "";
 
   // ---------- datos ----------
@@ -192,8 +192,8 @@ window.H = (() => {
     async function pintar() {
       const pj = cfg.perProj && window.HUBP ? window.HUBP() : "";
       const l = (await col(cfg.tipo)).filter(d => !pj || (pj === "-" ? !d.proyecto : d.proyecto === pj));
-      const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!cfg.tabs2 || en2(d, tab2)) && (!q || valors(d).toLowerCase().includes(q))).sort(cfg.ordenable ? ((a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9) || (cfg.orden ? cfg.orden(a, b) : 0)) : cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
-      VIS = vis;
+      const vis = l.filter(d => (!tab || d[cfg.tabs.f] === tab) && (!cfg.tabs2 || en2(d, tab2)) && (!q || valors(d).toLowerCase().includes(q))).sort(cfg.ordenable ? ((a, b) => (a.ord ?? -1) - (b.ord ?? -1) || (cfg.orden ? cfg.orden(a, b) : 0)) : cfg.orden || ((a, b) => (a.titulo || "").localeCompare(b.titulo || "")));
+      VIS = cfg.ordenable ? l.filter(d => !cfg.tabs2 || en2(d, tab2)).sort((a, b) => (a.ord ?? -1) - (b.ord ?? -1) || (cfg.orden ? cfg.orden(a, b) : 0)) : vis;
       const lista = cfg.grupos ? cfg.grupos(vis) : [["", vis]];
       await llistes();
       if (cfg.tabs) { const ops = opsDe(cfg.tabs); el.querySelector(".tabsw").innerHTML = `<div class="tabs"><button class="t ${tab ? "" : "on"}" data-k="tab" data-v="">Tots<small></small></button>${ops.map(o => `<button class="t ${tab === o ? "on" : ""}" data-k="tab" data-v="${E(o)}">${E(o)} <small></small></button>`).join("")}</div>` }

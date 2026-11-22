@@ -25,7 +25,7 @@
       { f: "iva", l: "IVA (%) si no és el de sempre", tipo: "number" },
       { f: "irpf", l: "IRPF (%) si no és el de sempre", tipo: "number" },
       { f: "cobrament", l: "Data de cobrament", tipo: "date" },
-      { f: "proyecto", l: "Projecte del hub (si n'hi ha)", tipo: "proyecto" },
+      { f: "proyecto", l: "Projecte del hub (si n'hi ha)", tipo: "proyecto", tots: 1 },
       { f: "cv", l: "Posar-la al CV i a la web", tipo: "check" },
       { f: "notas", l: "Notes", tipo: "textarea" }
     ],

@@ -16,7 +16,7 @@
   async function lista() {
     if (H.pj() && H.pj() !== "-") return obre(H.pj());
     const v = ++ver, [ps, ds] = await Promise.all([H.col("proyecto"), H.col("dev")]); if (v !== ver) return; p = d = null;
-    const dev = ps.filter(x => ["Llarg", "Curt"].includes(x.categoria) && x.rol !== "Ajudant de direcció" && x.rol !== "Script" && !["Distribució", "Acabat"].includes(x.estado));
+    const dev = ps.filter(x => ["Llarg", "Curt"].includes(x.categoria) && H.meu(x) && !["Distribució", "Acabat"].includes(x.estado));
     const altres = ps.filter(x => !dev.includes(x) && ds.some(y => y.id === "dev:" + x.id.split(":")[1]));
     const fila = x => { const o = ds.find(y => y.id === "dev:" + x.id.split(":")[1]) || {}, u = (o.versions || []).slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""))[0], pend = (o.convs || []).flatMap(c => c.docs || []).filter(z => !z.fet).length;
       return `<div class="r" data-k="obre" data-id="${x.id}"><i class="dot" style="background:#ff9f0a"></i><div class="g"><b>${E(x.titulo || "Sense títol")}</b><small>${[x.categoria, x.estado, u ? `última versió: ${u.tipus || ""} ${u.versio || ""} (${H.fecha(u.data)})` : "sense versions", (o.lectures || []).length ? o.lectures.length + " lectures" : "", pend ? pend + " documents per preparar" : ""].filter(Boolean).map(E).join(" · ")}</small></div></div>` };
