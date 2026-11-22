@@ -46,7 +46,7 @@ function resumFil(t) {
 }
 
 // respostes automàtiques (fora de l'oficina, vacances…): no compten com a resposta
-const AUTO = /(out of office|fuera de la oficina|fora de l'oficina|automatic reply|auto-?reply|respuesta autom|resposta autom|r[ée]ponse automatique|absence|vacaciones|vacances|delivery status|undeliverable|no se ha podido entregar)/i;
+const AUTO = /(out of office|fuera de la oficina|fora de l'oficina|automatic reply|auto-?reply|respuesta autom|resposta autom|r[ée]ponse automatique|delivery status|undeliverable|no se ha podido entregar)/i;
 const ACCIONS = {
   calendari: () => sincronitzaCal(),
   vigila: () => vigila(),

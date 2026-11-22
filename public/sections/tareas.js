@@ -57,7 +57,7 @@
   }
 
   async function abrir(tipo, id) {
-    if (tipo === "pdr") { hubShow("planes"); return window.P && P.abrir(id) }
+    if (tipo === "pdr") { hubShow("planes", { proj: "" }); return window.P && P.abrir(id) }
     const t = (await H.col(tipo)).find(x => x.id === id); if (!t) return;
     if (tipo === "tarea") return H.editar(CAMPOS, t, { alCerrar: pintar });
     H.abrir(tipo, id);
@@ -76,7 +76,7 @@
     if (k === "mes") { const [y, m] = mes.split("-").map(Number), d = new Date(y, m - 1 + +b.dataset.n, 1); mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; pintar() }
     if (k === "dia") dia(b.dataset.d);
     if (k === "abre") abrir("tarea", b.dataset.id);
-    if (k === "evl") { if (b.dataset.t === "pdr") { hubShow("planes"); return window.P && P.abrir(b.dataset.id) } H.abrir(b.dataset.t, b.dataset.id) }
+    if (k === "evl") { if (b.dataset.t === "pdr") { hubShow("planes", { proj: "" }); return window.P && P.abrir(b.dataset.id) } H.abrir(b.dataset.t, b.dataset.id) }
     if (k === "hechas") { verHechas = !verHechas; pintar() }
   });
   el.addEventListener("change", async e => {
