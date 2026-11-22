@@ -379,7 +379,7 @@ async function pontDiari(request, db, j) {
   }
   L("pdr").forEach(x => (x.dias || []).forEach((d, i) => { if (d && d.fecha === avui) ag.push([(String(d.calls || "").match(/\d{1,2}:\d{2}/) || [""])[0], `<b>Rodatge: ${esc(x.titulo || pn(x.proyecto) || "Pla de rodatge")}</b> · jornada ${i + 1}${d.calls ? " · " + esc(d.calls) : ""}`]) }));
   L("feina").filter(x => x.ini === avui && x.estado !== "Pressupostat").forEach(x => ag.push(["", `<b>Comença la feina: ${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""}`]));
-  L("convocatoria").filter(x => x.evento === avui && ["Seleccionat", "Presentat"].includes(x.estado)).forEach(x => ag.push(["", `<b>Festival: ${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
+  L("convocatoria").filter(x => x.evento === avui && ["Seleccionat", "Premiat", "Presentat"].includes(x.estado)).forEach(x => ag.push(["", `<b>Festival: ${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
   sec("Agenda", ag.sort((a, b) => (a[0] || "99").localeCompare(b[0] || "99")).map(x => (x[0] ? `<span style="display:inline-block;min-width:52px;color:#666">${esc(x[0])}</span>` : "") + x[1]));
   sec("Tasques per avui", L("tarea").filter(x => !x.hecha && x.fecha === avui).map(x => esc(x.titulo) + (x.proyecto ? ` <span style="color:#666">· ${esc(pn(x.proyecto))}</span>` : "")));
   // terminis: avui, i avisos a 2 i 7 dies

@@ -24,11 +24,11 @@
     const dates = [];
     de(ts).filter(x => !x.hecha && x.fecha).forEach(x => dates.push([x.fecha, "Tasca", x.titulo]));
     de(rs).filter(x => x.fecha >= hoy).forEach(x => dates.push([x.fecha, "Reunió", x.titulo + (x.hora ? " · " + x.hora : "")]));
-    de(fs).forEach(x => { if ((!x.estado || x.estado === "Per presentar") && x.limite >= hoy) dates.push([x.limite, "Límit", x.titulo]); if (x.evento >= hoy && ["Seleccionat", "Presentat"].includes(x.estado)) dates.push([x.evento, "Festival", x.titulo]) });
+    de(fs).forEach(x => { if ((!x.estado || x.estado === "Per presentar") && x.limite >= hoy) dates.push([x.limite, "Límit", x.titulo]); if (x.evento >= hoy && ["Seleccionat", "Premiat", "Presentat"].includes(x.estado)) dates.push([x.evento, "Festival", x.titulo]) });
     de(pre).concat(de(post)).filter(x => x.ini >= hoy).forEach(x => dates.push([x.ini, x.hito ? "Fita" : "Calendari", x.titulo]));
     de(pdr).forEach(x => (x.dias || []).forEach((d, i) => d.fecha >= hoy && dates.push([d.fecha, "Rodatge", `${x.titulo || "Pla"} · jornada ${i + 1}`])));
     const prop = dates.filter(d => d[0] <= lim || d[1] === "Tasca").sort((a, b) => a[0].localeCompare(b[0])).slice(0, 8);
-    const fp = de(fs), sel = fp.filter(x => x.estado === "Seleccionat"), prem = sel.filter(x => x.premi), pend = fp.filter(x => x.estado === "Presentat");
+    const fp = de(fs), sel = fp.filter(x => ["Seleccionat", "Premiat"].includes(x.estado)), prem = sel.filter(x => x.premi || x.estado === "Premiat"), pend = fp.filter(x => x.estado === "Presentat");
     const dev = devs.find(x => x.id === "dev:" + p.id.split(":")[1]) || {}, vers = (dev.versions || []).slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
     const gt = de(gts), plans = de(pdr), jorn = plans.reduce((a, x) => a + (x.dias || []).length, 0);
     const eq = (p.equip || []).filter(x => pers.some(y => y.id === x.id));

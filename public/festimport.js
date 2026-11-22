@@ -4,19 +4,20 @@
 // Sempre es proposa i Pablo revisa i accepta cada canvi; no es canvia res sol.
 window.FIMP = (() => {
   const { E } = H;
-  const EST = ["Presentat", "Seleccionat", "Rebutjat", "Per presentar", "Descartat"];
-  const RANG = { "Per presentar": 0, "Presentat": 1, "Descartat": 2, "Rebutjat": 3, "Seleccionat": 4 }; // mai es baixa d'un estat més avançat
+  const EST = ["Presentat", "Seleccionat", "Premiat", "Rebutjat", "Per presentar", "Descartat"];
+  const RANG = { "Per presentar": 0, "Presentat": 1, "Descartat": 2, "Rebutjat": 3, "Seleccionat": 4, "Premiat": 5 }; // mai es baixa d'un estat més avançat
   // ----- estat a partir del text (anglès, castellà, català i alguna forma francesa/italiana) -----
   const PROMO = /newsletter|butllet[ií]|bolet[ií]n|year in review|meet the (winners|festivals?)|recommended|recomendad|recomanat|\btips (for|to|on)\b|webinar|weekly|digest|monthly|mensual|setmanal|semanal|you should submit|submit to these|festivals (we think|you('ll| will) love|for you)|final deadline|deadline (tomorrow|today)|\bdeadline for\b|last call|el plazo|termina mañana|acaba demà|el termini|discount|descuento|descompte|% off|sale\b|deadline (is )?(approaching|extended|has passed|passed)|last chance|[uú]ltima oportunidad|new festivals|nuevos festivales|festivales (abiertos|recomendados)|open (for )?submissions|call for entries|convocatoria abierta|filmfreeway (awards|festival awards)|survey|encuesta/i;
   const SEL_F = /official selection|has been (officially )?selected|have been selected|been accepted|selected for|selecci[oó]n oficial|selecci[oó] oficial|ha sido seleccionad|han sido seleccionad|ha resultado seleccionad|ha estat seleccionad|ha quedat seleccionad|s[ée]lection officielle|selezione ufficiale|sele[cç][aã]o oficial|award winner|has won|ha ganado|ha guanyat|finalist|finalista|honou?rable mention|menci[oó]n (de honor|especial)|menci[oó] (d'honor|especial)|nominated|nominad/i;
   const REB_F = /not (been )?selected|not been accepted|were not able to (include|select)|unable to (include|select)|could not (include|select)|no ha sido seleccionad|no ha resultado seleccionad|no ha estat seleccionad|no ha quedat seleccionad|no seleccionad|n'a pas [ée]t[ée] s[ée]lectionn|non [èe] stat[oa] selezionat|not part of (our|the) (official )?selection|no forma parte de la selecci/i;
   const PRE_F = /submission (confirmation|received|complete|completed|successful)|successfully submitted|thank you for (your )?submi|thanks for submitting|you (have )?submitted|has been submitted|was received|new submission|receipt|payment (received|confirmation)|inscripci[oó]n (realizada|completada|confirmada|recibida)|gracias por (tu|su) inscripci|ha sido inscrit|inscrita (en|correctamente)|pago (realizado|confirmado)|inscripci[oó] (realitzada|completada|confirmada|rebuda)|gr[àa]cies per (la teva|la vostra) inscripci|ha estat inscrit|pagament (realitzat|confirmat)/i;
   const ACT = /(?:updated to|changed to|status:|estado:|ha cambiado a|ha canviat a|estat:)\s*:?\s*["«]?([a-záéíóúàèòç ]{4,30})/i;
-  const deParaula = w => /not selected|no seleccionad|rejected|rechazad|rebutjad|declined/i.test(w) ? "Rebutjat" : /withdrawn|retirad/i.test(w) ? "Descartat" : /selected|seleccionad|winner|ganador|guanyador|finalist|finalista|mention|menci/i.test(w) ? "Seleccionat" : /premiad|premiat/i.test(w) ? "Seleccionat" : /undecided|consideration|consideraci[oó]|pending|pendent|pendiente|received|recibid|rebut|rebuda|submitted|inscrit|in review|en revisi/i.test(w) ? "Presentat" : "";
+  const deParaula = w => /not selected|no seleccionad|rejected|rechazad|rebutjad|declined/i.test(w) ? "Rebutjat" : /withdrawn|retirad/i.test(w) ? "Descartat" : /winner|ganador|guanyador|premiad|premiat|awarded/i.test(w) ? "Premiat" : /selected|seleccionad|finalist|finalista|mention|menci/i.test(w) ? "Seleccionat" : /undecided|consideration|consideraci[oó]|pending|pendent|pendiente|received|recibid|rebut|rebuda|submitted|inscrit|in review|en revisi/i.test(w) ? "Presentat" : "";
   function estatDe(t) {
     t = String(t || ""); const a = t.match(ACT);
     if (a) { const e = deParaula(a[1]); if (e) return e }
     if (REB_F.test(t)) return "Rebutjat";
+    if (/award winner|has won|ha ganado|ha guanyat|winner of|ganador del|guanyador del|premiad[ao] (con|amb)|ha sido premiad|ha estat premiat/i.test(t)) return "Premiat";
     if (SEL_F.test(t)) return "Seleccionat";
     if (PRE_F.test(t)) return "Presentat";
     return "";
@@ -65,7 +66,7 @@ window.FIMP = (() => {
       const est = estatDe(m.assumpte) || estatDe(m.cos.slice(0, 1200));
       const dubte = !est;
       if (dubte && !/submi|inscrip|selec|status|estado|estat|decision|resultado|resultat/i.test(m.assumpte)) continue;
-      out.push({ mid: m.id, font: /festhome/i.test(m.de) ? "Festhome" : "FilmFreeway", festival: festivalDe(m.assumpte, m.cos), proyecto: await projecteDe(m.assumpte + " " + m.cos), estado: est || "Presentat", premi: est === "Seleccionat" ? premiDe(m.assumpte + " " + m.cos.slice(0, 600)) : "", dubte, data: dia(m.data), resum: m.assumpte });
+      out.push({ mid: m.id, font: /festhome/i.test(m.de) ? "Festhome" : "FilmFreeway", festival: festivalDe(m.assumpte, m.cos), proyecto: await projecteDe(m.assumpte + " " + m.cos), estado: est || "Presentat", premi: ["Seleccionat", "Premiat"].includes(est) ? premiDe(m.assumpte + " " + m.cos.slice(0, 600)) : "", dubte, data: dia(m.data), resum: m.assumpte });
     }
     return { props: out, aj, total: nous.length };
   }
@@ -78,7 +79,7 @@ window.FIMP = (() => {
     const afegeix = (festival, projecte, data, ...estats) => {
       const w = estats.filter(Boolean).join(" "), e = estats.map(x => deParaula(x || "")).filter(Boolean).sort((a, b) => RANG[b] - RANG[a])[0];
       festival = neteja(festival); if (!festival || !e) return;
-      out.push({ font: "Llista", festival, proyecto: prj(projecte) || prj(festival), estado: e, premi: e === "Seleccionat" ? premiDe(w) || (/winner|ganador|guanyador/i.test(w) ? "Premiat" : "") : "", data: dia(data), resum: [festival, projecte, w].filter(Boolean).join(" · ") });
+      out.push({ font: "Llista", festival, proyecto: prj(projecte) || prj(festival), estado: e, premi: ["Seleccionat", "Premiat"].includes(e) ? premiDe(w) : "", data: dia(data), resum: [festival, projecte, w].filter(Boolean).join(" · ") });
     };
     const ls = String(text).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
     // a) taula amb tabuladors (el més habitual en copiar una taula d'una web)

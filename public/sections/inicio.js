@@ -53,7 +53,7 @@
       if (!fcache || Date.now() - fcache.t > 20 * 6e4) { fcache = { t: Date.now(), r: null }; if (window.CORREU && !(await CORREU.connectat())) return posa("ifest"); fcache.r = await FIMP.pendents(21) }
       const { n, props } = fcache.r; if (!n) return posa("ifest");
       const ps = await H.col("proyecto"), pn = id => (ps.find(x => x.id === id) || {}).titulo || "";
-      posa("ifest", card("Novetats de festivals", "festivales", props.slice(0, 6).map(p => `<div class="r"><i class="dot" style="background:${p.estado === "Seleccionat" ? "#30b27a" : p.estado === "Rebutjat" ? "#8e8e93" : "#0a84ff"}"></i><div class="g"><b>${E(p.festival)}</b><small>${E([pn(p.proyecto), p.premi || p.estado, p.ja ? "abans: " + (p.ja.estado || "") : "nou"].filter(Boolean).join(" · "))}</small></div></div>`).join("") + `<button class="b" data-fest="1" style="margin-top:10px">Revisar i aplicar ${n === 1 ? "el canvi" : `els ${n} canvis`}</button>`));
+      posa("ifest", card("Novetats de festivals", "festivales", props.slice(0, 6).map(p => `<div class="r"><i class="dot" style="background:${p.estado === "Premiat" ? "#c9a227" : p.estado === "Seleccionat" ? "#30b27a" : p.estado === "Rebutjat" ? "#8e8e93" : "#0a84ff"}"></i><div class="g"><b>${E(p.festival)}</b><small>${E([pn(p.proyecto), p.premi || p.estado, p.ja ? "abans: " + (p.ja.estado || "") : "nou"].filter(Boolean).join(" · "))}</small></div></div>`).join("") + `<button class="b" data-fest="1" style="margin-top:10px">Revisar i aplicar ${n === 1 ? "el canvi" : `els ${n} canvis`}</button>`));
     } catch (e) { posa("ifest") }
   }
   // Classes d'avui i de demà, amb el material
