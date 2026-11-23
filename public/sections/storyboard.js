@@ -189,7 +189,7 @@
     // moure / escalar / girar elements
     let ar = null;
     ss.addEventListener("pointerdown", e => {
-      if (ar || (e.pointerType === "touch" && ED.penVist && e.width > 30)) return;
+      if (ar || (e.pointerType === "touch" && ED.penVist)) return;
       e.preventDefault(); const [x, y] = loc(e, ss), h = e.target.dataset && e.target.dataset.h;
       if (h && ED.sel >= 0) { const o = ED.objs[ED.sel]; ar = { id: e.pointerId, m: h, o, x0: x, y0: y, s0: o.s || 30, r0: o.r || 0, cx: o.x / 100 * W, cy: o.y / 100 * Hh }; ar.a0 = Math.atan2(y - ar.cy, x - ar.cx) * 180 / Math.PI; ss.setPointerCapture(e.pointerId); return }
       // tria l'element de més amunt que hi ha sota el dit
@@ -307,7 +307,7 @@
     const mostra = () => {
       const v = vs[k], f = info(v);
       if (kVist !== k) { kVist = k; const em = v.vurl && incrusta(v.vurl);
-        fr.innerHTML = v.video ? `<video src="${url(v.video)}" playsinline muted></video>` : em ? `<iframe src="${E(em)}" allow="autoplay; fullscreen" style="width:100%;height:100%;border:0"></iframe>` : v.img ? `<img src="${url(v.img)}" alt="">` : `<span class="em">Sense dibuix</span>` }
+        fr.innerHTML = v.video ? `<video src="${url(v.video)}" playsinline muted ${jugant ? "autoplay" : ""}></video>` : em ? `<iframe src="${E(em)}" allow="autoplay; fullscreen" style="width:100%;height:100%;border:0"></iframe>` : v.img ? `<img src="${url(v.img)}" alt="">` : `<span class="em">Sense dibuix</span>` }
       cap.innerHTML = `<b>${f.esc ? "Esc. " + E(f.esc) + " · " : ""}Pla ${E(f.num || String(k + 1))}</b>${f.escala ? " · " + E(f.escala) : ""}${f.desc ? ` — ${E(f.desc)}` : ""}${v.dial ? `<br><i style="font-style:normal">«${E(v.dial)}»</i>` : ""}`;
       segs.forEach((s, j) => s.classList.toggle("on", j <= k));
       ov.querySelector('[data-a="play"]').innerHTML = jugant ? IC.pausa : IC.play; ov.classList.toggle("jugant", jugant);
@@ -323,7 +323,7 @@
       if (p >= 1) { if (k < vs.length - 1) { k++; t0 = now; mostra() } else { jugant = false; mostra(); return } }
       if (jugant) raf = requestAnimationFrame(pas);
     };
-    const juga = () => { jugant = true; IN = inicis(); t0 = performance.now() - tA; mostra(); const vd = fr.querySelector("video"); vd && vd.play().catch(() => { }); raf = requestAnimationFrame(pas) };
+    const juga = () => { if (k === vs.length - 1 && tA >= (+vs[k].dur || 3) * 1000 - 50) { k = 0; tA = 0; kVist = -1 } jugant = true; IN = inicis(); t0 = performance.now() - tA; mostra(); const vd = fr.querySelector("video"); vd && vd.play().catch(() => { }); raf = requestAnimationFrame(pas) };
     const para = () => { jugant = false; cancelAnimationFrame(raf); tA = performance.now() - t0; mostra(); const vd = fr.querySelector("video"); vd && vd.pause() };
     const ves = j => { k = Math.max(0, Math.min(vs.length - 1, j)); tA = 0; const vd0 = fr.querySelector("video"); if (vd0 && kVist === k) vd0.currentTime = 0; t0 = performance.now(); IN = inicis(); if (IN[k] != null) scr.scrollTop = IN[k]; mostra(); if (jugant) { const vd = fr.querySelector("video"); vd && vd.play().catch(() => { }) } };
     ov.addEventListener("click", e => {

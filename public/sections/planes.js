@@ -140,7 +140,7 @@
       if (doc.gt && f.ref) { const g = (await H.col("gt")).find(x => x.id === doc.gt), p = g && g.escenas.flatMap(e => e.planos).find(x => x.id === f.ref); if (p) { p.ok = b.checked; H.put(g, 1) } }
     }
     if (k === "color") { const f = D().filas[i]; f.color = ((f.color || 0) + 1) % FILA.length; save(); refresca() }
-    if (k === "qimg") { delete D().filas[i].img; save(); refresca() }
+    if (k === "qimg") { delete D().filas[i].img; delete D().filas[i].imgSb; save(); refresca() }
     if (k === "ver") window.open(b.src, "_blank");
     if (k === "pdf") exportarPDF();
     if (k === "cit") return CIT.obre(doc, dia, () => pintar());
@@ -181,7 +181,7 @@
   let tr; const debRef = () => { clearTimeout(tr); tr = setTimeout(() => { const a = document.activeElement, s = a && [a.dataset.i, a.dataset.f, a.dataset.j]; refresca(); if (s) { const n = el.querySelector(s[2] ? `[data-j="${s[2]}"]` : `[data-i="${s[0]}"][data-f="${s[1]}"]`); if (n) { n.focus(); n.setSelectionRange && n.setSelectionRange(n.value.length, n.value.length) } } }, 700) };
   el.addEventListener("change", async e => {
     const t = e.target; if (!doc) return;
-    if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { D().filas[+t.dataset.i].img = id; save(); refresca() } }
+    if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { D().filas[+t.dataset.i].img = id; delete D().filas[+t.dataset.i].imgSb; save(); refresca() } }
     if (t.dataset.k === "mover" && t.value !== "→") { const [f] = D().filas.splice(+t.dataset.i, 1), d2 = doc.dias[+t.value], w = d2.filas.findIndex(x => x.tipo === "wrap"); w < 0 ? d2.filas.push(f) : d2.filas.splice(w, 0, f); save(); refresca(); H.toast("Mogut a la jornada " + (+t.value + 1)) }
     if (t.dataset.j === "fecha") { pintar() }
   });
@@ -191,7 +191,7 @@
   el.addEventListener("drop", async e => {
     const r = e.target.closest("tr.pr"); if (!r || !doc) return; e.preventDefault(); el.querySelectorAll(".dropb").forEach(x => x.classList.remove("dropb"));
     const ti = +r.dataset.i;
-    if (drag == null) { if (e.dataTransfer.files.length && D().filas[ti].tipo === "plano") { const id = await R.subirImagen(e.dataTransfer.files[0]); if (id) { D().filas[ti].img = id; save(); refresca() } } return }
+    if (drag == null) { if (e.dataTransfer.files.length && D().filas[ti].tipo === "plano") { const id = await R.subirImagen(e.dataTransfer.files[0]); if (id) { D().filas[ti].img = id; delete D().filas[ti].imgSb; save(); refresca() } } return }
     const [f] = D().filas.splice(drag, 1); D().filas.splice(drag < ti ? ti - 1 : ti, 0, f); drag = null; save(); refresca();
   });
   el.addEventListener("dragend", () => { drag = null; el.querySelectorAll(".dropb").forEach(x => x.classList.remove("dropb")) });

@@ -148,7 +148,7 @@
     const t = e.target; if (!doc) return;
     if (t.dataset.d === "proyecto") { doc.proyecto = t.value; if (doc.colsAuto !== false) await perDefecte(doc); save(); pintar() }
     if (t.dataset.se != null && t.tagName === "SELECT") { doc.escenas[+t.dataset.se][t.dataset.f] = t.value; save() }
-    if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { doc.escenas[+t.dataset.e].planos[+t.dataset.p].img = id; save(); pintar() } }
+    if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { const pq = doc.escenas[+t.dataset.e].planos[+t.dataset.p]; pq.img = id; delete pq.imgSb; save(); pintar() } }
   });
   // arrastrar filas / escenas / imágenes
   let drag = null;
@@ -157,7 +157,7 @@
   el.addEventListener("drop", async e => {
     const tr = e.target.closest("tr.pr,tr.eh"); if (!tr || !doc) return; e.preventDefault(); el.querySelectorAll(".dropb").forEach(x => x.classList.remove("dropb"));
     const te = +tr.dataset.e, tp = tr.dataset.p != null ? +tr.dataset.p : 0;
-    if (!drag && e.dataTransfer.files.length && tr.dataset.p != null) { const id = await R.subirImagen(e.dataTransfer.files[0]); if (id) { doc.escenas[te].planos[tp].img = id; save(); pintar() } return }
+    if (!drag && e.dataTransfer.files.length && tr.dataset.p != null) { const id = await R.subirImagen(e.dataTransfer.files[0]); if (id) { doc.escenas[te].planos[tp].img = id; delete doc.escenas[te].planos[tp].imgSb; save(); pintar() } return }
     if (!drag) return;
     // se coloca delante de la fila sobre la que se suelta (sobre la cabecera de escena: al principio de esa escena)
     if (drag.e != null) { const [s] = doc.escenas.splice(drag.e, 1); doc.escenas.splice(te > drag.e ? te - 1 : te, 0, s) }
