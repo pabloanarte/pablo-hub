@@ -69,7 +69,7 @@
       if (d.filas.length > 1) fila("proceso", { texto: "Canvi de set / muntatge", dur: o.cambio });
       for (const s of g.l) {
         if (t - ready + s.dur > largo && d.filas.some(f => f.tipo === "plano")) { fila("wrap", { texto: "WRAP" }); nuevoDia(); fila("set", { texto: g.n + " (continuació)" }) }
-        const p = s.p; fila("plano", { ref: p.id, num: p.num || "", esc: s.e.num || "", escala: p.escala || "", angulo: p.angulo || "", posicion: p.posicion || "", desc: [p.desc, p.accion].filter(Boolean).join("\n"), mov: p.mov || "", personajes: p.sujeto || "", notas: [p.notas, p.fps && p.fps + " fps", p.lente, p.soporte].filter(Boolean).join(" · "), dur: s.dur, img: p.img || "" });
+        const p = s.p; fila("plano", { ref: p.id, num: p.num || "", esc: s.e.num || "", escala: p.escala || "", angulo: p.angulo || "", posicion: p.posicion || "", desc: [p.desc, p.accion].filter(Boolean).join("\n"), mov: p.mov || "", personajes: p.sujeto || "", notas: [p.notas, p.fps && p.fps + " fps", p.lente, p.soporte].filter(Boolean).join(" · "), dur: s.dur, img: p.img || "", imgSb: p.imgSb ? 1 : 0 });
       }
     }
     fila("wrap", { texto: "WRAP" });
@@ -164,7 +164,7 @@
     }
     if (b.dataset.k === "addpend" && doc) {
       const g = (await H.col("gt")).find(x => x.id === doc.gt), e2 = g.escenas.find(e => e.planos.some(p => p.id === b.dataset.ref)), p = e2.planos.find(p => p.id === b.dataset.ref);
-      const f = { id: uid(), tipo: "plano", ref: p.id, num: p.num || "", esc: e2.num || "", escala: p.escala || "", angulo: p.angulo || "", posicion: p.posicion || "", desc: [p.desc, p.accion].filter(Boolean).join("\n"), mov: p.mov || "", personajes: p.sujeto || "", notas: p.notas || "", dur: +p.dur || 20, img: p.img || "" };
+      const f = { id: uid(), tipo: "plano", ref: p.id, num: p.num || "", esc: e2.num || "", escala: p.escala || "", angulo: p.angulo || "", posicion: p.posicion || "", desc: [p.desc, p.accion].filter(Boolean).join("\n"), mov: p.mov || "", personajes: p.sujeto || "", notas: p.notas || "", dur: +p.dur || 20, img: p.img || "", imgSb: p.imgSb ? 1 : 0 };
       const w = D().filas.findIndex(x => x.tipo === "wrap"); w < 0 ? D().filas.push(f) : D().filas.splice(w, 0, f); save(); b.remove(); refresca();
     }
   });

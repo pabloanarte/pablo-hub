@@ -91,7 +91,7 @@
     if (k === "delgt" && confirm("Eliminar aquest guió tècnic sencer? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Guió eliminat"); return lista() }
     if (k === "ok") { doc.escenas[ei].planos[pi].ok = b.checked; save(); b.closest("tr").style.opacity = b.checked ? .55 : 1 }
     if (k === "color") { const p = doc.escenas[ei].planos[pi]; p.color = ((p.color || 0) + 1) % FILA.length; save(); b.closest("tr").style.background = FILA[p.color]; b.style.background = FILA[p.color] || "#fff" }
-    if (k === "qimg") { const p = doc.escenas[ei].planos[pi]; H.api("DELETE", "archivo/" + p.img).catch(() => { }); delete p.img; save(); pintar() }
+    if (k === "qimg") { const p = doc.escenas[ei].planos[pi]; if (!p.imgSb) H.api("DELETE", "archivo/" + p.img).catch(() => { }); delete p.img; delete p.imgSb; save(); pintar() }
     if (k === "ver") window.open(b.src, "_blank");
     if (k === "renum") { doc.escenas.forEach((s, i) => { s.num = String(i + 1); s.planos.forEach((p, j) => p.num = String(j + 1)) }); save(); pintar(); H.toast("Escenes i plans renumerats") }
     if (k === "cols") panell();
