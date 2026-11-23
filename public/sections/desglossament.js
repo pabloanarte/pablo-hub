@@ -97,8 +97,13 @@
   async function lista(auto) {
     const v = ++ver, [ds0, ps] = await Promise.all([H.col("desg"), H.col("proyecto")]); if (v !== ver) return; const ds = ds0.filter(H.dePj); doc = null;
     const pj = ps.find(x => x.id === H.pj()); if (auto && pj && pj.desg && ds.some(x => x.id === pj.desg)) return obre(pj.desg);
-    el.innerHTML = `<div class="bar"><span class="em">Puja el guió en PDF (format estàndard) i en sortiran les escenes desglossades.</span><span style="flex:1"></span><label class="b" style="cursor:pointer">Desglossar un guió (PDF)<input type="file" accept=".pdf,application/pdf" data-k="pdf" hidden></label></div>
-      ${ds.length ? ds.sort((a, b) => (b.mod || 0) - (a.mod || 0)).map(d => { const p = ps.find(x => x.id === d.proyecto); return `<div class="r" data-k="obre" data-id="${d.id}"><i class="dot" style="background:#ff9f0a"></i><div class="g"><b>${E(d.titulo || "Sense títol")}</b><small>${[p && p.titulo, d.escenes.length + " escenes", vuitens(d.escenes.reduce((a, e) => a + aNum(e.pag), 0)) + " pàg.", new Set(d.escenes.map(e => e.set)).size + " sets"].filter(Boolean).map(E).join(" · ")}</small></div></div>` }).join("") : `<p class="em">Encara no hi ha cap desglossament.</p>`}`;
+    // dins un projecte: els guions ja pujats (Resum o Desenvolupament) es poden desglossar directament
+    const enPj = pj && H.pj() !== "-", dev = enPj ? (await H.col("dev")).find(x => x.id === "dev:" + pj.id.split(":")[1]) : null; if (v !== ver) return;
+    const gs = ((dev && dev.versions) || []).filter(x => x.tipus === "Guió" && x.arxiu).sort((a, b) => (b.data || "").localeCompare(a.data || "") || String(b.versio || "").localeCompare(String(a.versio || ""), undefined, { numeric: true }));
+    const triar = gs.length ? `<h2 style="margin:4px 0 6px">Guions del projecte</h2><div style="margin-bottom:22px">${gs.map((g, i) => `<div class="r"><i class="dot" style="background:${i ? "var(--mut)" : "#30b27a"}"></i><div class="g"><b>${E(g.versio || "Guió")}${i ? "" : " · la més nova"}</b><small>${E([g.data && H.fecha ? H.fecha(g.data) : g.data, g.pag && g.pag + " pàg.", g.arxiu.nombre].filter(Boolean).join(" · "))}</small></div><button class="${i ? "b2" : "b"}" data-k="dver" data-a="${E(g.arxiu.id)}" data-n="${E(g.arxiu.nombre || "guio.pdf")}" data-v="${E(g.versio || "")}">Desglossar</button></div>`).join("")}</div>${ds.length ? `<h2 style="margin:0 0 6px">Desglossaments</h2>` : ""}` : "";
+    const txt = !enPj ? "Puja el guió en PDF (format estàndard) i en sortiran les escenes desglossades." : gs.length ? "Tria quina versió del guió vols desglossar." : "Encara no hi ha cap guió en aquest projecte. Puja'l al Resum del projecte o aquí mateix.";
+    el.innerHTML = `<div class="bar"><span class="em">${txt}</span><span style="flex:1"></span><label class="${enPj && gs.length ? "b2" : "b"}" style="cursor:pointer">${enPj ? (gs.length ? "Pujar una versió nova (PDF)" : "Pujar el guió (PDF)") : "Desglossar un guió (PDF)"}<input type="file" accept=".pdf,application/pdf" data-k="pdf" hidden></label></div>${triar}
+      ${ds.length ? ds.sort((a, b) => (b.mod || 0) - (a.mod || 0)).map(d => { const p = ps.find(x => x.id === d.proyecto); return `<div class="r" data-k="obre" data-id="${d.id}"><i class="dot" style="background:#ff9f0a"></i><div class="g"><b>${E(d.titulo || "Sense títol")}</b><small>${[p && p.titulo, d.escenes.length + " escenes", vuitens(d.escenes.reduce((a, e) => a + aNum(e.pag), 0)) + " pàg.", new Set(d.escenes.map(e => e.set)).size + " sets"].filter(Boolean).map(E).join(" · ")}</small></div></div>` }).join("") : (gs.length ? "" : `<p class="em">Encara no hi ha cap desglossament.</p>`)}`;
   }
   async function obre(id) { ++ver; doc = (await H.col("desg")).find(x => x.id === id); if (doc) pinta() }
 
@@ -125,6 +130,15 @@
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
     if (k === "obre") return obre(b.dataset.id);
+    if (k === "dver") {
+      b.disabled = true; b.textContent = "Desglossant…";
+      try {
+        const r0 = await fetch("/api/archivo/" + encodeURIComponent(b.dataset.a)); if (!r0.ok) throw new Error("arxiu");
+        const f = new File([await r0.blob()], b.dataset.n, { type: "application/pdf" }), pid = H.pj(), p = (await H.col("proyecto")).find(x => x.id === pid);
+        const r = await desdePDF(f, pid, ((p && p.titulo) || "Guió") + (b.dataset.v ? " " + b.dataset.v : ""));
+        H.toast(`${r.d.escenes.length} escenes desglossades${r.revisar ? ` · el guió tècnic té ${r.revisar} ${r.revisar === 1 ? "canvi" : "canvis"} per revisar` : ""}`); doc = r.d; vista = "esc"; return pinta();
+      } catch (er) { b.disabled = false; b.textContent = "Desglossar"; return H.toast(er && /capçaleres/.test(er.message) ? "No he trobat capçaleres d'escena (INT./EXT.). És un guió en format estàndard?" : er && er.message === "arxiu" ? "No he pogut obrir l'arxiu del guió" : "No s'ha pogut llegir el PDF") }
+    }
     if (!doc) return;
     if (k === "torna") return lista();
     if (k === "vis") { vista = b.dataset.v; pinta() }
