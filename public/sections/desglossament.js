@@ -58,6 +58,17 @@
     return esc.map(e => { const o = { ...e, pag: vuitens(e.pag), pers: e.pers.join(", ") }; o._a = { intext: o.intext, set: o.set, moment: o.moment, pag: o.pag, pers: o.pers }; return o });
   }
 
+  // Empremta d'una escena (capçalera i text): serveix per saber si ha canviat respecte del guió tècnic
+  const firma = e => { const t = [e.num, e.intext, e.set, e.moment, (e.text || []).map(x => x[1]).join("\n")].join("|"); let h = 5381; for (let i = 0; i < t.length; i++) h = (h * 33 ^ t.charCodeAt(i)) >>> 0; return h.toString(36) };
+  // Què ha canviat entre el desglossament i un guió tècnic vinculat
+  function diferencies(gt, d) {
+    const ref = new Set(gt.escenas.map(e => e.dsg).filter(Boolean));
+    return {
+      nous: d.escenes.filter(e => !ref.has(e.id) && !(gt.ignora || []).includes(e.id)),
+      canvis: gt.escenas.filter(e => e.dsg && d.escenes.some(x => x.id === e.dsg && firma(x) !== e.pet)),
+      fora: gt.escenas.filter(e => e.dsg && !e.fora && !d.escenes.some(x => x.id === e.dsg))
+    };
+  }
   // El guió és el tronc del projecte: quan se'n puja una versió (al Resum o a Desenvolupament) es torna a desglossar sol.
   // Si el projecte ja tenia desglossament, s'hi conserva el que s'hagi escrit a mà (atrezzo, vestuari, notes).
   async function desdePDF(f, pid, nom) {
@@ -77,7 +88,9 @@
     } else d = { id: H.uid("desg"), proyecto: pid, titulo: nom || (p && p.titulo) || "Guió", escenes, mod: Date.now() };
     await H.put(d, 1);
     if (p && p.desg !== d.id) { p.desg = d.id; await H.put(p, 1) }
-    return { d, pagines: pags.length };
+    // guions tècnics fets d'aquest desglossament que ara tenen escenes per revisar
+    const gts = (await H.col("gt")).filter(g => g.desg === d.id), revisar = gts.reduce((a, g) => { const x = diferencies(g, d); return a + x.nous.length + x.canvis.length + x.fora.length }, 0);
+    return { d, pagines: pags.length, revisar };
   }
 
   // ---------- llista ----------
@@ -120,8 +133,8 @@
     if (k === "esborra" && confirm("Eliminar aquest desglossament?")) { await H.del(doc); lista() }
     if (k === "gt") {
       if (!window.GT || !GT.nou) return H.toast("No s'ha pogut obrir Guions tècnics");
-      const escenes = doc.escenes.map(x => ({ id: R.uid(), num: x.num, intext: x.intext, lugar: x.set, momento: x.moment, paginas: x.pag, notas: [x.pers && "Personatges: " + x.pers, x.atrezzo && "Atrezzo: " + x.atrezzo, x.vestuari && "Vestuari: " + x.vestuari, x.notes].filter(Boolean).join("\n"), planos: [] }));
-      GT.nou(escenes, doc.titulo, doc.proyecto);
+      const escenes = doc.escenes.map(x => ({ id: R.uid(), dsg: x.id, pet: firma(x), num: x.num, intext: x.intext, lugar: x.set, momento: x.moment, paginas: x.pag, notas: [x.pers && "Personatges: " + x.pers, x.atrezzo && "Atrezzo: " + x.atrezzo, x.vestuari && "Vestuari: " + x.vestuari, x.notes].filter(Boolean).join("\n"), planos: [] }));
+      GT.nou(escenes, doc.titulo, doc.proyecto, doc.id);
     }
     if (k === "pdfx") R.pdf(`<div class="pz"><h1>${E(doc.titulo || "Desglossament")}</h1><p>${doc.escenes.length} escenes · ${vuitens(doc.escenes.reduce((a, e) => a + aNum(e.pag), 0))} pàgines</p><table><tr>${CAMPS.map(([, l]) => `<th>${l}</th>`).join("")}</tr>${doc.escenes.map(e => `<tr>${CAMPS.map(([f]) => `<td>${E(e[f] || "")}</td>`).join("")}</tr>`).join("")}</table></div>`);
   });
@@ -146,6 +159,6 @@
   });
   // en entrar: dins un projecte s'obre el seu desglossament (i es torna a llegir per si s'ha pujat un guió nou)
   window.addEventListener("hub-sec", e => { if (e.detail !== "desglossament") return; if (doc && H.dePj(doc)) return obre(doc.id); lista(true) });
-  window.DESG = { obre, desdePDF };
+  window.DESG = { obre, desdePDF, firma, diferencies };
   if (!el.hidden) lista(true);
 })();

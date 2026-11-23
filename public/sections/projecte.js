@@ -181,7 +181,7 @@
     if (!ja) dv.versions = (dv.versions || []).concat(v);
     await H.put(dv, 1);
     if (v.pag) { const es = (await H.col("ajust")).find(x => x.id === "ajust:escriptura") || { id: "ajust:escriptura", log: [] }; es.log = (es.log || []).filter(x => !(x.proj === pid && x.d === v.data)).concat({ proj: pid, d: v.data, p: v.pag, versio: v.versio }); H.put(es, 1) }
-    try { const r = await DESG.desdePDF(f, pid, (p.titulo || "Guió") + " " + v.versio); H.toast(`Guió ${v.versio}${v.pag ? " · " + v.pag + " pàg." : ""} · ${r.d.escenes.length} escenes desglossades`); return r }
+    try { const r = await DESG.desdePDF(f, pid, (p.titulo || "Guió") + " " + v.versio); H.toast(`Guió ${v.versio}${v.pag ? " · " + v.pag + " pàg." : ""} · ${r.d.escenes.length} escenes desglossades${r.revisar ? ` · el guió tècnic té ${r.revisar} ${r.revisar === 1 ? "canvi" : "canvis"} per revisar` : ""}`); return r }
     catch (er) { H.toast(er && /capçaleres/.test(er.message) ? "Guió desat, però no he trobat les capçaleres d'escena (INT./EXT.)" : "Guió desat, però no s'ha pogut desglossar") }
   }
   window.PJ = { pujaGuio };

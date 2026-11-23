@@ -44,7 +44,35 @@
     if (c.dl) return `<td><input class="cel" list="${c.dl}" ${d} value="${E(p[c.k] || "")}"></td>`;
     return `<td><textarea class="cel" rows="1" ${d}>${E(p[c.k] || "")}</textarea></td>`;
   }
+  // Avís quan el guió (desglossament) ha canviat després de fer aquest guió tècnic
+  async function avis() {
+    const box = el.querySelector("#gtav"); if (!box || !doc || !window.DESG || !DESG.diferencies) return;
+    const ds = await H.col("desg"), pj = doc.proyecto && (await H.col("proyecto")).find(p => p.id === doc.proyecto);
+    let d = doc.desg && ds.find(x => x.id === doc.desg);
+    if (!d) { const c = pj && pj.desg && ds.find(x => x.id === pj.desg); box.innerHTML = c ? `<div class="gtav"><span>Aquest guió tècnic no està vinculat al guió del projecte, i no et podrà avisar quan canviï.</span><button class="b2" data-k="gtvincula">Vincular-lo</button></div>` : ""; return }
+    const x = DESG.diferencies(doc, d), n = x.nous.length + x.canvis.length + x.fora.length;
+    el.querySelectorAll("tr.eh .gtcv").forEach(t => t.remove());
+    x.canvis.forEach(e => { const i = doc.escenas.indexOf(e), tr = el.querySelector(`tr.eh[data-e="${i}"] .ehd`); tr && tr.insertAdjacentHTML("beforeend", `<span class="gtcv">Canviada al guió</span>`) });
+    x.fora.forEach(e => { const i = doc.escenas.indexOf(e), tr = el.querySelector(`tr.eh[data-e="${i}"] .ehd`); tr && tr.insertAdjacentHTML("beforeend", `<span class="gtcv">Ja no és al guió</span>`) });
+    const ll = l => l.map(e => E(e.num || "?")).join(", ");
+    box.innerHTML = n ? `<div class="gtav"><span><b>El guió ha canviat.</b> ${[x.nous.length && `${x.nous.length} ${x.nous.length === 1 ? "escena nova" : "escenes noves"} (${ll(x.nous)})`, x.canvis.length && `${x.canvis.length} ${x.canvis.length === 1 ? "escena canviada" : "escenes canviades"} (${ll(x.canvis)})`, x.fora.length && `${x.fora.length} ${x.fora.length === 1 ? "escena que ja no hi és" : "escenes que ja no hi són"} (${ll(x.fora)})`].filter(Boolean).join(" · ")}.</span>
+      ${x.nous.length ? `<button class="b2" data-k="gtnous">Afegir les noves</button>` : ""}${x.canvis.length ? `<button class="b2" data-k="gtcap">Actualitzar capçaleres</button>` : ""}<button class="b2" data-k="gtrevisat">Ja ho he revisat</button></div>` : "";
+  }
+  async function aplicaAvis(k) {
+    const d = (await H.col("desg")).find(x => x.id === doc.desg); if (!d) return;
+    const x = DESG.diferencies(doc, d), de = s => ({ num: s.num, intext: s.intext, lugar: s.set, momento: s.moment, paginas: s.pag });
+    if (k === "gtnous") x.nous.forEach(s => { const j = d.escenes.indexOf(s); let pos = -1; for (let q = j - 1; q >= 0 && pos < 0; q--) pos = doc.escenas.findIndex(e => e.dsg === d.escenes[q].id); const n = { id: uid(), dsg: s.id, pet: DESG.firma(s), ...de(s), sinopsis: [s.pers && "Personatges: " + s.pers, s.atrezzo && "Atrezzo: " + s.atrezzo, s.vestuari && "Vestuari: " + s.vestuari, s.notes].filter(Boolean).join("\n"), planos: [] }; n.planos.push(nuevoPlano(n)); doc.escenas.splice(pos + 1, 0, n) });
+    if (k === "gtcap") x.canvis.forEach(e => { const s = d.escenes.find(y => y.id === e.dsg); Object.assign(e, de(s), { pet: DESG.firma(s) }) });
+    if (k === "gtrevisat") { x.canvis.forEach(e => { const s = d.escenes.find(y => y.id === e.dsg); e.pet = DESG.firma(s) }); x.fora.forEach(e => e.fora = true); doc.ignora = (doc.ignora || []).concat(x.nous.map(s => s.id)) }
+    save(); pintar();
+  }
+  async function vincula() {
+    const pj = (await H.col("proyecto")).find(p => p.id === doc.proyecto), d = pj && (await H.col("desg")).find(x => x.id === pj.desg); if (!d) return;
+    doc.desg = d.id; doc.escenas.forEach(e => { const s = d.escenes.find(y => String(y.num) === String(e.num)); if (s) { e.dsg = s.id; e.pet = DESG.firma(s) } });
+    save(); pintar(); H.toast("Vinculat al guió del projecte");
+  }
   function pintar() {
+    setTimeout(avis, 0);
     const cs = vis(), sets = [...new Set(doc.escenas.map(e => e.lugar).concat(planos().map(p => p.set)).filter(Boolean))];
     H.col("proyecto").then(ps => { const s = el.querySelector("#gt-proy"); if (s) s.innerHTML = `<option value="">Sense projecte</option>` + ps.filter(p => H.meu(p) || p.id === doc.proyecto).map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("") });
     const pl = planos();
@@ -53,6 +81,7 @@
       <span class="cnt">${doc.escenas.length} ${doc.escenas.length === 1 ? "escena" : "escenes"} · ${pl.length} ${pl.length === 1 ? "pla" : "plans"}${minTot(pl) ? " · " + Math.round(minTot(pl) / 6) / 10 + " h" : ""}</span><span style="flex:1"></span><button class="del" style="margin:0" data-k="delgt">Eliminar guió</button></div>
       <div class="bar tb"><button class="b2" data-k="pegar">Enganxar des de Sheets</button><button class="b2" data-k="cols">Columnes</button><button class="b2" data-k="renum">Renumerar</button><span style="flex:1"></span>
       ${R.selLang()}<button class="b2" data-k="pdf">PDF</button><button class="b2" data-k="xls">Excel</button><button class="b" data-k="plan">Crear pla de rodatge →</button></div>
+      <div id="gtav"></div>
       <div class="lg">${ESC.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}<span style="margin-left:auto">Arrossega ⋮⋮ per reordenar · deixa anar una imatge sobre una fila per afegir-la</span></div>
       <div class="shw"><table class="gt" style="table-layout:fixed;width:${70 + cs.reduce((a, c) => a + c.w, 0) + 64}px"><colgroup><col style="width:70px">${cs.map(c => `<col style="width:${c.w}px">`).join("")}<col style="width:64px"></colgroup><tbody>` +
       doc.escenas.map((e, ei) => `<tr class="eh" data-e="${ei}" style="--c:${e.color || BANDA.escena}"><td colspan="${cs.length + 2}"><div class="ehd">
@@ -81,6 +110,8 @@
     if (k === "abre") return abrir(b.dataset.id);
     if (k === "importar") return IMP.dialeg("gt", async escenes => { const d = { id: H.uid("gt"), titulo: "Guió importat", proyecto: H.pj() === "-" ? "" : H.pj(), escenas: escenes }; await perDefecte(d); if (escenes.some(e => e.planos.some(p => p.dur))) d.ocultas = d.ocultas.filter(x => x !== "dur"); await H.put(d, 1); doc = d; pintar(); H.toast(escenes.reduce((a, e) => a + e.planos.length, 0) + " plans importats"); const t = el.querySelector(".tt"); t && (t.focus(), t.select()) });
     if (!doc) return;
+    if (k === "gtnous" || k === "gtcap" || k === "gtrevisat") return aplicaAvis(k);
+    if (k === "gtvincula") return vincula();
     if (k === "volver") return lista();
     if (k === "addp") { doc.escenas[ei].planos.push(nuevoPlano(doc.escenas[ei])); save(); pintar(); const t = el.querySelectorAll(`tr.pr[data-e="${ei}"] textarea`); t.length && t[t.length - (vis().length - 2)]?.focus() }
     if (k === "addesc") { const u = doc.escenas.at(-1); const n = { id: uid(), num: String((+(u && u.num) || doc.escenas.length) + 1), intext: "INT", lugar: "", planos: [] }; n.planos.push(nuevoPlano(n)); doc.escenas.push(n); save(); pintar() }
@@ -186,8 +217,8 @@
 
   window.addEventListener("hub-sec", e => { if (e.detail === "guiones" && (!doc || !H.dePj(doc))) lista() });
   // Crea un guió tècnic nou a partir d'unes escenes (p. ex. des del Desglossament)
-  async function nou(escenas, titulo, proyecto) {
-    const d = { id: H.uid("gt"), titulo: titulo || "Guió tècnic", escenas: escenas.map(e => ({ ...e, sinopsis: e.sinopsis || e.notas || "" })), proyecto: proyecto || "" };
+  async function nou(escenas, titulo, proyecto, desg) {
+    const d = { id: H.uid("gt"), titulo: titulo || "Guió tècnic", escenas: escenas.map(e => ({ ...e, sinopsis: e.sinopsis || e.notas || "" })), proyecto: proyecto || "", desg: desg || "" };
     await perDefecte(d); await H.put(d, 1); hubShow("guiones"); doc = d; ++ver; pintar(); H.toast(escenas.length + " escenes passades al guió tècnic");
   }
   window.GT = { abrir, nou };
