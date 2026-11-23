@@ -266,12 +266,12 @@ button.x{border:0;background:none;font-size:18px;color:var(--mut);cursor:pointer
 .sbobjbar{display:flex;gap:6px;position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.15);padding:6px;z-index:2;max-width:calc(100% - 20px);overflow-x:auto}.sbobjbar>*{flex:none}.sbobjbar[hidden]{display:none}
 .sbmeta{display:flex;gap:8px;align-items:center;padding:0 14px calc(10px + env(safe-area-inset-bottom,0px))}.sbmeta input{max-width:360px}
 .anim{background:#fff;color:#000}.antm{font-variant-numeric:tabular-nums;color:var(--mut)}
-.anvis{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:8px}.anfr{width:min(100%,calc((max(120px,min(50vh,100vh - 330px)) - 16px) * var(--r)));aspect-ratio:var(--r);background:#f2f2f7;box-shadow:0 0 0 1px var(--line,#e5e5ea);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.anvis{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:8px}.anfr{width:min(100%,calc((max(120px,min(50vh,100vh - 330px)) - 16px) * var(--r)));aspect-ratio:var(--r);background:#f2f2f7;box-shadow:0 0 0 1px var(--bd,#e5e5ea);display:flex;align-items:center;justify-content:center;overflow:hidden}
 .anfr img,.anfr video{width:100%;height:100%;object-fit:contain;display:block}
 .ancap{padding:6px 16px;font-size:13px;color:#000;min-height:20px}
 .anbar{display:flex;gap:2px;padding:0 16px;height:6px}.anbar i{background:#e5e5ea;border-radius:2px;cursor:pointer}.anbar i.on{background:#000}
 .anctl{display:flex;align-items:center;gap:8px;padding:8px 16px}
-.anscr{flex:1;min-height:0;overflow-y:auto;background:#f2f2f7;color:#000;position:relative;border-top:1px solid var(--line,#e5e5ea)}
+.anscr{flex:1;min-height:0;overflow-y:auto;background:#fff;color:#000;position:relative;border-top:1px solid var(--bd,#e5e5ea)}
 .anpap{max-width:64ch;margin:14px auto 0;padding:22px 28px;background-color:#fdfcf9;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");box-shadow:0 0 0 1px #e8e6e0,0 2px 8px rgba(0,0,0,.05);font-family:"Courier Prime","Courier New",Courier,monospace;font-size:15px;line-height:1.35;color:#000}
 .anl{white-space:pre-wrap;cursor:pointer;border-radius:3px}.anl.on{background:rgba(0,0,0,.07)}.anim.jugant .anpista{visibility:hidden}.anctl .b,.anctl .t{width:44px;height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center}.ancap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.anl:hover{background:rgba(0,0,0,.05)}
 @media(pointer:coarse){.sbed .t,.sbed .b,.sbed .b2{min-height:44px}.sbcol button{width:36px;height:36px}.sbn .t,.sbn .x{min-width:40px;min-height:40px}.sbtools input[type=range]{height:44px}}
@@ -280,6 +280,7 @@ button.x{border:0;background:none;font-size:18px;color:var(--mut);cursor:pointer
 @media(max-width:600px){.anpap{font-size:13px}.sbpal button{width:66px}}
 #htoast,#toast{z-index:90}
 .eqd{grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))}.eqd .card{margin:0}.eqo{display:flex;gap:2px;flex:none}.eqo .t{padding:4px 8px}
+@media(max-width:600px){.anpap{margin:12px 10px 0}.eqd+h2+div .r{flex-wrap:wrap}.eqd+h2+div .r input[data-rol]{flex:1 1 100%;width:auto!important;max-width:none!important;margin-left:0}}@media(pointer:coarse){.eqo .t{min-width:44px;min-height:44px}}
 </style></head><body>
 <div class="app">
 <header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="mb" id="mb">Menú</button></header>
