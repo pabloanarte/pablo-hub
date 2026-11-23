@@ -29,7 +29,7 @@
     de(pdr).forEach(x => (x.dias || []).forEach((d, i) => d.fecha >= hoy && dates.push([d.fecha, "Rodatge", `${x.titulo || "Pla"} · jornada ${i + 1}`])));
     const prop = dates.filter(d => d[0] <= lim || d[1] === "Tasca").sort((a, b) => a[0].localeCompare(b[0])).slice(0, 8);
     const fp = de(fs), sel = fp.filter(x => ["Seleccionat", "Premiat"].includes(x.estado)), prem = sel.filter(x => x.premi || x.estado === "Premiat"), pend = fp.filter(x => x.estado === "Presentat");
-    const dev = devs.find(x => x.id === "dev:" + p.id.split(":")[1]) || {}, vers = (dev.versions || []).slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+    const dev = devs.find(x => x.id === "dev:" + p.id.split(":")[1]) || {}, vers = (dev.versions || []).map((x, i) => [x, i]).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0]);
     const gt = de(gts), plans = de(pdr), jorn = plans.reduce((a, x) => a + (x.dias || []).length, 0);
     const eq = (p.equip || []).filter(x => pers.some(y => y.id === x.id));
     const targ = (pt, t, n, s) => `<div class="card prs" data-pt="${pt}" style="cursor:pointer"><h3>${t}</h3><div class="pn">${n}</div><small class="em">${E(s || "")}</small></div>`;
@@ -43,9 +43,9 @@
         </div></div>
       <div class="dash" style="margin-top:20px">
         ${(() => { const gs = (dev.versions || []).map((x, i) => [x, i]).filter(([x]) => (x.tipus || "Guió") === "Guió" && x.arxiu).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0]), u = gs[0], dg = p.desg && ds.find(x => x.id === p.desg);
-          return `<div class="card w2"><h3>Guió</h3>${u ? `<div class="r" style="padding:4px 0"><i class="dot" style="background:#000"></i><a class="g" href="/api/archivo/${E(u.arxiu.id)}" target="_blank" style="color:inherit;text-decoration:none"><b>${E(u.arxiu.nombre || "Guió")}</b><small>${E([u.versio, u.data && H.fecha(u.data), u.pag && u.pag + " pàg."].filter(Boolean).join(" · "))}</small></a></div>` : `<p class="em" style="margin-top:0">Puja-hi el guió i en sortiran el desglossament, el guió tècnic, el storyboard i el pla.</p>`}
+          return `<div class="card" style="grid-column:1/-1"><h3>Guió</h3>${u ? `<div class="r" style="padding:4px 0"><i class="dot" style="background:#000"></i><a class="g" href="/api/archivo/${E(u.arxiu.id)}" target="_blank" style="color:inherit;text-decoration:none"><b>Guió ${E(u.versio || "")}</b><small>${E([u.data && H.fecha(u.data), u.pag && u.pag + " pàg.", u.arxiu.nombre].filter(Boolean).join(" · "))}</small></a></div>` : `<p class="em" style="margin-top:0">Puja-hi el guió i en sortiran el desglossament, el guió tècnic, el storyboard i el pla.</p>`}
             ${dg ? `<p class="em" style="margin:6px 0 0">Desglossat: ${dg.escenes.length} escenes · <a href="#" data-pt="guio" style="color:#000">Obrir</a></p>` : ""}
-            <div class="ls" style="margin-top:10px"><label class="b" style="cursor:pointer;color:#fff">${u ? "Pujar una versió nova (PDF)" : "Pujar el guió (PDF)"}<input type="file" accept=".pdf,application/pdf" id="prguio" hidden></label>${gs.length > 1 ? `<button class="b2" data-pt="desenvolupament">Totes les versions (${gs.length})</button>` : ""}</div></div>` })()}
+            <div class="ls" style="margin-top:10px;align-items:center"><label class="b" style="cursor:pointer;color:#fff">${u ? "Pujar una versió nova (PDF)" : "Pujar el guió (PDF)"}<input type="file" accept=".pdf,application/pdf" id="prguio" hidden></label>${gs.length > 1 ? `<button class="b2" data-pt="desenvolupament">Totes les versions (${gs.length})</button>` : ""}</div></div>` })()}
         <div class="card w2"><h3>Properes dates</h3>${prop.length ? prop.map(d => `<div class="m pdt"><b>${E(H.fecha(d[0]))}</b><span><span class="em">${E(d[1])}</span> · ${E(d[2] || "")}</span></div>`).join("") : `<p class="em">Res als propers dos mesos.</p>`}</div>
         ${targ("festivales", "Festivals", fp.length, fp.length ? `${sel.length} ${sel.length === 1 ? "selecció" : "seleccions"}${prem.length ? ` · ${prem.length} ${prem.length === 1 ? "premi" : "premis"}` : ""}${pend.length ? ` · ${pend.length} sense decidir` : ""}` : "Encara cap inscripció")}
         ${["Llarg", "Curt"].includes(p.categoria) ? targ("desenvolupament", "Desenvolupament", vers.length, vers[0] ? `última: ${[vers[0].tipus, vers[0].versio].filter(Boolean).join(" ")}${vers[0].data ? " · " + H.fecha(vers[0].data) : ""}` : "Cap versió apuntada") : ""}
@@ -164,6 +164,27 @@
       <div class="ls" style="margin-top:8px">${ln.map(x => `<a class="ln" target="_blank" rel="noopener" href="${E(H.url(x))}">${E(x.replace(/^https?:\/\/(www\.)?/, "").slice(0, 60))}</a>`).join("")}</div>`;
   }
 
+  // Pujar una versió del guió (des del Resum o del Desglossament): versió a Desenvolupament, pàgines, escriptura i desglossament
+  async function pujaGuio(pid, f) {
+    const p = (await H.col("proyecto")).find(x => x.id === pid); if (!p) return;
+    if (f.size > 25 * 1024 * 1024) return H.toast("Passa de 25 MB");
+    const id = "dev:" + pid.split(":")[1], dv = (await H.col("dev")).find(x => x.id === id) || { id, versions: [], lectures: [], convs: [] };
+    const gs = (dv.versions || []).filter(x => (x.tipus || "Guió") === "Guió"), ant = gs.map(x => parseInt(String(x.versio || "").replace(/\D/g, "")) || 0);
+    const num = (f.name.replace(/\.pdf$/i, "").match(/(?:^|[^a-z0-9])v\.?\s?(\d{1,3})(?![0-9])/i) || [])[1];
+    const versio = "v" + (num || (ant.length ? Math.max(...ant) + 1 : 1)), ja = gs.find(x => x.versio === versio);
+    if (ja && !confirm(`Ja hi ha una ${versio} del guió. Vols substituir-la per aquest arxiu?`)) return;
+    H.toast("Pujant el guió…");
+    let a; try { a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f) } catch (er) { return H.toast("No s'ha pogut pujar") }
+    const v = ja || { tipus: "Guió", versio, canvis: "" }; if (ja && ja.arxiu) H.api("DELETE", "archivo/" + ja.arxiu.id).catch(() => { });
+    Object.assign(v, { data: avui(), arxiu: a });
+    try { const pdfjs = await import("/vendor/pdf.min.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdf.worker.min.mjs"; v.pag = (await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise).numPages } catch (er) { }
+    if (!ja) dv.versions = (dv.versions || []).concat(v);
+    await H.put(dv, 1);
+    if (v.pag) { const es = (await H.col("ajust")).find(x => x.id === "ajust:escriptura") || { id: "ajust:escriptura", log: [] }; es.log = (es.log || []).filter(x => !(x.proj === pid && x.d === v.data)).concat({ proj: pid, d: v.data, p: v.pag, versio: v.versio }); H.put(es, 1) }
+    try { const r = await DESG.desdePDF(f, pid, (p.titulo || "Guió") + " " + v.versio); H.toast(`Guió ${v.versio}${v.pag ? " · " + v.pag + " pàg." : ""} · ${r.d.escenes.length} escenes desglossades`); return r }
+    catch (er) { H.toast(er && /capçaleres/.test(er.message) ? "Guió desat, però no he trobat les capçaleres d'escena (INT./EXT.)" : "Guió desat, però no s'ha pogut desglossar") }
+  }
+  window.PJ = { pujaGuio };
   const doc = async () => (await H.col("proyecto")).find(x => x.id === H.pj());
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k],[data-pt]"); if (!b) return; if (b.tagName === "A") e.preventDefault();
@@ -189,21 +210,7 @@
   });
   el.addEventListener("change", async e => {
     const t = e.target, p = await doc(); if (!p) return;
-    if (t.id === "prguio" && t.files[0]) {
-      const f = t.files[0]; t.value = ""; if (f.size > 25 * 1024 * 1024) return H.toast("Passa de 25 MB");
-      H.toast("Pujant el guió…");
-      let a; try { a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f) } catch (er) { return H.toast("No s'ha pogut pujar") }
-      // versió nova a Desenvolupament
-      const id = "dev:" + p.id.split(":")[1], dv = (await H.col("dev")).find(x => x.id === id) || { id, versions: [], lectures: [], convs: [] };
-      const ant = (dv.versions || []).filter(x => (x.tipus || "Guió") === "Guió").map(x => parseInt(String(x.versio || "").replace(/\D/g, "")) || 0), num = (f.name.match(/v\.?\s?(\d+)/i) || [])[1];
-      const v = { tipus: "Guió", data: avui(), versio: "v" + (num || (ant.length ? Math.max(...ant) + 1 : 1)), canvis: "", arxiu: a };
-      // i es torna a desglossar
-      try { const r = await DESG.desdePDF(f, p.id, (p.titulo || "Guió") + " " + v.versio); v.pag = r.pagines; H.toast(`Guió ${v.versio} · ${r.pagines} pàg. · ${r.d.escenes.length} escenes desglossades`) }
-      catch (er) { H.toast(er && /capçaleres/.test(er.message) ? "Guió desat, però no he trobat les capçaleres d'escena (INT./EXT.)" : "Guió desat, però no s'ha pogut desglossar") }
-      dv.versions = (dv.versions || []).concat(v); await H.put(dv, 1);
-      if (v.pag) { const es = (await H.col("ajust")).find(x => x.id === "ajust:escriptura") || { id: "ajust:escriptura", log: [] }; es.log = (es.log || []).filter(x => !(x.proj === p.id && x.d === v.data)).concat({ proj: p.id, d: v.data, p: v.pag, versio: v.versio }); H.put(es, 1) }
-      return pintar();
-    }
+    if (t.id === "prguio" && t.files[0]) { const f = t.files[0]; t.value = ""; const l = t.closest("label"); l.classList.add("ocupat"); await pujaGuio(p.id, f); l.classList.remove("ocupat"); return pintar() }
     if (t.id === "prup" && t.files.length) {
       for (const f of t.files) {
         if (f.size > 25 * 1024 * 1024) { H.toast(f.name + " passa de 25 MB"); continue }

@@ -10,7 +10,8 @@
   const aNum = s => { s = String(s || "").trim().replace(",", "."); let m; if ((m = s.match(/^(\d+)\s+(\d+)\/(\d+)$/))) return +m[1] + m[2] / m[3]; if ((m = s.match(/^(\d+)\/(\d+)$/))) return m[1] / m[2]; return parseFloat(s) || 0 };
 
   // ---------- llegir el guió ----------
-  const HEAD = /^\s*(\d+[A-Z]?[.)]?\s+)?(INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|INT|EXT)[.\s:]/i;
+  const NUM = "\\d+[A-Z]?(?:\\s*[+\\/-]\\s*\\d+[A-Z]?)*"; // «7», «7A», «7+8»
+  const HEAD = /^\s*(\d+[A-Z]?(?:\s*[+\/-]\s*\d+[A-Z]?)*[.)]?\s+)?(INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|INT|EXT)[.\s:]/i;
   const TRANS = /^(CORTE A|CORTA A|FUNDIDO|FUNDE|CUT TO|FADE|DISSOLVE|ENCADENA|TALL A|FOS|CONTINUAR|CONTINUA|CONTINÚA|\(?CONT|FIN\b|THE END)/i;
   async function llegeix(file) {
     const pdfjs = await import("/vendor/pdf.min.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdf.worker.min.mjs";
@@ -20,7 +21,9 @@
       tc.items.filter(i => i.str.trim()).forEach(i => { const y = i.transform[5], x = i.transform[4]; let l = ls.find(l => Math.abs(l.y - y) < 3); if (!l) ls.push(l = { y, x, t: [] }); l.t.push([x, i.str, i.width || 0, Math.abs(i.transform[0]) || 12]); l.x = Math.min(l.x, x) });
       // alguns PDF (p. ex. els exportats des de l'iPhone o l'iPad) donen cada lletra per separat: s'ajunten per posició,
       // i només hi va un espai quan hi ha un buit real entre lletres
-      ls.forEach(l => { let s = "", fi = null; l.t.sort((a, b) => a[0] - b[0]).forEach(([x, t, w, f]) => { if (fi != null && x - fi > f * .22 && !/\s$/.test(s) && !/^\s/.test(t)) s += " "; s += t; fi = x + (w || t.length * f * .6) }); l.s = s.replace(/\s+/g, " ").trim() });
+      ls.forEach(l => { let s = "", fi = null; l.t.sort((a, b) => a[0] - b[0]).forEach(([x, t, w, f]) => { if (fi != null && x - fi > f * .22 && !/\s$/.test(s) && !/^\s/.test(t)) s += " "; s += t; fi = x + (w || t.length * f * .6) }); l.s = s.replace(/\s+/g, " ").trim();
+        // trossos separats per un buit gran (diàleg doble a dues columnes)
+        l.segs = []; let cur = null, fi2 = null; l.t.forEach(([x, t, w, f]) => { if (!cur || x - fi2 > f * 2.5) l.segs.push(cur = { x, s: "" }); else if (x - fi2 > f * .22 && !/\s$/.test(cur.s)) cur.s += " "; cur.s += t; fi2 = x + (w || t.length * f * .6) }); l.segs.forEach(g => g.s = g.s.replace(/\s+/g, " ").trim()) });
       ls.sort((a, b) => b.y - a.y);
       // treu el número de pàgina (una línia curta només amb números a dalt o a baix)
       pags.push({ alt: vp.height, ls: ls.filter((l, i) => !((i === 0 || i === ls.length - 1) && /^\d{1,3}\.?$/.test(l.s))) });
@@ -35,22 +38,24 @@
       p.ls.forEach((l, li) => {
         const seg = p.ls[li + 1], alt = seg ? l.y - seg.y : 14;
         if (HEAD.test(l.s)) {
-          const t = l.s.replace(/^\s*\d+[A-Z]?[.)]?\s+/, "").replace(/\s+\d+[A-Z]?\.?\s*$/, ""), m = t.match(/^(INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|INT|EXT)[.\s:]*(.*)$/i);
-          const parts = (m ? m[2] : t).split(/\s+[-–—]\s+/), num = (l.s.match(/^\s*(\d+[A-Z]?)/) || [])[1];
+          const t = l.s.replace(/^\s*\d+[A-Z]?(?:\s*[+\/-]\s*\d+[A-Z]?)*[.)]?\s+/, "").replace(/\s+\d+[A-Z]?(?:\s*[+\/-]\s*\d+[A-Z]?)*\.?\s*$/, ""), m = t.match(/^(INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|INT|EXT)[.\s:]*(.*)$/i);
+          const parts = (m ? m[2] : t).split(/\s+[-–—]\s+/), num = ((l.s.match(/^\s*(\d+[A-Z]?(?:\s*[+\/-]\s*\d+[A-Z]?)*)/) || [])[1] || "").replace(/\s+/g, "");
           cur = { id: R.uid(), num: num || String(esc.length + 1), intext: m ? m[1].toUpperCase().replace(/\s/g, "").replace(/\.$/, "").replace(/\./g, ".") : "", set: (parts.length > 1 ? parts.slice(0, -1).join(" - ") : parts[0]).trim(), moment: parts.length > 1 ? parts.at(-1).trim() : "", pag: 0, pers: [], atrezzo: "", vestuari: "", notes: "", pagina: pi + 1 };
           cur.text = [[0, l.s]];
           esc.push(cur);
         } else if (cur) {
           // text del guió per a l'animàtic del storyboard: [sagnat en caràcters, línia]; línia buida quan hi ha salt de paràgraf
           const ant = li ? p.ls[li - 1] : null; if (ant && ant.y - l.y > 20) cur.text.push([0, ""]);
-          cur.text.push([Math.max(0, Math.round((l.x - marge) / 7.2)), l.s]);
-          const net = l.s.replace(/\s*\((CONT['’]?D?|CONT\.|V\.?O\.?|O\.?S\.?|OFF|O\.?C\.?|CONTINUA|CONTINÚA|CONT)\)\s*/gi, "").trim();
-          if (l.x - marge > 90 && net === net.toUpperCase() && /[A-ZÀ-Ý]/.test(net) && net.split(" ").length <= 4 && !TRANS.test(net) && !/^\(/.test(net) && !/[.!?]$/.test(net)) { if (!cur.pers.includes(net)) cur.pers.push(net) }
+          cur.text.push([Math.max(0, Math.round((l.x - marge) / 7.2)), (l.segs && l.segs.length > 1 ? l.segs.map(g => g.s).join("      ") : l.s)]);
+          (l.segs && l.segs.length > 1 ? l.segs : [l]).forEach(g => {
+            const net = g.s.replace(/\s*\((CONT['’]?D?|CONT\.|V\.?O\.?|O\.?S\.?|OFF|O\.?C\.?|CONTINUA|CONTINÚA|CONT)\)\s*/gi, "").trim();
+            if (g.x - marge > 70 && net === net.toUpperCase() && /[A-ZÀ-Ý]/.test(net) && net.split(" ").length <= 4 && !TRANS.test(net) && !/^\(/.test(net) && !/[.!?]$/.test(net)) { if (!cur.pers.includes(net)) cur.pers.push(net) }
+          });
         }
         if (cur) cur.pag += Math.min(alt, 40) / util;
       });
     });
-    return esc.map(e => ({ ...e, pag: vuitens(e.pag), pers: e.pers.join(", ") }));
+    return esc.map(e => { const o = { ...e, pag: vuitens(e.pag), pers: e.pers.join(", ") }; o._a = { intext: o.intext, set: o.set, moment: o.moment, pag: o.pag, pers: o.pers }; return o });
   }
 
   // El guió és el tronc del projecte: quan se'n puja una versió (al Resum o a Desenvolupament) es torna a desglossar sol.
@@ -59,10 +64,16 @@
     const pags = await llegeix(f), escenes = desglossa(pags);
     if (!escenes.length) throw new Error("No he trobat capçaleres d'escena (INT./EXT.)");
     const p = (await H.col("proyecto")).find(x => x.id === pid);
-    let d = p && p.desg && (await H.col("desg")).find(x => x.id === p.desg);
+    const dsg = await H.col("desg");
+    let d = (p && p.desg && dsg.find(x => x.id === p.desg)) || dsg.filter(x => x.proyecto === pid).sort((a, b) => (b.mod || 0) - (a.mod || 0))[0];
     if (d) {
-      escenes.forEach(e => { const v = d.escenes.find(o => o.num === e.num && (o.set || "").toLowerCase() === (e.set || "").toLowerCase()) || d.escenes.find(o => o.num === e.num); if (v) { e.id = v.id; ["atrezzo", "vestuari", "notes"].forEach(k => { if (v[k]) e[k] = v[k] }) } });
-      d.escenes = escenes; if (nom) d.titulo = nom; d.mod = Date.now();
+      const usats = new Set();
+      escenes.forEach(e => { const v = d.escenes.find(o => !usats.has(o) && o.num === e.num && (o.set || "").toLowerCase() === (e.set || "").toLowerCase()) || d.escenes.find(o => !usats.has(o) && o.num === e.num); if (!v) return; usats.add(v); e.id = v.id;
+        ["atrezzo", "vestuari", "notes"].forEach(k => { if (v[k]) e[k] = v[k] });
+        // el que hagis corregit a mà (set, moment, pàgines, personatges) es manté si el guió no ho ha canviat
+        ["intext", "set", "moment", "pag", "pers"].forEach(k => { if (v._a ? v[k] !== v._a[k] : false) e[k] = v[k] }) });
+      // les escenes afegides a mà (sense lectura automàtica) es queden
+      d.escenes = escenes.concat(d.escenes.filter(o => !o._a && !usats.has(o))); d.mod = Date.now();
     } else d = { id: H.uid("desg"), proyecto: pid, titulo: nom || (p && p.titulo) || "Guió", escenes, mod: Date.now() };
     await H.put(d, 1);
     if (p && p.desg !== d.id) { p.desg = d.id; await H.put(p, 1) }
@@ -70,9 +81,9 @@
   }
 
   // ---------- llista ----------
-  async function lista() {
+  async function lista(auto) {
     const v = ++ver, [ds0, ps] = await Promise.all([H.col("desg"), H.col("proyecto")]); if (v !== ver) return; const ds = ds0.filter(H.dePj); doc = null;
-    const pj = ps.find(x => x.id === H.pj()); if (pj && pj.desg && ds.some(x => x.id === pj.desg)) return obre(pj.desg);
+    const pj = ps.find(x => x.id === H.pj()); if (auto && pj && pj.desg && ds.some(x => x.id === pj.desg)) return obre(pj.desg);
     el.innerHTML = `<div class="bar"><span class="em">Puja el guió en PDF (format estàndard) i en sortiran les escenes desglossades.</span><span style="flex:1"></span><label class="b" style="cursor:pointer">Desglossar un guió (PDF)<input type="file" accept=".pdf,application/pdf" data-k="pdf" hidden></label></div>
       ${ds.length ? ds.sort((a, b) => (b.mod || 0) - (a.mod || 0)).map(d => { const p = ps.find(x => x.id === d.proyecto); return `<div class="r" data-k="obre" data-id="${d.id}"><i class="dot" style="background:#ff9f0a"></i><div class="g"><b>${E(d.titulo || "Sense títol")}</b><small>${[p && p.titulo, d.escenes.length + " escenes", vuitens(d.escenes.reduce((a, e) => a + aNum(e.pag), 0)) + " pàg.", new Set(d.escenes.map(e => e.set)).size + " sets"].filter(Boolean).map(E).join(" · ")}</small></div></div>` }).join("") : `<p class="em">Encara no hi ha cap desglossament.</p>`}`;
   }
@@ -125,7 +136,7 @@
     if (t.dataset.k !== "pdf" || !t.files[0]) return;
     const f = t.files[0]; H.toast("Llegint el guió…");
     try {
-      if (H.pj() && H.pj() !== "-") { const { d } = await desdePDF(f, H.pj(), f.name.replace(/\.pdf$/i, "").replace(/_+/g, " ")); doc = d; vista = "esc"; pinta(); H.toast(d.escenes.length + " escenes"); t.value = ""; return }
+      if (H.pj() && H.pj() !== "-" && window.PJ) { t.value = ""; const r = await PJ.pujaGuio(H.pj(), f); if (r && r.d) { doc = r.d; vista = "esc"; pinta() } return }
       const escenes = desglossa(await llegeix(f));
       if (!escenes.length) { t.value = ""; return H.toast("No he trobat capçaleres d'escena (INT./EXT.). És un guió en format estàndard?") }
       const d = { id: H.uid("desg"), proyecto: H.pj() === "-" ? "" : H.pj(), titulo: f.name.replace(/\.pdf$/i, "").replace(/^[0-9a-f]{8}-/, "").replace(/_+/g, " "), escenes, mod: Date.now() };
@@ -133,7 +144,8 @@
     } catch (er) { H.toast(er && /capçaleres/.test(er.message) ? "No he trobat capçaleres d'escena (INT./EXT.). És un guió en format estàndard?" : "No s'ha pogut llegir el PDF") }
     t.value = "";
   });
-  window.addEventListener("hub-sec", e => { if (e.detail === "desglossament" && (!doc || !H.dePj(doc))) lista() });
+  // en entrar: dins un projecte s'obre el seu desglossament (i es torna a llegir per si s'ha pujat un guió nou)
+  window.addEventListener("hub-sec", e => { if (e.detail !== "desglossament") return; if (doc && H.dePj(doc)) return obre(doc.id); lista(true) });
   window.DESG = { obre, desdePDF };
-  if (!el.hidden) lista();
+  if (!el.hidden) lista(true);
 })();

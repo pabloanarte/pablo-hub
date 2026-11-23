@@ -30,7 +30,7 @@
   }
   const ta = (k, i, f, v, ph = "", rows = 1) => `<textarea rows="${rows}" data-l="${k}" data-i="${i}" data-f="${f}" placeholder="${E(ph)}">${E(v || "")}</textarea>`;
   async function pinta() {
-    const vs = d.versions.slice().map((v, i) => [v, i]).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "")), cs = (await H.col("convocatoria")).filter(c => c.proyecto === p.id && c.tipo === "Lab / residència");
+    const vs = d.versions.slice().map((v, i) => [v, i]).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]), cs = (await H.col("convocatoria")).filter(c => c.proyecto === p.id && c.tipo === "Lab / residència");
     el.innerHTML = `<div class="bar tb">${H.pj() ? "" : `<button class="b2" data-k="torna">← Desenvolupament</button><b style="font-size:20px">${E(p.titulo || "")}</b>`}<span class="em">${E([p.categoria, p.estado].filter(Boolean).join(" · "))}</span><span style="flex:1"></span><button class="b2" data-k="proj">Fitxa del projecte</button></div>
       ${p.logline ? `<p style="font-size:17px;max-width:900px;margin:4px 0 18px">${E(p.logline)}</p>` : ""}
       <div class="card"><h3>Versions</h3><p class="em" style="margin:0 0 8px">Cada versió del tractament, de l'escaleta o del guió, amb l'arxiu i què ha canviat.</p>
@@ -93,11 +93,11 @@
         }
       }
       save(); pinta(); H.toast(v.pag ? `Pujat · ${v.pag} pàgines` : "Pujat");
-      const darrera = d.versions.filter(x => (x.tipus || "Guió") === "Guió" && x.arxiu).sort((a, b) => (b.data || "").localeCompare(a.data || ""))[0];
-      if ((v.tipus || "Guió") === "Guió" && darrera === v && window.DESG) DESG.desdePDF(f, p.id, (p.titulo || "Guió") + (v.versio ? " " + v.versio : "")).then(r => H.toast(r.d.escenes.length + " escenes desglossades")).catch(() => { })
+      const darrera = d.versions.map((x, i) => [x, i]).filter(([x]) => (x.tipus || "Guió") === "Guió" && x.arxiu).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0])[0];
+      if ((v.tipus || "Guió") === "Guió" && darrera === v && window.DESG) DESG.desdePDF(f, p.id, (p.titulo || "Guió") + (v.versio ? " " + v.versio : "")).then(r => H.toast(r.d.escenes.length + " escenes desglossades")).catch(er => H.toast(er && /capçaleres/.test(er.message) ? "No he trobat les capçaleres d'escena (INT./EXT.) per desglossar-lo" : "No s'ha pogut desglossar el guió"))
     }
   });
-  window.addEventListener("hub-sec", e => { if (e.detail === "desenvolupament" && (!p || (H.pj() && H.pj() !== "-" && p.id !== H.pj()) || !H.pj())) lista() });
+  window.addEventListener("hub-sec", e => { if (e.detail !== "desenvolupament") return; if (p && H.pj() && p.id === H.pj()) return obre(p.id); lista() });
   window.DEV = { obre };
   if (!el.hidden) lista();
 })();
