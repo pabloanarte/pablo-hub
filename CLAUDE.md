@@ -1,6 +1,14 @@
 # PABLO hub
 Hub personal de Pablo Anarte. Cloudflare Pages (proyecto pablo-hub, carpeta de salida `public`, sin build) + base de datos D1 (variable `DB`).
 
+## Com treballar amb Pablo
+- Pablo escriu en castellà i se li respon en castellà; la interfície del hub és en català. Dir «videoclip», mai «clip».
+- Publicar directament a `main` (commit + push) quan el canvi està provat en local; Pablo ho veu en 1–2 minuts. Excepció: si demana «propuesta» o «no publiques», fer-ho només en local (artefacte o arxiu) sense tocar el repo.
+- Provar sempre amb els arxius reals que envia (PDF de guions i GT, captures) i, als importadors, comprovar que els formats antics donen el mateix resultat.
+- Després de cada bloc de canvis, la skill /revision-en-paralelo (completitud, coherència, estètica). A Pablo només el resultat i una llista curta del que s'ha trobat.
+- Respostes curtes i directes: què ha canviat i què ha de fer ell, si cal. No contrasenyes ni claus al xat (les posa ell).
+- Mantenir aquest arxiu al dia amb cada canvi d'estructura.
+
 ## Archivos
 - `public/index.html`: estructura (cabecera, menú lateral izquierdo, contenido) y estilos.
 - `public/hub.js`: lista de secciones. **Añadir una sección = una línea aquí + un archivo en `public/sections/`.**
