@@ -14,6 +14,7 @@ function configurar() {
   CalendarApp.getDefaultCalendar();
   DriveApp.getRootFolder();
   GmailApp.getInboxUnreadCount();
+  try { SpreadsheetApp.getActive() } catch (e) { } // demana el permís per llegir els fulls (respostes dels formularis)
   Logger.log("Clau per enganxar al hub:\n" + p.getProperty("CLAU"));
 }
 
@@ -49,6 +50,12 @@ function resumFil(t) {
 const AUTO = /(out of office|fuera de la oficina|fora de l'oficina|automatic reply|auto-?reply|respuesta autom|resposta autom|r[ée]ponse automatique|delivery status|undeliverable|no se ha podido entregar)/i;
 const ACCIONS = {
   calendari: () => sincronitzaCal(),
+  // llegeix un full de càlcul teu (p. ex. les respostes d'un Google Forms) sense haver-lo de fer públic
+  full: q => {
+    const ss = SpreadsheetApp.openByUrl(String(q.url || "")), gid = (String(q.url).match(/[#&?]gid=(\d+)/) || [])[1];
+    const sh = (gid && ss.getSheets().filter(s => String(s.getSheetId()) === gid)[0]) || ss.getSheets()[0];
+    return { nom: ss.getName(), rows: sh.getDataRange().getDisplayValues() };
+  },
   vigila: () => vigila(),
   // «Enviar-me'l ara»: compta com el resum del dia (no n'arribarà un altre a les 8:30)
   diari: () => { const r = resumDiari(); if (r && !r.buit) PropertiesService.getScriptProperties().setProperty("RESUM_DIA", Utilities.formatDate(new Date(), "Europe/Madrid", "yyyy-MM-dd")); return r },

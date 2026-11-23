@@ -53,13 +53,79 @@
   }
 
   // ---------- Equip ----------
+  // ---------- Equip ----------
+  // @ d'Instagram net a partir del que escriguin («@nom», «nom», «instagram.com/nom/?igsh=…»)
+  const arroba = t => { t = String(t || "").trim(); if (!t) return ""; const m = t.match(/instagram\.com\/([\w.]+)/i); t = (m ? m[1] : t).replace(/^@+/, "").replace(/[/?#].*$/, "").trim(); return /^[\w.]{1,30}$/.test(t) ? "@" + t : "" };
+  const UNIO = { i: " i ", y: " y ", "&": " & ", ",": ", " };
+  // Text dels crèdits: un rol per línia («Rol: @a i @b»), en l'ordre de l'equip; si algú no té Instagram, surt el nom
+  function credits(p, eq) {
+    const c = p.cred || {}, sep = c.sep === "espai" ? " " : ": ", u = UNIO[c.unio || "i"], grups = [];
+    eq.forEach(x => { const rol = String(x.rol || x.p.rol || "").trim() || "Equip", k = rol.toLowerCase(), qui = arroba(x.p.insta) || x.p.titulo || ""; if (!qui) return; let g = grups.find(y => y.k === k); if (!g) grups.push(g = { k, rol, q: [] }); if (!g.q.includes(qui)) g.q.push(qui) });
+    const ll = grups.map(g => g.rol + sep + (g.q.length > 1 ? g.q.slice(0, -1).join(" ") + u + g.q.at(-1) : g.q[0]));
+    return [c.cap || "", ll.join(c.buit ? "\n\n" : "\n")].filter(Boolean).join("\n\n");
+  }
   async function equip(p, v) {
     const pers = await H.col("persona"); if (v !== ver) return;
     const eq = (p.equip || []).map(x => Object.assign({}, x, { p: pers.find(y => y.id === x.id) })).filter(x => x.p);
     const lliures = pers.filter(x => !eq.some(y => y.id === x.id)).sort((a, b) => (a.titulo || "").localeCompare(b.titulo || ""));
-    el.innerHTML = `<div class="card"><h3>Afegir algú</h3><div class="ls" style="gap:10px"><select id="peq" style="flex:2;min-width:200px"><option value="">Tria una persona d'Equip i repartiment…</option>${lliures.map(x => `<option value="${x.id}">${E(x.titulo || "Sense nom")}${x.rol ? " · " + E(x.rol) : x.tipus === "Repartiment" ? " · repartiment" : ""}</option>`).join("")}</select><input id="peqr" placeholder="Rol en aquest projecte" style="flex:1;min-width:160px"><button class="b" data-k="afeq">Afegir</button></div>
-        <p class="em" style="margin:10px 0 0">Si no hi és, crea-la primer a Gent → Equip i repartiment.</p></div>
-      <div style="margin-top:16px">${eq.length ? eq.map(x => `<div class="r"><i class="dot" style="background:${x.p.tipus === "Repartiment" ? "#ff375f" : "#0a84ff"}"></i><div class="g" data-k="pers" data-id="${x.id}" style="cursor:pointer"><b>${E(x.p.titulo || "Sense nom")}</b><small>${E([x.p.tel, x.p.email].filter(Boolean).join(" · "))}</small></div><input data-rol="${x.id}" value="${E(x.rol || x.p.rol || "")}" placeholder="Rol" style="width:200px;max-width:40%"><button class="x" data-k="treq" data-id="${x.id}" title="Treure del projecte">×</button></div>`).join("") : `<p class="em">Encara no hi ha ningú en aquest projecte.</p>`}</div>`;
+    const c = p.cred || {}, txt = p.credits != null && p.credits !== "" ? p.credits : credits(p, eq);
+    el.innerHTML = `<div class="dash eqd">
+      <div class="card"><h3>Del formulari de l'equip</h3>
+        <p class="em" style="margin-top:0">Enganxa l'enllaç del full de respostes del Google Forms (al formulari: Respostes → Enllaça amb Fulls). Surt el nom, el rol tal com l'han escrit, l'Instagram, el correu i el telèfon.</p>
+        <div class="ls" style="gap:8px"><input id="eqf" placeholder="https://docs.google.com/spreadsheets/…" value="${E(p.formulari || "")}" style="flex:1;min-width:220px"><button class="b" data-k="eqllegeix">${p.formulari ? "Tornar a llegir" : "Llegir"}</button></div>
+        <div class="ls" style="margin-top:8px"><label class="b2" style="cursor:pointer">O puja l'arxiu (CSV o Excel)<input type="file" accept=".csv,.tsv,.xlsx,text/csv" id="eqarx" hidden></label></div></div>
+      <div class="card"><h3>Afegir algú a mà</h3><div class="ls" style="gap:10px"><select id="peq" style="flex:2;min-width:200px"><option value="">Tria una persona d'Equip i repartiment…</option>${lliures.map(x => `<option value="${x.id}">${E(x.titulo || "Sense nom")}${x.rol ? " · " + E(x.rol) : x.tipus === "Repartiment" ? " · repartiment" : ""}</option>`).join("")}</select><input id="peqr" placeholder="Rol en aquest projecte" style="flex:1;min-width:160px"><button class="b" data-k="afeq">Afegir</button></div>
+        <p class="em" style="margin:10px 0 0">Si no hi és, crea-la primer a Gent → Equip i repartiment.</p></div></div>
+      <h2 style="margin-top:20px">Equip <span>${eq.length}</span></h2>
+      <div>${eq.length ? eq.map((x, i) => `<div class="r"><span class="eqo"><button class="t" data-k="eqamunt" data-i="${i}" ${i ? "" : "disabled"} title="Amunt">↑</button><button class="t" data-k="eqavall" data-i="${i}" ${i < eq.length - 1 ? "" : "disabled"} title="Avall">↓</button></span><div class="g" data-k="pers" data-id="${x.id}" style="cursor:pointer"><b>${E(x.p.titulo || "Sense nom")}</b><small>${E([arroba(x.p.insta), x.p.tel, x.p.email].filter(Boolean).join(" · "))}</small></div><input data-rol="${x.id}" value="${E(x.rol || x.p.rol || "")}" placeholder="Rol" style="width:220px;max-width:40%"><button class="x" data-k="treq" data-id="${x.id}" title="Treure del projecte">×</button></div>`).join("") : `<p class="em">Encara no hi ha ningú en aquest projecte.</p>`}</div>
+      ${eq.length ? `<div class="card" style="margin-top:20px"><h3>Crèdits per a Instagram</h3>
+        <p class="em" style="margin-top:0">Surten en l'ordre de la llista (canvia'l amb ↑ ↓) i els rols repetits s'ajunten. Pots retocar el text: es guarda.</p>
+        <div class="ls" style="gap:10px;margin-bottom:10px">
+          <select data-c="sep" style="width:auto"><option value="dos" ${c.sep !== "espai" ? "selected" : ""}>Rol: @usuari</option><option value="espai" ${c.sep === "espai" ? "selected" : ""}>Rol @usuari</option></select>
+          <select data-c="unio" style="width:auto">${Object.keys(UNIO).map(k => `<option value="${E(k)}" ${(c.unio || "i") === k ? "selected" : ""}>@a ${k === "," ? "," : k} @b</option>`).join("")}</select>
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin:0;font-size:14px;color:#000"><input type="checkbox" data-c="buit" ${c.buit ? "checked" : ""} style="width:auto;margin:0"> Línia en blanc entre rols</label></div>
+        <input data-c="cap" value="${E(c.cap || "")}" placeholder="Primera línia (opcional): títol, «Una producció de @…»" style="margin-bottom:8px">
+        <textarea id="eqtxt" rows="14" style="font-family:inherit">${E(txt)}</textarea>
+        <div class="ls" style="margin-top:8px;align-items:center"><button class="b" data-k="eqcopia">Copiar</button><button class="b2" data-k="eqregen">Tornar a generar</button><span class="em" id="eqn" style="margin-left:auto">${txt.length} / 2.200 caràcters</span></div></div>` : ""}`;
+  }
+
+  // ---------- llegir el formulari ----------
+  const col = (hs, re) => hs.findIndex(h => re.test(h));
+  async function llegeixFormulari(p, font) {
+    let rows = null;
+    if (typeof font === "string") {
+      if (/docs\.google\.com\/forms/i.test(font)) return H.toast("Aquest és l'enllaç del formulari: obre Respostes → «Enllaça amb Fulls» i enganxa l'enllaç del full");
+      try { const r = await H.api("POST", "correu/full", { url: font }); if (r && r.rows) rows = r.rows } catch (e) { }
+      if (!rows) { try { rows = (await IMP.llegir(font))[0].rows } catch (e) { return H.toast((e && e.message) || "No s'ha pogut llegir el full") } }
+    } else { try { const f = await IMP.llegir(font); rows = f[0].rows || null } catch (e) { return H.toast("No s'ha pogut llegir l'arxiu") } }
+    rows = (rows || []).filter(r => r.some(x => String(x).trim()));
+    if (rows.length < 2) return H.toast("El full no té respostes");
+    const hs = rows[0].map(h => String(h).toLowerCase());
+    const ci = { nom: col(hs, /nom|nombre|name/), rol: col(hs, /\brol|càrrec|cargo|posici|departament|role|position|funci|ofici|lloc|puesto/), ig: col(hs, /insta|\big\b|usuari|usuario|@/), mail: col(hs, /mail|correu|correo/), tel: col(hs, /tel|mòbil|móvil|movil|phone|whats|contacte|contacto/) };
+    if (ci.nom < 0) ci.nom = hs.findIndex((h, i) => i > 0 && !Object.values(ci).includes(i) && !/marca|time|data|fecha/.test(h));
+    const pers = await H.col("persona"), net = t => String(t || "").trim();
+    const llista = rows.slice(1).map(r => { const g = k => ci[k] >= 0 ? net(r[ci[k]]) : ""; return { nom: g("nom"), rol: g("rol"), ig: arroba(g("ig")), mail: g("mail").toLowerCase(), tel: g("tel") } }).filter(x => x.nom || x.ig);
+    // fusiona respostes repetides (la darrera mana) i busca qui ja hi és a Gent
+    const uniq = []; llista.forEach(x => { const k = x.mail || x.ig || x.nom.toLowerCase(), j = uniq.findIndex(y => (y.mail || y.ig || y.nom.toLowerCase()) === k); j >= 0 ? uniq[j] = x : uniq.push(x) });
+    uniq.forEach(x => { x.ja = pers.find(y => (x.mail && String(y.email || "").toLowerCase() === x.mail) || (x.ig && arroba(y.insta) === x.ig) || (x.nom && (y.titulo || "").toLowerCase() === x.nom.toLowerCase())); x.dins = x.ja && (p.equip || []).some(e => e.id === x.ja.id) });
+    if (typeof font === "string") { p.formulari = font; H.put(p, 1) }
+    H.sheet(`<h2 style="margin-top:4px">Respostes del formulari</h2><p class="em" style="margin-top:0">Marca qui vols afegir a l'equip del projecte. Pots corregir el rol i l'Instagram.</p>
+      <div id="eqrev">${uniq.map((x, i) => `<div class="r" style="flex-wrap:wrap;gap:6px"><input type="checkbox" data-i="${i}" ${x.dins ? "" : "checked"}><div class="g" style="min-width:140px"><b>${E(x.nom || x.ig)}</b><small>${E([x.mail, x.tel].filter(Boolean).join(" · "))}${x.dins ? " · ja és a l'equip" : x.ja ? " · ja és a Gent" : " · nou"}</small></div>
+        <input data-f="rol" data-i="${i}" value="${E(x.rol)}" placeholder="Rol" style="width:170px"><input data-f="ig" data-i="${i}" value="${E(x.ig)}" placeholder="@instagram" style="width:150px"></div>`).join("")}</div>
+      <div class="sfoot"><span class="em">${uniq.length} respostes</span><button class="b" id="eqok">Afegir a l'equip</button></div>`);
+    const box = document.getElementById("eqrev");
+    box.addEventListener("input", e => { const t = e.target; if (t.dataset.f) uniq[+t.dataset.i][t.dataset.f] = t.dataset.f === "ig" ? t.value.trim() : t.value });
+    document.getElementById("eqok").onclick = async () => {
+      const tria = [...box.querySelectorAll("input[type=checkbox]")].filter(c => c.checked).map(c => uniq[+c.dataset.i]);
+      for (const x of tria) {
+        const ig = arroba(x.ig); let q = x.ja;
+        if (!q) { q = { id: H.uid("persona"), titulo: x.nom || ig, tipus: "Equip", email: x.mail, tel: x.tel, insta: ig ? "https://www.instagram.com/" + ig.slice(1) : "" }; await H.put(q, 1) }
+        else { let c = false; if (!q.email && x.mail) { q.email = x.mail; c = true } if (!q.tel && x.tel) { q.tel = x.tel; c = true } if (ig && arroba(q.insta) !== ig) { q.insta = "https://www.instagram.com/" + ig.slice(1); c = true } if (c) await H.put(q, 1) }
+        const e = (p.equip || []).find(y => y.id === q.id);
+        if (e) { if (x.rol) e.rol = x.rol } else p.equip = (p.equip || []).concat({ id: q.id, rol: x.rol });
+      }
+      await H.put(p, 1); H.cerrar(); H.toast(tria.length + (tria.length === 1 ? " persona afegida" : " persones afegides")); pintar();
+    };
   }
 
   // ---------- Arxius ----------
@@ -84,8 +150,16 @@
     if (k === "edita") return H.abrir("proyecto", p.id);
     if (k === "pers") return H.abrir("persona", b.dataset.id);
     if (k === "afeq") { const s = document.getElementById("peq"); if (!s.value) return s.focus(); p.equip = (p.equip || []).concat({ id: s.value, rol: document.getElementById("peqr").value.trim() }); await H.put(p, 1); return pintar() }
+    if (k === "eqllegeix") { const u = document.getElementById("eqf").value.trim(); if (!/^https:\/\//.test(u)) return document.getElementById("eqf").focus(); b.disabled = true; b.textContent = "Llegint…"; await llegeixFormulari(p, u); b.disabled = false; b.textContent = "Tornar a llegir"; return }
+    if (k === "eqamunt" || k === "eqavall") { const pers = await H.col("persona"), eq = (p.equip || []).filter(x => pers.some(y => y.id === x.id)), i = +b.dataset.i, j = k === "eqamunt" ? i - 1 : i + 1;[eq[i], eq[j]] = [eq[j], eq[i]]; p.equip = eq.concat((p.equip || []).filter(x => !eq.includes(x))); if (!p.credits) delete p.credits; await H.put(p, 1); return pintar() }
+    if (k === "eqcopia") { const t = document.getElementById("eqtxt").value; try { await navigator.clipboard.writeText(t); H.toast("Copiat") } catch (er) { document.getElementById("eqtxt").select(); document.execCommand("copy"); H.toast("Copiat") } return }
+    if (k === "eqregen") { if (p.credits && !confirm("Es perdran els retocs que hagis fet al text. Tornar a generar-lo?")) return; delete p.credits; await H.put(p, 1); return pintar() }
     if (k === "treq") { p.equip = (p.equip || []).filter(x => x.id !== b.dataset.id); await H.put(p, 1); return pintar() }
     if (k === "trar") { if (!confirm("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.id).catch(() => { }); p.archivos = (p.archivos || []).filter(a => a.id !== b.dataset.id); await H.put(p, 1); return pintar() }
+  });
+  el.addEventListener("input", async e => {
+    if (e.target.id !== "eqtxt") return; const p = await doc(); if (!p) return;
+    p.credits = e.target.value; document.getElementById("eqn").textContent = e.target.value.length + " / 2.200 caràcters"; H.put(p);
   });
   el.addEventListener("change", async e => {
     const t = e.target, p = await doc(); if (!p) return;
@@ -97,7 +171,9 @@
       }
       await H.put(p, 1); H.toast("Fet"); return pintar();
     }
-    if (t.dataset.rol) { const x = (p.equip || []).find(y => y.id === t.dataset.rol); if (x) { x.rol = t.value.trim(); H.put(p, 1) } }
+    if (t.id === "eqarx" && t.files[0]) return llegeixFormulari(p, t.files[0]);
+    if (t.dataset.c) { p.cred = Object.assign({}, p.cred, { [t.dataset.c]: t.type === "checkbox" ? t.checked : t.value }); if (!p.credits || confirm("Has retocat el text dels crèdits. Vols tornar-lo a generar amb aquest format? (Es perdran els retocs)")) delete p.credits; await H.put(p, 1); return pintar() }
+    if (t.dataset.rol) { const x = (p.equip || []).find(y => y.id === t.dataset.rol); if (x) { x.rol = t.value.trim(); await H.put(p, 1); if (!p.credits) pintar() } }
     if (t.id === "prln") { p.enlaces = t.value; await H.put(p, 1); pintar() }
   });
   H.onChange(() => { if (!el.hidden && !el.contains(document.activeElement)) pintar() });
