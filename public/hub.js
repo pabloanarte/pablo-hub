@@ -36,6 +36,7 @@ const SECTIONS = [
  {id:"preproduccion",label:"Preproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/preproduccion.js"},
  {id:"desglossament",label:"Desglossament",desc:"Del guió en PDF a escenes, sets i personatges",src:"sections/desglossament.js"},
  {id:"guiones",label:"Guions tècnics",desc:"Plans per escena, amb escales en color i imatges",src:"sections/guiones.js"},
+ {id:"storyboard",label:"Storyboard",desc:"Vinyetes dibuixades, fotos i vídeos, i l'animàtic amb el guió",src:"sections/storyboard.js"},
  {id:"planes",label:"Plans de rodatge",desc:"Generats des del guió tècnic, ordenats i amb hores",src:"sections/planes.js"},
  {id:"postproduccion",label:"Postproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/postproduccion.js"},
  {id:"festivales",label:"Festivals",desc:"Festivals, labs i residències",src:"sections/festivales.js"},
@@ -60,7 +61,7 @@ const GRUPS = [
 ];
 // Dins d'un projecte: pestanyes amb només el que és d'aquell projecte
 const PTABS = [["resum","Resum"],["desenvolupament","Desenvolupament"],["decks","Dossiers"],["preproduccion","Preproducció"],["guio","Guió i pla"],["postproduccion","Postproducció"],["festivales","Festivals"],["equip","Equip"],["arxius","Arxius"]];
-const GUIO = [["desglossament","Desglossament"],["guiones","Guió tècnic"],["planes","Pla de rodatge"]];
+const GUIO = [["desglossament","Desglossament"],["guiones","Guió tècnic"],["storyboard","Storyboard"],["planes","Pla de rodatge"]];
 const nav = document.getElementById("hubnav"), wrap = document.querySelector(".w"), sub = document.getElementById("subnav");
 SECTIONS.forEach(s => { if (!document.getElementById("s-" + s.id)) { const e = document.createElement("section"); e.id = "s-" + s.id; e.hidden = true; wrap.appendChild(e) } });
 nav.innerHTML = GRUPS.map(g => g.sep ? "<hr>" : `<button data-g="${g.id}"><svg viewBox="0 0 24 24"><path d="${I[g.ic] || I.inicio}"/></svg>${g.label}<span class="n" id="n-${g.id}" hidden></span></button>`).join("") + `<hr><button class="out" onclick="location.href='/salir'">Tancar la sessió</button>`;
@@ -163,7 +164,7 @@ async function contar() {
 document.getElementById("gq").addEventListener("keydown", async e => {
  if (e.key !== "Enter" || !e.target.value.trim()) return;
  const q = e.target.value.trim().toLowerCase(), E = H.E, txt = d => H.valors(d).toLowerCase();
- const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Idees"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["feina", "Diners"], ["desg", "Desglossament", "desglossament"], ["curs", "Cursos"], ["visionat", "Visionats"]];
+ const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Idees"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["sb", "Storyboards", "storyboard"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["feina", "Diners"], ["desg", "Desglossament", "desglossament"], ["curs", "Cursos"], ["visionat", "Visionats"]];
  const ls = await Promise.all(T.map(([t]) => H.col(t))), cs = await H.contactos();
  const data = (t, d) => t === "convocatoria" ? (d.limite ? "Límit " + H.fecha(d.limite) : "") : t === "pre" || t === "post" ? H.fecha(d.ini) : t === "pdr" ? (d.dias && d.dias[0] && d.dias[0].fecha ? H.fecha(d.dias[0].fecha) : "") : d.fecha ? H.fecha(d.fecha) : "";
  let h = `<h2 style="margin-top:0">Resultats de «${E(q)}»</h2>`, n = 0;
@@ -179,6 +180,7 @@ document.getElementById("hsh").addEventListener("click", e => {
  if (t === "gt") { show("guiones", { proj: "" }); return window.GT && GT.abrir(id) }
  if (t === "pdr") { show("planes", { proj: "" }); return window.P && P.abrir(id) }
  if (t === "curs" || t === "visionat") { show("docencia"); return window.DOC && (t === "curs" ? DOC.curs(id) : DOC.vis(id)) }
+ if (t === "sb") { show("storyboard", { proj: "" }); return window.SB && SB.obre(id) }
  if (t === "desg") { show("desglossament", { proj: "" }); return window.DESG && DESG.obre(id) }
  if (t === "pre" || t === "post") { show(t === "pre" ? "preproduccion" : "postproduccion"); return window.CronoAbrir && CronoAbrir[t] && CronoAbrir[t](id) }
  t === "tarea" ? H.abrirTarea(id) : H.abrir(t, id);

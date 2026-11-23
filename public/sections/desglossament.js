@@ -36,8 +36,12 @@
           const t = l.s.replace(/^\s*\d+[A-Z]?[.)]?\s+/, "").replace(/\s+\d+[A-Z]?\.?\s*$/, ""), m = t.match(/^(INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|INT|EXT)[.\s:]*(.*)$/i);
           const parts = (m ? m[2] : t).split(/\s+[-–—]\s+/), num = (l.s.match(/^\s*(\d+[A-Z]?)/) || [])[1];
           cur = { id: R.uid(), num: num || String(esc.length + 1), intext: m ? m[1].toUpperCase().replace(/\s/g, "").replace(/\.$/, "").replace(/\./g, ".") : "", set: (parts.length > 1 ? parts.slice(0, -1).join(" - ") : parts[0]).trim(), moment: parts.length > 1 ? parts.at(-1).trim() : "", pag: 0, pers: [], atrezzo: "", vestuari: "", notes: "", pagina: pi + 1 };
+          cur.text = [[0, l.s]];
           esc.push(cur);
         } else if (cur) {
+          // text del guió per a l'animàtic del storyboard: [sagnat en caràcters, línia]; línia buida quan hi ha salt de paràgraf
+          const ant = li ? p.ls[li - 1] : null; if (ant && ant.y - l.y > 20) cur.text.push([0, ""]);
+          cur.text.push([Math.max(0, Math.round((l.x - marge) / 7.2)), l.s]);
           const net = l.s.replace(/\s*\((CONT'?D?|CONT\.|V\.?O\.?|O\.?S\.?|OFF|O\.?C\.?|CONTINUA|CONTINÚA|CONT)\)\s*/gi, "").trim();
           if (l.x - marge > 90 && net === net.toUpperCase() && /[A-ZÀ-Ý]/.test(net) && net.split(" ").length <= 4 && !TRANS.test(net) && !/^\(/.test(net) && !/[.!?]$/.test(net)) { if (!cur.pers.includes(net)) cur.pers.push(net) }
         }
