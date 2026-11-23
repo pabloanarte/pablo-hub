@@ -123,8 +123,22 @@ async function archivo(p, m, request, env, j) {
 
 // ---------- Importar un full de Google Sheets (compartit amb enllaç) com a CSV ----------
 async function importar(request) {
-  const u = new URL(request.url).searchParams.get("url") || "", id = (u.match(/\/spreadsheets\/d\/([\w-]+)/) || [])[1], gid = (u.match(/[#&?]gid=(\d+)/) || [])[1] || "0";
+  const q = new URL(request.url).searchParams;
+  // imatge d'una cel·la =IMAGE("url"): es passa pel servidor perquè el navegador no la pot baixar d'un altre domini
+  if (q.get("img")) {
+    const iu = q.get("img"); if (!/^https:\/\//i.test(iu)) return new Response("no", { status: 400 });
+    let r; try { r = await fetch(iu, { redirect: "follow" }) } catch (e) { return new Response("no", { status: 502 }) }
+    const ct = r.headers.get("content-type") || ""; if (!r.ok || !/^image\//i.test(ct)) return new Response("no", { status: 400 });
+    const b = await r.arrayBuffer(); if (b.byteLength > 15e6) return new Response("massa gran", { status: 413 });
+    return new Response(b, { headers: { "content-type": ct } });
+  }
+  const u = q.get("url") || "", id = (u.match(/\/spreadsheets\/d\/([\w-]+)/) || [])[1], gid = (u.match(/[#&?]gid=(\d+)/) || [])[1] || "0";
   if (!id) return new Response("Aquest enllaç no és d'un full de Google Sheets", { status: 400 });
+  if (q.get("format") === "xlsx") { // tot el llibre, amb les imatges
+    let r; try { r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`, { redirect: "follow" }) } catch (e) { return new Response("no", { status: 502 }) }
+    const ct = r.headers.get("content-type") || ""; if (!r.ok || /html/i.test(ct)) return new Response("No puc llegir el full. Comparteix-lo com a «Qualsevol persona amb l'enllaç» (lector).", { status: 400 });
+    return new Response(r.body, { headers: { "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" } });
+  }
   let r; try { r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`, { redirect: "follow" }) } catch (e) { return new Response("No puc connectar amb Google Sheets ara mateix. Torna-ho a provar d'aquí a una estona.", { status: 502 }) }
   const t = await r.text();
   if (!r.ok || /^\s*<!DOCTYPE html|<html/i.test(t)) return new Response("No puc llegir el full. Comparteix-lo com a «Qualsevol persona amb l'enllaç» (lector).", { status: 400 });

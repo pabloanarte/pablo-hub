@@ -108,7 +108,7 @@
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k, ei = +b.dataset.e, pi = +b.dataset.p;
     if (k === "nuevo") { const d = { id: H.uid("gt"), titulo: "", proyecto: H.pj() === "-" ? "" : H.pj(), escenas: [{ id: uid(), num: "1", intext: "INT", lugar: "", planos: [] }] }; d.escenas[0].planos.push(nuevoPlano(d.escenas[0])); await perDefecte(d); await H.put(d, 1); doc = d; pintar(); el.querySelector(".tt").focus(); return }
     if (k === "abre") return abrir(b.dataset.id);
-    if (k === "importar") return IMP.dialeg("gt", async escenes => { const d = { id: H.uid("gt"), titulo: "Guió importat", proyecto: H.pj() === "-" ? "" : H.pj(), escenas: escenes }; await perDefecte(d); if (escenes.some(e => e.planos.some(p => p.dur))) d.ocultas = d.ocultas.filter(x => x !== "dur"); await H.put(d, 1); doc = d; pintar(); H.toast(escenes.reduce((a, e) => a + e.planos.length, 0) + " plans importats"); const t = el.querySelector(".tt"); t && (t.focus(), t.select()) });
+    if (k === "importar") return IMP.dialeg("gt", async escenes => { const d = { id: H.uid("gt"), titulo: "Guió importat", proyecto: H.pj() === "-" ? "" : H.pj(), escenas: escenes }; await perDefecte(d); if (escenes.some(e => e.planos.some(p => p.dur))) d.ocultas = d.ocultas.filter(x => x !== "dur"); if (escenes.some(e => e.planos.some(p => p.img))) d.ocultas = d.ocultas.filter(x => x !== "img"); await H.put(d, 1); doc = d; pintar(); H.toast(escenes.reduce((a, e) => a + e.planos.length, 0) + " plans importats"); const t = el.querySelector(".tt"); t && (t.focus(), t.select()) });
     if (!doc) return;
     if (k === "gtnous" || k === "gtcap" || k === "gtrevisat") return aplicaAvis(k);
     if (k === "gtvincula") return vincula();

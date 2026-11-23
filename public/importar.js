@@ -22,7 +22,7 @@ window.IMP = (() => {
       its.sort((a, b) => b.y - a.y || a.x - b.x);
       for (const it of its) { const l = linies.length && linies[linies.length - 1]; if (l && l.pag === n && Math.abs(l.y - it.y) < 3.5) l.its.push(it); else linies.push({ pag: n, y: it.y, its: [it] }) }
     }
-    return linies; // es converteixen a files quan es coneix la capçalera
+    linies.doc = doc; return linies; // es converteixen a files quan es coneix la capçalera
   }
   // Converteix línies de PDF en files. Les cel·les poden ocupar diverses línies (centrades verticalment):
   // cada fila s'ancora a la columna clau (pla o hora) i el text del voltant s'assigna a l'àncora més propera.
@@ -80,7 +80,9 @@ window.IMP = (() => {
       let best = null, d = 1e9; for (const a of anc) { if (a.orfe || a.pag !== o.pag || entre(o.pag, o.y, a.y)) continue; const e = Math.abs(a.y - o.y); if (e < d) { d = e; best = a } }
       if (best && d <= 60) { o.cel.forEach((c, i) => best.cel[i].push(...c)); o.buit = 1 }
     }
-    const tot = anc.filter(a => !a.buit).map(a => ({ pag: a.pag, y: a.y, fila: a.cel.map(c => c.sort((p, q) => q.y - p.y || p.x - q.x).map(i => i.s).join(" ")) })).concat(bandes.map(b => ({ pag: b.pag, y: b.y, banda: b.t })));
+    // imatges de referència: l'espai sense text just a sobre d'una fila (p. ex. sota «REFERENCIA · Plano A2»)
+    const ref = a => { if (a.orfe || !linies.doc) return null; const dalt = linies.filter(l => l.pag === a.pag && l.y > a.y + 6).reduce((m, l) => Math.min(m, l.y), 1e9), y0 = a.y + 11, y1 = dalt < 1e9 ? dalt - 3 : null; return y1 == null || y1 - y0 > 45 ? { doc: linies.doc, pag: a.pag, y0, y1 } : null };
+    const tot = anc.filter(a => !a.buit).map(a => { const fila = a.cel.map(c => c.sort((p, q) => q.y - p.y || p.x - q.x).map(i => i.s).join(" ")); fila._ref = ref(a); return { pag: a.pag, y: a.y, fila } }).concat(bandes.map(b => ({ pag: b.pag, y: b.y, banda: b.t })));
     tot.sort((a, b) => a.pag - b.pag || b.y - a.y);
     tot.forEach(x => out.push(x.banda != null ? { banda: x.banda } : x.fila));
     return out;
@@ -88,7 +90,13 @@ window.IMP = (() => {
   async function xlsx(buf) {
     const X = await (window.ExcelJS ? Promise.resolve(window.ExcelJS) : new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "/vendor/exceljs.min.js"; s.onload = () => ok(window.ExcelJS); s.onerror = ko; document.head.appendChild(s) }));
     const wb = new X.Workbook(); await wb.xlsx.load(buf); const fulls = [];
-    wb.eachSheet(ws => { const rows = []; ws.eachRow({ includeEmpty: false }, r => { const a = []; r.eachCell({ includeEmpty: true }, (c, i) => { a[i - 1] = String(c.text ?? "").trim() }); rows.push(Array.from(a, x => x || "")) }); fulls.push({ nom: ws.name, rows }) });
+    wb.eachSheet(ws => {
+      const rows = [], imgs = [];
+      ws.eachRow({ includeEmpty: false }, r => { const a = []; r.eachCell({ includeEmpty: true }, (c, i) => { const v = c.value, f = v && typeof v === "object" && v.formula; const u = f && (f.match(/IMAGE\(\s*"([^"]+)"/i) || [])[1]; if (u) imgs.push({ fila: r.number, col: i - 1, url: u }); a[i - 1] = u ? "" : String(c.text ?? "").trim() }); const fa = Array.from(a, x => x || ""); fa._n = r.number; rows.push(fa) });
+      // imatges enganxades al full (a sobre d'una cel·la)
+      try { ws.getImages().forEach(im => { const m = wb.getImage(+im.imageId), tl = im.range && im.range.tl; if (m && m.buffer && tl) imgs.push({ fila: Math.floor(tl.nativeRow ?? tl.row) + 1, col: Math.floor(tl.nativeCol ?? tl.col), buf: m.buffer, ext: m.extension || "png" }) }) } catch (e) { }
+      fulls.push({ nom: ws.name, rows, imgs });
+    });
     return fulls;
   }
   // Retorna una llista de "fulls": [{nom, rows}] o, per a PDF, [{nom, linies}]
@@ -96,7 +104,18 @@ window.IMP = (() => {
     if (typeof font === "string") { // enllaç de Google Sheets
       const r = await fetch("/api/importar?url=" + encodeURIComponent(font)), t = await r.text();
       if (!r.ok) throw new Error(t && t.length < 300 && !/^\s*</.test(t) ? t : "No s'ha pogut llegir el full. Comprova l'enllaç i que estigui compartit com a «Qualsevol amb l'enllaç».");
-      return [{ nom: "Google Sheets", rows: csv(t) }];
+      const rows = csv(t);
+      // el llibre en Excel porta també les imatges: es fa servir el full que coincideix amb el de l'enllaç
+      try {
+        const rx = await fetch("/api/importar?format=xlsx&url=" + encodeURIComponent(font));
+        if (rx.ok) {
+          const fs = await xlsx(await rx.arrayBuffer()), clau = rows.slice(0, 12).flat().map(x => String(x).trim()).filter(x => x.length > 2);
+          const punts = f => { const tx = new Set(f.rows.slice(0, 40).flat()); return clau.filter(x => tx.has(x)).length };
+          const millor = fs.slice().sort((a, b) => punts(b) - punts(a))[0];
+          if (millor && punts(millor) >= Math.min(3, clau.length)) return [{ ...millor, nom: "Google Sheets" }];
+        }
+      } catch (e) { }
+      return [{ nom: "Google Sheets", rows }];
     }
     const nom = font.name.toLowerCase(), buf = await font.arrayBuffer();
     if (nom.endsWith(".pdf")) return [{ nom: font.name, linies: await pdf(buf) }];
@@ -138,10 +157,55 @@ window.IMP = (() => {
         const n = o.esc ? nn(o.esc) : (cur ? cur.num : "1"); delete o.esc;
         if (!cur || cur.num !== n) nova(n, { intext: (o.intext || "").toUpperCase().replace(/\./g, ""), lugar: o.set || "" });
         delete o.intext; if (o.escala) o.escala = esc(o.escala); if (o.dur) o.dur = String(parseInt(o.dur) || ""); if (!o.set) o.set = cur.lugar || "";
+        if (r._ref) o._ref = r._ref; if (r._n) { o._n = r._n; o._full = full }
         cur.planos.push(o);
       }
     }
+    // imatges dels fulls d'Excel/Sheets: cada una va al pla de la seva fila o, si és en una fila de referència, al pla de just a sota
+    for (const full of fulls) for (const im of (full.imgs || [])) {
+      const ps = escenes.flatMap(e => e.planos).filter(p => p._full === full && p._n >= im.fila).sort((a, b) => a._n - b._n), p = ps[0];
+      if (p && !p._img) p._img = im;
+    }
     return escenes;
+  }
+  // baixa, retalla i puja les imatges de referència; cada pla queda amb img = id de l'arxiu
+  let pagCache = new Map();
+  async function pagina(doc, n) {
+    const k = n; if (pagCache.has(k) && pagCache.get(k).doc === doc) return pagCache.get(k);
+    const pg = await doc.getPage(n), sc = 2, vp = pg.getViewport({ scale: sc }), cv = document.createElement("canvas"); cv.width = vp.width; cv.height = vp.height;
+    await pg.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise; const o = { doc, cv, sc, h: vp.height / sc }; pagCache.set(k, o); return o;
+  }
+  // retall sense marges blancs ni línies de taula; null si no hi ha cap imatge (només text o buit)
+  function retalla(cv, x0, y0, w, h) {
+    const d = cv.getContext("2d").getImageData(x0, y0, w, h).data, k = (Math.floor(h / 2) * w + Math.floor(w * .07)) * 4; // fons: blanc o el color de la cel·la (vora esquerra de la taula)
+    const fons = i => (d[i] > 222 && d[i + 1] > 222 && d[i + 2] > 222) || (Math.abs(d[i] - d[k]) < 10 && Math.abs(d[i + 1] - d[k + 1]) < 10 && Math.abs(d[i + 2] - d[k + 2]) < 10);
+    const colN = new Array(w).fill(0), filN = new Array(h).fill(0);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!fons((y * w + x) * 4)) { colN[x]++; filN[y]++ }
+    const trams = (arr, tot) => { const r = []; let a = -1; arr.forEach((v, i) => { const ple = v > tot * .25; if (ple && a < 0) a = i; if ((!ple || i === arr.length - 1) && a >= 0) { const b = ple ? i : i - 1; if (b - a > 12) r.push([a, b]); a = -1 } }); return r };
+    const tc = trams(colN, h), tf = trams(filN, w); if (!tc.length || !tf.length) return null;
+    const bx = tc[0][0], ex = tc[tc.length - 1][1], by = tf[0][0], ey = tf[tf.length - 1][1];
+    let ple = 0; for (let y = by; y <= ey; y += 2) for (let x = bx; x <= ex; x += 2) if (!fons((y * w + x) * 4)) ple++;
+    if (ple / (((ey - by) / 2 + 1) * ((ex - bx) / 2 + 1)) < .45) return null; // text solt, no una foto
+    const out = document.createElement("canvas"), es = Math.min(1, 1600 / (ex - bx + 1)); out.width = Math.round((ex - bx + 1) * es); out.height = Math.round((ey - by + 1) * es);
+    out.getContext("2d").drawImage(cv, x0 + bx, y0 + by, ex - bx + 1, ey - by + 1, 0, 0, out.width, out.height); return out;
+  }
+  async function imatges(escenes, st) {
+    const ps = escenes.flatMap(e => e.planos).filter(p => p._ref || p._img); let fet = 0;
+    for (const p of ps) {
+      st && st(`Important les imatges de referència… ${++fet} de ${ps.length}`);
+      try {
+        let blob = null, nom = "ref_" + (p.num || "pla");
+        if (p._img && p._img.buf) blob = new Blob([p._img.buf], { type: "image/" + (p._img.ext === "jpg" ? "jpeg" : p._img.ext) }), nom += "." + p._img.ext;
+        else if (p._img && p._img.url) { const r = await fetch("/api/importar?img=" + encodeURIComponent(p._img.url)); if (r.ok) { blob = await r.blob(); nom += "." + ((blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg")) } }
+        else if (p._ref) {
+          const g = await pagina(p._ref.doc, p._ref.pag), y0 = p._ref.y1 == null ? 20 * g.sc : Math.max(0, Math.round((g.h - p._ref.y1) * g.sc)), y1 = Math.round((g.h - p._ref.y0) * g.sc);
+          const c = y1 - y0 > 40 ? retalla(g.cv, 0, y0, g.cv.width, y1 - y0) : null; if (c) { blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", .85)); nom += ".jpg" }
+        }
+        if (blob) { const a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(nom), blob); if (a && a.id) p.img = a.id }
+      } catch (e) { }
+    }
+    escenes.forEach(e => e.planos.forEach(p => { delete p._ref; delete p._img; delete p._n; delete p._full })); pagCache = new Map();
+    return ps.filter(p => p.img).length;
   }
 
   // ---------- pla de rodatge ----------
@@ -206,12 +270,12 @@ window.IMP = (() => {
     const fer = async fonts => {
       try {
         st("Llegint…"); const fulls = []; for (const f of fonts) fulls.push(...await llegir(f));
-        if (tipus === "gt") { const e = aGT(fulls); if (!e.length || !e.some(x => x.planos.length)) return st("No he trobat cap taula de plans. Comprova que l'arxiu té una fila de capçalera (Pla, Escala, Descripció…)."); H.cerrar(); fet(e) }
+        if (tipus === "gt") { const e = aGT(fulls); if (!e.length || !e.some(x => x.planos.length)) return st("No he trobat cap taula de plans. Comprova que l'arxiu té una fila de capçalera (Pla, Escala, Descripció…)."); await imatges(e, st); H.cerrar(); fet(e) }
         else { const ds = fulls.map(aDia).filter(d => d.filas.some(f => f.tipo === "plano")).sort((a, b) => (a.fecha || "9").localeCompare(b.fecha || "9")); if (!ds.length) return st("No he trobat cap taula de plans. Comprova que l'arxiu té una fila de capçalera (Hora, Pla, Escala, Descripció…)."); H.cerrar(); fet(ds) }
       } catch (e) { st("No s'ha pogut llegir: " + (e.message || e)) }
     };
     document.getElementById("imp-f").onchange = e => e.target.files.length && fer([...e.target.files]);
     document.getElementById("imp-ub").onclick = () => { const u = document.getElementById("imp-u").value.trim(); if (u) fer([u]) };
   }
-  return { llegir, aGT, aDia, dialeg, csv, files, cGT, cPDR };
+  return { llegir, imatges, aGT, aDia, dialeg, csv, files, cGT, cPDR };
 })();
