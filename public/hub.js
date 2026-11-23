@@ -189,3 +189,16 @@ document.getElementById("hsh").addEventListener("click", e => {
 let ini = "inicio", iniP = "", iniPT = "resum"; try { ini = localStorage.getItem("hub-sec") || ini; iniP = localStorage.getItem("hub-proj") || ""; iniPT = localStorage.getItem("hub-pt") || "resum" } catch (e) {}
 if (iniP) { P = iniP; PT = iniPT; show(ini, { proj: iniP, dins: true, refresca: false }) } else show(ini, { refresca: false });
 (function carga(i) { if (i >= SECTIONS.length) { contar(); H.onChange(contar); return } const e = document.createElement("script"); e.src = SECTIONS[i].src; e.onload = e.onerror = () => carga(i + 1); document.body.appendChild(e) })(0);
+
+// Lluna: mode fosc («Sala de muntatge»). Canvi suau: fos de tota la pantalla (View Transitions) o, si no n'hi ha, transició de colors.
+(() => {
+ const h = document.documentElement, b = document.getElementById("lluna"), meta = document.querySelector('meta[name="theme-color"]');
+ const posa = fosc => { if (fosc) h.dataset.tema = "fosc"; else delete h.dataset.tema; if (meta) meta.content = fosc ? "#111110" : "#f6f5f2"; b && b.setAttribute("aria-pressed", fosc ? "true" : "false"); try { localStorage.setItem("hub-tema", fosc ? "fosc" : "clar") } catch (e) { } };
+ posa(h.dataset.tema === "fosc");
+ if (!b) return;
+ b.addEventListener("click", () => {
+  const fosc = h.dataset.tema !== "fosc", redueix = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (document.startViewTransition && !redueix) return document.startViewTransition(() => posa(fosc));
+  h.classList.add("canvitema"); posa(fosc); setTimeout(() => h.classList.remove("canvitema"), 500);
+ });
+})();
