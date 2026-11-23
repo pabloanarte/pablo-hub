@@ -92,7 +92,9 @@
           es.log = (es.log || []).filter(x => !(x.proj === p.id && x.d === dia)).concat({ proj: p.id, d: dia, p: v.pag, versio: v.versio || "" }); H.put(es, 1);
         }
       }
-      save(); pinta(); H.toast(v.pag ? `Pujat · ${v.pag} pàgines` : "Pujat")
+      save(); pinta(); H.toast(v.pag ? `Pujat · ${v.pag} pàgines` : "Pujat");
+      const darrera = d.versions.filter(x => (x.tipus || "Guió") === "Guió" && x.arxiu).sort((a, b) => (b.data || "").localeCompare(a.data || ""))[0];
+      if ((v.tipus || "Guió") === "Guió" && darrera === v && window.DESG) DESG.desdePDF(f, p.id, (p.titulo || "Guió") + (v.versio ? " " + v.versio : "")).then(r => H.toast(r.d.escenes.length + " escenes desglossades")).catch(() => { })
     }
   });
   window.addEventListener("hub-sec", e => { if (e.detail === "desenvolupament" && (!p || (H.pj() && H.pj() !== "-" && p.id !== H.pj()) || !H.pj())) lista() });

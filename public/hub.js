@@ -105,7 +105,7 @@ function show(id, o) {
  window.dispatchEvent(new CustomEvent("hub-sec", { detail: id }));
 }
 // obrir un projecte (des del seu pòster) i canviar de pestanya
-const SEC_PT = { resum: "projecte", equip: "projecte", arxius: "projecte", guio: "guiones" };
+const SEC_PT = { resum: "projecte", equip: "projecte", arxius: "projecte", guio: "desglossament" };
 function obreProjecte(id, pt) { P = id; PT = pt || "resum"; show(SEC_PT[PT] || PT, { proj: id, dins: true }) }
 window.HUB = { obreProjecte, mode: () => PT, show };
 window.hubShow = (id, o) => show(id, o || {});

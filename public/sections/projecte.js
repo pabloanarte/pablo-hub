@@ -42,6 +42,10 @@
           <div class="ls" style="margin-top:14px"><button class="b" data-k="edita">Editar la fitxa</button>${(p.altres || "").trim() ? `<span class="em">També: ${E(p.altres)}</span>` : ""}</div>
         </div></div>
       <div class="dash" style="margin-top:20px">
+        ${(() => { const gs = (dev.versions || []).map((x, i) => [x, i]).filter(([x]) => (x.tipus || "Guió") === "Guió" && x.arxiu).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0]), u = gs[0], dg = p.desg && ds.find(x => x.id === p.desg);
+          return `<div class="card w2"><h3>Guió</h3>${u ? `<div class="r" style="padding:4px 0"><i class="dot" style="background:#000"></i><a class="g" href="/api/archivo/${E(u.arxiu.id)}" target="_blank" style="color:inherit;text-decoration:none"><b>${E(u.arxiu.nombre || "Guió")}</b><small>${E([u.versio, u.data && H.fecha(u.data), u.pag && u.pag + " pàg."].filter(Boolean).join(" · "))}</small></a></div>` : `<p class="em" style="margin-top:0">Puja-hi el guió i en sortiran el desglossament, el guió tècnic, el storyboard i el pla.</p>`}
+            ${dg ? `<p class="em" style="margin:6px 0 0">Desglossat: ${dg.escenes.length} escenes · <a href="#" data-pt="guio" style="color:#000">Obrir</a></p>` : ""}
+            <div class="ls" style="margin-top:10px"><label class="b" style="cursor:pointer;color:#fff">${u ? "Pujar una versió nova (PDF)" : "Pujar el guió (PDF)"}<input type="file" accept=".pdf,application/pdf" id="prguio" hidden></label>${gs.length > 1 ? `<button class="b2" data-pt="desenvolupament">Totes les versions (${gs.length})</button>` : ""}</div></div>` })()}
         <div class="card w2"><h3>Properes dates</h3>${prop.length ? prop.map(d => `<div class="m pdt"><b>${E(H.fecha(d[0]))}</b><span><span class="em">${E(d[1])}</span> · ${E(d[2] || "")}</span></div>`).join("") : `<p class="em">Res als propers dos mesos.</p>`}</div>
         ${targ("festivales", "Festivals", fp.length, fp.length ? `${sel.length} ${sel.length === 1 ? "selecció" : "seleccions"}${prem.length ? ` · ${prem.length} ${prem.length === 1 ? "premi" : "premis"}` : ""}${pend.length ? ` · ${pend.length} sense decidir` : ""}` : "Encara cap inscripció")}
         ${["Llarg", "Curt"].includes(p.categoria) ? targ("desenvolupament", "Desenvolupament", vers.length, vers[0] ? `última: ${[vers[0].tipus, vers[0].versio].filter(Boolean).join(" ")}${vers[0].data ? " · " + H.fecha(vers[0].data) : ""}` : "Cap versió apuntada") : ""}
@@ -162,7 +166,7 @@
 
   const doc = async () => (await H.col("proyecto")).find(x => x.id === H.pj());
   el.addEventListener("click", async e => {
-    const b = e.target.closest("[data-k],[data-pt]"); if (!b) return;
+    const b = e.target.closest("[data-k],[data-pt]"); if (!b) return; if (b.tagName === "A") e.preventDefault();
     if (b.dataset.k === "eqcopia") { // abans de qualsevol espera, perquè Safari ho compti com a part del toc
       const ta = document.getElementById("eqtxt"), t = ta.value; let ok = false;
       try { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(t).then(() => H.toast("Copiat"), () => { ta.focus(); ta.setSelectionRange(0, t.length); H.toast(document.execCommand("copy") ? "Copiat" : "Selecciona el text i copia'l") }); return } } catch (er) { }
@@ -185,6 +189,21 @@
   });
   el.addEventListener("change", async e => {
     const t = e.target, p = await doc(); if (!p) return;
+    if (t.id === "prguio" && t.files[0]) {
+      const f = t.files[0]; t.value = ""; if (f.size > 25 * 1024 * 1024) return H.toast("Passa de 25 MB");
+      H.toast("Pujant el guió…");
+      let a; try { a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f) } catch (er) { return H.toast("No s'ha pogut pujar") }
+      // versió nova a Desenvolupament
+      const id = "dev:" + p.id.split(":")[1], dv = (await H.col("dev")).find(x => x.id === id) || { id, versions: [], lectures: [], convs: [] };
+      const ant = (dv.versions || []).filter(x => (x.tipus || "Guió") === "Guió").map(x => parseInt(String(x.versio || "").replace(/\D/g, "")) || 0), num = (f.name.match(/v\.?\s?(\d+)/i) || [])[1];
+      const v = { tipus: "Guió", data: avui(), versio: "v" + (num || (ant.length ? Math.max(...ant) + 1 : 1)), canvis: "", arxiu: a };
+      // i es torna a desglossar
+      try { const r = await DESG.desdePDF(f, p.id, (p.titulo || "Guió") + " " + v.versio); v.pag = r.pagines; H.toast(`Guió ${v.versio} · ${r.pagines} pàg. · ${r.d.escenes.length} escenes desglossades`) }
+      catch (er) { H.toast(er && /capçaleres/.test(er.message) ? "Guió desat, però no he trobat les capçaleres d'escena (INT./EXT.)" : "Guió desat, però no s'ha pogut desglossar") }
+      dv.versions = (dv.versions || []).concat(v); await H.put(dv, 1);
+      if (v.pag) { const es = (await H.col("ajust")).find(x => x.id === "ajust:escriptura") || { id: "ajust:escriptura", log: [] }; es.log = (es.log || []).filter(x => !(x.proj === p.id && x.d === v.data)).concat({ proj: p.id, d: v.data, p: v.pag, versio: v.versio }); H.put(es, 1) }
+      return pintar();
+    }
     if (t.id === "prup" && t.files.length) {
       for (const f of t.files) {
         if (f.size > 25 * 1024 * 1024) { H.toast(f.name + " passa de 25 MB"); continue }

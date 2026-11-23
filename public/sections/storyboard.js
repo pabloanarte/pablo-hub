@@ -51,7 +51,8 @@
       <label>Format</label><select id="sbr">${RATIOS.map(r => `<option value="${r[0]}" ${r[0] === "16:9" ? "selected" : ""}>${r[1]}</option>`).join("")}</select>
       <div class="sfoot"><span></span><button class="b" id="sbok">Crear</button></div>`);
     if (gs.length) document.getElementById("sbg").value = gs[0].id;
-    if (ds.length) document.getElementById("sbd").value = ds[0].id;
+    const pj = (await H.col("proyecto")).find(x => x.id === H.pj());
+    if (pj && pj.desg && ds.some(x => x.id === pj.desg)) document.getElementById("sbd").value = pj.desg; else if (ds.length) document.getElementById("sbd").value = ds[0].id;
     document.getElementById("sbok").onclick = async () => {
       const g = gs.find(x => x.id === document.getElementById("sbg").value);
       doc = { id: H.uid("sb"), titulo: document.getElementById("sbt").value.trim() || (g ? g.titulo || "" : "") || "Storyboard", proyecto: H.pj() && H.pj() !== "-" ? H.pj() : (g && g.proyecto) || "", gt: g ? g.id : "", desg: document.getElementById("sbd").value, ratio: document.getElementById("sbr").value, vin: [], mod: Date.now() };
