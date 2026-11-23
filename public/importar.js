@@ -81,7 +81,15 @@ window.IMP = (() => {
       if (best && d <= 60) { o.cel.forEach((c, i) => best.cel[i].push(...c)); o.buit = 1 }
     }
     // imatges de referència: l'espai sense text just a sobre d'una fila (p. ex. sota «REFERENCIA · Plano A2»)
-    const ref = a => { if (a.orfe || !linies.doc) return null; const dalt = linies.filter(l => l.pag === a.pag && l.y > a.y + 6).reduce((m, l) => Math.min(m, l.y), 1e9), y0 = a.y + 11, y1 = dalt < 1e9 ? dalt - 3 : null; return y1 == null || y1 - y0 > 45 ? { doc: linies.doc, pag: a.pag, y0, y1 } : null };
+    // si hi ha una columna d'imatges (Photostory, Imatge…), la imatge és a la mateixa fila, dins d'aquesta columna
+    const ic = R.mapa(capT.map(c => c.toLowerCase())).img, gMed = gaps.length ? gaps[gaps.length >> 1] : 60;
+    const refCol = a => {
+      const mat = anc.filter(b => !b.orfe && !b.buit && b.pag === a.pag && /^\s*[A-Z]?\d+[A-Z]?\s*$/i.test(b.cel[kc] ? b.cel[kc].map(i => i.s).join(" ") : "")) /* només files de pla, no «SCENE: 01» */, dalt = mat.filter(b => b.y > a.y).reduce((m, b) => Math.min(m, b.y), 1e9), baix = mat.filter(b => b.y < a.y).reduce((m, b) => Math.max(m, b.y), -1e9);
+      const sobre = linies.filter(l => l.pag === a.pag && l.y > a.y + 18).reduce((m, l) => Math.min(m, l.y), 1e9); // text de sobre (barra d'escena, fila anterior)
+      const y1 = Math.min(dalt < 1e9 ? (dalt + a.y) / 2 : 1e9, sobre < 1e9 ? sobre - 4 : a.y + gMed * .65), y0 = baix > -1e9 ? (baix + a.y) / 2 : a.y - gMed * .65;
+      return { doc: linies.doc, pag: a.pag, y0, y1, x0: ic > 0 ? (cen[ic - 1] + cen[ic]) / 2 : 0, x1: ic < cen.length - 1 ? (cen[ic] + cen[ic + 1]) / 2 : null, fila: 1 };
+    };
+    const ref = a => { if (a.orfe || !linies.doc) return null; if (ic != null) return refCol(a); const dalt = linies.filter(l => l.pag === a.pag && l.y > a.y + 6).reduce((m, l) => Math.min(m, l.y), 1e9), y0 = a.y + 11, y1 = dalt < 1e9 ? dalt - 3 : null; return y1 == null || y1 - y0 > 45 ? { doc: linies.doc, pag: a.pag, y0, y1 } : null };
     const tot = anc.filter(a => !a.buit).map(a => { const fila = a.cel.map(c => c.sort((p, q) => q.y - p.y || p.x - q.x).map(i => i.s).join(" ")); fila._ref = ref(a); return { pag: a.pag, y: a.y, fila } }).concat(bandes.map(b => ({ pag: b.pag, y: b.y, banda: b.t })));
     tot.sort((a, b) => a.pag - b.pag || b.y - a.y);
     tot.forEach(x => out.push(x.banda != null ? { banda: x.banda } : x.fila));
@@ -172,18 +180,22 @@ window.IMP = (() => {
   let pagCache = new Map();
   async function pagina(doc, n) {
     const k = n; if (pagCache.has(k) && pagCache.get(k).doc === doc) return pagCache.get(k);
-    const pg = await doc.getPage(n), sc = 2, vp = pg.getViewport({ scale: sc }), cv = document.createElement("canvas"); cv.width = vp.width; cv.height = vp.height;
+    const pg = await doc.getPage(n), sc = 3, vp = pg.getViewport({ scale: sc }), cv = document.createElement("canvas"); cv.width = vp.width; cv.height = vp.height;
     await pg.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise; const o = { doc, cv, sc, h: vp.height / sc }; pagCache.set(k, o); return o;
   }
   // retall sense marges blancs ni línies de taula; null si no hi ha cap imatge (només text o buit)
   function retalla(cv, x0, y0, w, h) {
-    const d = cv.getContext("2d").getImageData(x0, y0, w, h).data, k = (Math.floor(h / 2) * w + Math.floor(w * .07)) * 4; // fons: blanc o el color de la cel·la (vora esquerra de la taula)
+    const d = cv.getContext("2d").getImageData(x0, y0, w, h).data, k = (() => { // fons: blanc o el color de la cel·la (el més repetit a les vores del retall)
+      const n = {}; let best = 0, bk = 0; const vot = (x, y) => { const i = (y * w + x) * 4, q = (d[i] >> 3) + "," + (d[i + 1] >> 3) + "," + (d[i + 2] >> 3); n[q] = (n[q] || 0) + 1; if (n[q] > best) { best = n[q]; bk = i } };
+      for (let x = 0; x < w; x += 4) { vot(x, 1); vot(x, h - 2) } for (let y = 0; y < h; y += 4) { vot(1, y); vot(w - 2, y) } return bk })();
     const fons = i => (d[i] > 222 && d[i + 1] > 222 && d[i + 2] > 222) || (Math.abs(d[i] - d[k]) < 10 && Math.abs(d[i + 1] - d[k + 1]) < 10 && Math.abs(d[i + 2] - d[k + 2]) < 10);
     const colN = new Array(w).fill(0), filN = new Array(h).fill(0);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!fons((y * w + x) * 4)) { colN[x]++; filN[y]++ }
     const trams = (arr, tot) => { const r = []; let a = -1; arr.forEach((v, i) => { const ple = v > tot * .25; if (ple && a < 0) a = i; if ((!ple || i === arr.length - 1) && a >= 0) { const b = ple ? i : i - 1; if (b - a > 12) r.push([a, b]); a = -1 } }); return r };
     const tc = trams(colN, h), tf = trams(filN, w); if (!tc.length || !tf.length) return null;
-    const bx = tc[0][0], ex = tc[tc.length - 1][1], by = tf[0][0], ey = tf[tf.length - 1][1];
+    // en vertical, el tram més alt (així no s'hi colen barres d'escena ni trossos de la imatge veïna); en horitzontal, totes les imatges de la tira
+    const alt = tf.reduce((m, t) => t[1] - t[0] > m[1] - m[0] ? t : m, tf[0]);
+    const bx = tc[0][0], ex = tc[tc.length - 1][1], by = alt[0], ey = alt[1];
     let ple = 0; for (let y = by; y <= ey; y += 2) for (let x = bx; x <= ex; x += 2) if (!fons((y * w + x) * 4)) ple++;
     if (ple / (((ey - by) / 2 + 1) * ((ex - bx) / 2 + 1)) < .45) return null; // text solt, no una foto
     const out = document.createElement("canvas"), es = Math.min(1, 1600 / (ex - bx + 1)); out.width = Math.round((ex - bx + 1) * es); out.height = Math.round((ey - by + 1) * es);
@@ -199,7 +211,8 @@ window.IMP = (() => {
         else if (p._img && p._img.url) { const r = await fetch("/api/importar?img=" + encodeURIComponent(p._img.url)); if (r.ok) { blob = await r.blob(); nom += "." + ((blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg")) } }
         else if (p._ref) {
           const g = await pagina(p._ref.doc, p._ref.pag), y0 = p._ref.y1 == null ? 20 * g.sc : Math.max(0, Math.round((g.h - p._ref.y1) * g.sc)), y1 = Math.round((g.h - p._ref.y0) * g.sc);
-          const c = y1 - y0 > 40 ? retalla(g.cv, 0, y0, g.cv.width, y1 - y0) : null; if (c) { blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", .85)); nom += ".jpg" }
+          const x0 = Math.max(0, Math.round((p._ref.x0 || 0) * g.sc)), x1 = p._ref.x1 == null ? g.cv.width : Math.min(g.cv.width, Math.round(p._ref.x1 * g.sc));
+          const c = y1 - y0 > 30 && x1 - x0 > 30 ? retalla(g.cv, x0, y0, x1 - x0, y1 - y0) : null; if (c) { blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", .85)); nom += ".jpg" }
         }
         if (blob) { const a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(nom), blob); if (a && a.id) p.img = a.id }
       } catch (e) { }
