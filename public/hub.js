@@ -193,12 +193,15 @@ if (iniP) { P = iniP; PT = iniPT; show(ini, { proj: iniP, dins: true, refresca: 
 // Lluna: mode fosc («Sala de muntatge»). Canvi suau: fos de tota la pantalla (View Transitions) o, si no n'hi ha, transició de colors.
 (() => {
  const h = document.documentElement, b = document.getElementById("lluna"), meta = document.querySelector('meta[name="theme-color"]');
- const posa = fosc => { if (fosc) h.dataset.tema = "fosc"; else delete h.dataset.tema; if (meta) meta.content = fosc ? "#111110" : "#f6f5f2"; b && b.setAttribute("aria-pressed", fosc ? "true" : "false"); try { localStorage.setItem("hub-tema", fosc ? "fosc" : "clar") } catch (e) { } };
+ const posa = fosc => { if (fosc) h.dataset.tema = "fosc"; else delete h.dataset.tema; if (meta) meta.content = fosc ? "#111110" : "#f6f5f2"; b && b.setAttribute("aria-pressed", fosc ? "true" : "false") };
+ const desa = fosc => { try { localStorage.setItem("hub-tema", fosc ? "fosc" : "clar") } catch (e) { } };
  posa(h.dataset.tema === "fosc");
  if (!b) return;
  b.addEventListener("click", () => {
   const fosc = h.dataset.tema !== "fosc", redueix = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  desa(fosc);
   if (document.startViewTransition && !redueix) return document.startViewTransition(() => posa(fosc));
+  if (redueix) return posa(fosc);
   h.classList.add("canvitema"); posa(fosc); setTimeout(() => h.classList.remove("canvitema"), 500);
  });
 })();
