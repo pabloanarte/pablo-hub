@@ -26,7 +26,7 @@ window.IMP = (() => {
   }
   // Converteix línies de PDF en files. Les cel·les poden ocupar diverses línies (centrades verticalment):
   // cada fila s'ancora a la columna clau (pla o hora) i el text del voltant s'assigna a l'àncora més propera.
-  const BANDA_RX = /^(set\b|set:|wrap|recollida|dinar|comida|lunch|esmorzar|desayuno|sopar|cena|crew call|talent call|call\b|citaci|ready to shoot|scen\s*e|escena|esc\.?\s*\d|sc\.?\s*\d|\d{1,2}[:.]\d{2}(\s*-\s*\d{1,2}[:.]\d{2})?\s+[A-ZÀ-Ú])/i;
+  const BANDA_RX = /^(referencia\b|refer[eè]ncia\b|\[hueco|\d{1,3}\s*·\s*[A-ZÀ-Ú]|set\b|set:|wrap|recollida|dinar|comida|lunch|esmorzar|desayuno|sopar|cena|crew call|talent call|call\b|citaci|ready to shoot|scen\s*e|escena|esc\.?\s*\d|sc\.?\s*\d|\d{1,2}[:.]\d{2}(\s*-\s*\d{1,2}[:.]\d{2})?\s+[A-ZÀ-Ú])/i;
   function pdfAFiles(linies, esCap, clau) {
     const hi = linies.findIndex(l => esCap(l.its.map(i => i.s)) >= 3);
     if (hi < 0) return linies.map(l => ({ banda: l.its.map(i => i.s).join(" ") }));
@@ -34,17 +34,22 @@ window.IMP = (() => {
     const ajunta = ant => { const cap = linies[hi].its.map(i => ({ ...i })); if (ant) for (const it of ant.its) { const c = cap.find(c => Math.abs(c.x + c.w / 2 - (it.x + it.w / 2)) < 22); if (c) c.s = it.s + " " + c.s; else cap.push({ ...it }) } return cap.sort((a, b) => a.x - b.x) };
     let ant = hi > 0 && linies[hi - 1].pag === linies[hi].pag && linies[hi - 1].y - linies[hi].y < 16 ? linies[hi - 1] : null;
     if (ant && esCap(ajunta(ant).map(c => c.s)) <= esCap(linies[hi].its.map(i => i.s))) ant = null; // només si la capçalera s'entén millor
-    const cap = ajunta(ant); const cen = cap.map(c => c.x + c.w / 2), capT = cap.map(c => c.s);
+    const cap = ajunta(ant); let cen = cap.map(c => c.x + c.w / 2); const capT = cap.map(c => c.s);
     // títol del document que es repeteix a cada pàgina: no és contingut
     const titols = new Set(linies.slice(0, ant ? hi - 1 : hi).flatMap(l => l.its.map(i => i.s)).filter(x => x.length > 3).concat(["POSITION", "POSICIÓ", "POSICIÓN"]));
     const FORA = /^(set\s*:|\d{1,2}\s*h\s*wrap|wrap\b|comida\b|dinar\b|lunch\b)/i;
-    const col = it => { const x = it.x + it.w / 2; let k = 0, d = 1e9; cen.forEach((c, i) => { const e = Math.abs(c - x); if (e < d) { d = e; k = i } }); return k };
+    const colC = it => { const x = it.x + it.w / 2; let k = 0, d = 1e9; cen.forEach((c, i) => { const e = Math.abs(c - x); if (e < d) { d = e; k = i } }); return k };
+    // taules alineades a l'esquerra (capçalera i cel·les comencen al mateix x, com les de Word): la columna és la de l'esquerra més propera
+    let esq = cap.map(c => c.x); const mostra = linies.slice(hi + 1, hi + 40).flatMap(l => l.its);
+    const aEsq = mostra.length > 8 && mostra.filter(i => esq.some(x => Math.abs(i.x - x) < 3)).length / mostra.length > .6;
+    const col = it => { if (!aEsq) return colC(it); let k = 0; esq.forEach((x, i) => { if (it.x >= x - 4) k = i }); return k };
     const kcs = [].concat(clau(capT.map(c => c.toLowerCase()))).filter(k => k >= 0), kc = kcs[0];
     const out = linies.slice(0, ant ? hi - 1 : hi).map(l => ({ banda: l.its.map(i => i.s).join(" ") }));
     out.push(capT);
     const bandes = [], items = [];
     for (const l0 of linies.slice(hi + 1)) {
-      if (esCap(l0.its.map(i => i.s)) >= 3) continue; // capçalera repetida
+      // capçalera repetida: si cada taula té amplades pròpies (una per secció), les columnes es recol·loquen
+      if (esCap(l0.its.map(i => i.s)) >= 3) { const n = l0.its.slice().sort((a, b) => a.x - b.x); if (n.length === cap.length) { esq = n.map(c => c.x); cen = n.map(c => c.x + c.w / 2) } continue }
       const l = { ...l0, its: l0.its.filter(i => !titols.has(i.s)) }; if (!l.its.length) continue;
       l.its = l.its.filter(i => { if (FORA.test(i.s)) { bandes.push({ pag: l.pag, y: l.y + .1, t: i.s }); return false } return true }); // "SET: …", "WRAP" dins d'una línia amb altres textos
       if (!l.its.length) continue;
@@ -54,14 +59,17 @@ window.IMP = (() => {
     }
     // àncores: elements a la columna clau
     const anc = [];
-    const cand = items.filter(i => kcs.includes(i.c) && i.s.trim() && i.s.trim() !== "-" || (i.c === kc && i.s.trim()));
+    const cand = items.filter(i => (kcs.includes(i.c) && i.s.trim() && i.s.trim() !== "-" || (i.c === kc && i.s.trim())) && /[A-Za-z0-9À-ú]/.test(i.s));
     // un text sense xifres just a sobre d'un altre de la mateixa columna (p. ex. "SCEN" / "E: 01") no obre fila pròpia
     cand.filter(i => /\d/.test(i.s) || !cand.some(o => o !== i && o.pag === i.pag && o.c === i.c && i.y - o.y > 0 && i.y - o.y < 16)).forEach(i => { if (!anc.some(a => a.pag === i.pag && Math.abs(a.y - i.y) < 5)) anc.push({ pag: i.pag, y: i.y, cel: cap.map(() => []) }) });
     // distància màxima a l'àncora: segons l'espai habitual entre files (taules atapeïdes → més curta)
     const gaps = anc.map(a => anc.filter(b => b.pag === a.pag && b.y < a.y).reduce((m, b) => Math.min(m, a.y - b.y), 1e9)).filter(g => g < 1e9).sort((a, b) => a - b);
     const maxD = gaps.length ? Math.max(12, Math.min(60, gaps[gaps.length >> 1] * .75)) : 60;
     const entre = (pag, y1, y2) => bandes.some(b => b.pag === pag && b.y < Math.max(y1, y2) && b.y > Math.min(y1, y2));
-    for (const it of items) {
+    // pàgines sense cap fila (notes al final del document): són text, no plans
+    const ambFiles = new Set(anc.map(a => a.pag));
+    for (const it of items.filter(i => !ambFiles.has(i.pag))) bandes.push({ pag: it.pag, y: it.y, t: it.s });
+    for (const it of items.filter(i => ambFiles.has(i.pag))) {
       let best = null, d = 1e9;
       for (const a of anc) { if (a.pag !== it.pag || entre(it.pag, it.y, a.y)) continue; const e = Math.abs(a.y - it.y); if (e < d) { d = e; best = a } }
       if (!best || d > maxD) { best = { pag: it.pag, y: it.y, cel: cap.map(() => []), orfe: 1 }; anc.push(best) }
@@ -100,7 +108,8 @@ window.IMP = (() => {
   const net = s => String(s || "").trim();
 
   // escala: "*MCU" → PMC; "PG -TO- PMC" → "PG → PMC"
-  const esc = v => { v = String(v || "").replace(/^[^A-Za-zÀ-ú]+/, "").trim(); const ps = v.split(/\s*-?\s*\bto\b\s*-?\s*|\s*→\s*/i).filter(Boolean); return ps.length > 1 ? ps.map(p => R.escNorm(p) || p).join(" → ") : R.escNorm(v) || v };
+  const esc = v => { v = String(v || "").replace(/^[^A-Za-zÀ-ú]+/, "").replace(/\bclose-?\s?up\b/i, "PP").trim();
+    if (/\s\/\s/.test(v)) return v.split(/\s*\/\s*/).map(p => R.escNorm(p) || p).join(" / "); /* alternatives: "PG / PC" */ const ps = v.split(/\s*-?\s*\bto\b\s*-?\s*|\s*→\s*/i).filter(Boolean); return ps.length > 1 ? ps.map(p => R.escNorm(p) || p).join(" → ") : R.escNorm(v) || v };
   // ---------- guió tècnic ----------
   const cGT = cs => { const l = cs.map(c => net(c).toLowerCase()); return R.compta(l) };
   function aGT(fulls) {
@@ -110,14 +119,19 @@ window.IMP = (() => {
     for (const full of fulls) {
       const rs = files(full, cGT, cab => { const m = R.mapa(cab); return m.num != null ? m.num : 0 }); const hi = rs.findIndex(r => Array.isArray(r) && cGT(r) >= 3); if (hi < 0) continue;
       const mapa = R.mapa(rs[hi].map(c => net(c).toLowerCase()));
-      for (const r of rs.slice(hi + 1)) {
+      // la primera escena pot anar just abans de la capçalera («1 · AZOTEA 1 (15:00–17:00)»)
+      const pre = rs.slice(0, hi).map(r => Array.isArray(r) ? r.map(net).filter(Boolean).join(" ") : net(r.banda)).reverse().find(t => /^\d{1,3}[a-z]?\s*·\s*[A-ZÀ-Ú]/.test(t));
+      for (const r of (pre ? [{ banda: pre }] : []).concat(rs.slice(hi + 1))) {
         const vals = Array.isArray(r) ? r.map(net) : [net(r.banda)], plens = vals.filter(Boolean);
         if (!plens.length) continue;
         // banda d'escena: "ESC 3 · INT. CASA - DIA" o "SC 3 ..." en una sola cel·la
         const be = plens.filter(x => !/^(notes|notas|notes)\s*:?$|^✓$/i.test(x)).join(" ").replace(/^S\s*C\s*E\s*N\s*E/i, "SCENE").match(/^(?:esc(?:ena)?|sc(?:ene)?|seq)\s*\.?\s*:?\s*(\d+[a-z]?)\b\s*[·.\-:|]?\s*(.*)$/i);
+        const bn = !be && plens.length <= 2 && plens.join(" ").match(/^(\d{1,3}[a-z]?)\s*·\s*([A-ZÀ-Ú].*)$/);
+        if (bn) { const hora = (bn[2].match(/\(([^)]*\d[^)]*)\)\s*$/) || [])[1] || "", resta = bn[2].replace(/\s*\([^)]*\)\s*$/, "").trim(), ie = resta.match(/^(INT\.?\/EXT|INT|EXT)\.?\s*/i), lm = resta.replace(/^(INT\.?\/EXT|INT|EXT)\.?\s*/i, "").split(/\s+[-–·]\s+/); nova(bn[1], { intext: ie ? ie[1].toUpperCase().replace(".", "") : "", lugar: (lm[0] || "").trim(), momento: (lm[1] || hora || "").trim() }); continue }
+        if (/^(referencia|refer[eè]ncia)\b|^\[hueco/i.test(plens.join(" "))) continue; // files de referència d'imatges
         if (be) { let resta = be[2]; const pg = resta.match(/(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*P[ÀÁA]GS?\.?\s*(.*)$/i); if (pg) resta = resta.slice(0, pg.index).trim(); resta = resta.replace(/\s*\b(POSITION|POSICIÓ|POSICIÓN)\b\s*/gi, " ").trim(); const ie = resta.match(/^(INT\.?\/EXT|INT|EXT)\.?\s*/i), lm = resta.replace(/^(INT\.?\/EXT|INT|EXT)\.?\s*/i, "").split(/\s+[-–·]\s+/); nova(be[1], { intext: ie ? ie[1].toUpperCase().replace(".", "") : "", lugar: (lm[0] || "").trim(), momento: (lm[1] || "").trim(), paginas: pg ? pg[1] : "", sinopsis: pg ? pg[2].trim() : "" }); continue }
         if (!Array.isArray(r)) continue;
-        const o = { id: R.uid() }; for (const [k, i] of Object.entries(mapa)) if (k !== "img") o[k] = net(r[i]);
+        const o = { id: R.uid() }; for (const [k, i] of Object.entries(mapa)) if (k !== "img") o[k] = net(r[i]).replace(/^\[\s*(no\s*especif\s*icado|no\s*especif\s*icat|sin\s*especificar|n\/a)\s*\]$/i, "");
         if (!o.num && !o.desc && !o.sujeto && !o.dialogo) continue; // files buides de plantilla
         if (o.num && !Object.entries(o).some(([k, v]) => !["id", "num", "esc"].includes(k) && v && v !== "-")) continue; // només el número: fila buida
         if (o.esc && !/\d/.test(o.esc)) { o.notas = [o.esc, o.notas].filter(Boolean).join(" "); delete o.esc }

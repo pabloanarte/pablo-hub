@@ -27,12 +27,12 @@ window.R = (() => {
   // ---------- pegar desde Google Sheets / Excel ----------
   // Reconoce las cabeceras habituales (castellano, catalán, inglés) y las convierte a campos del guion técnico.
   const CAB = {
-    esc: ["esc", "esc.", "escena", "scene", "sc", "seq"], num: ["pla", "pl.", "plano", "shot", "shot #", "pl", "nº", "n", "#"], sujeto: ["sujeto", "subjecte", "subject", "personajes", "personatges"],
-    escala: ["valor de pl", "valor de plano", "escala", "shot size", "tamaño", "valor"], posicion: ["camera position", "posición", "posicio", "posició", "ang. horiz.", "ang. horitz.", "ang. horitzontal", "ang. horizontal", "angulo horizontal", "ángulo horizontal", "angulación horizontal", "angulació horitzontal", "horizontal angle"],
-    angulo: ["angle", "angulación", "angulacio", "angulació", "ang. vert.", "ang. vertical", "angulo", "ángulo", "angulación vertical", "angulació vertical", "vertical angle"], mov: ["movement", "movimiento", "moviment", "mov. de càmera", "mov. càmera", "mov. de camara", "mov. cámara", "mov"],
+    esc: ["esc", "esc.", "escena", "scene", "sc", "seq"], num: ["pla", "pl.", "plano", "shot", "shot #", "pl", "nº", "n", "#", "id", "n.º"], sujeto: ["sujeto", "subjecte", "subject", "personajes", "personatges"],
+    escala: ["valor de pl", "valor de plano", "escala", "shot size", "tamaño", "valor", "e", "e.", "esc. pl."], posicion: ["camera position", "posición", "posicio", "posició", "ang. horiz.", "ang. horitz.", "ang. horitzontal", "ang. horizontal", "angulo horizontal", "ángulo horizontal", "angulación horizontal", "angulació horitzontal", "horizontal angle"],
+    angulo: ["angle", "angulación", "angulacio", "angulació", "ang. vert.", "ang. vertical", "angulo", "ángulo", "angulación vertical", "angulació vertical", "vertical angle", "aº", "a°", "a.", "ang.", "ang"], mov: ["movement", "movimiento", "moviment", "mov. de càmera", "mov. càmera", "mov. de camara", "mov. cámara", "mov"],
     soporte: ["equipment", "soporte", "suport", "equipo"], lente: ["lens", "lente", "òptica", "optica", "objetivo"], sonido: ["sound", "sonido", "so"], img: ["imatge", "imagen", "image", "ref.", "storyboard"],
     desc: ["description", "descripción", "descripcio", "descripció", "acció", "acción", "action", "accio"], dialogo: ["diálogo", "dialogo", "dialeg", "diàleg", "dialogue"],
-    notas: ["notes", "notas", "anotaciones", "anotacions", "fx/notes", "observaciones"], dur: ["duración", "durada", "duration", "dur", "min. rodatge", "min. rodaje", "durada (min)", "dur. (min)", "shooting min."], fps: ["fps"], intext: ["int./ext.", "int/ext", "int.ext", "int-ext"], set: ["set", "localización", "localitzacio", "location"]
+    notas: ["notes", "notas", "anotaciones", "anotacions", "fx/notes", "observaciones", "luz/efectos", "luz / efectos", "llum/efectes", "luz", "llum", "iluminación", "il·luminació", "efectos"], dur: ["duración", "durada", "duration", "dur", "min. rodatge", "min. rodaje", "durada (min)", "dur. (min)", "shooting min."], fps: ["fps"], intext: ["int./ext.", "int/ext", "int.ext", "int-ext"], set: ["set", "localización", "localitzacio", "location"]
   };
   // Relaciona cada columna de la capçalera amb un camp (primer coincidències exactes, després per prefix)
   function mapa(cab) {
