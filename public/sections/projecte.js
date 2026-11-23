@@ -64,38 +64,52 @@
     else { const m = t.match(/@([\w.]{1,30})/); t = m ? m[1] : t.replace(/^@+/, "") }
     t = t.trim(); return /^[\w.]{1,30}$/.test(t) && /[a-z]/i.test(t) ? "@" + t : "";
   };
-  // Ordre de crèdits per departaments (com als posts habituals): repartiment, caps d'equip i després la resta per departament.
-  // Es comproven primer els rols més concrets («Ajudant de direcció» abans que «Direcció»).
+  // Ordre de crèdits per departaments: repartiment, direcció (amb guió, ajudantia, script i coach), producció,
+  // fotografia (amb càmera, DIT, elèctrics i grip), art, vestuari, maquillatge, so, postproducció, càsting i foto fixa.
+  // Cada regla és [rang, departament, patró]; es comproven primer les més concretes.
   const DEPT = [
-    [12, /ajudan\w* de direcci|ayudant\w* de direcci|assistant director|\b1st ad\b|\b2nd ad\b|\bad\b|primer ayudante|segon ajudant/i],
-    [4, /fotograf|\bdop\b|\bd\.?o\.?p\.?\b|cinematograph|director of photography/i],
-    [5, /direcci[oó] d['’ ]?art|direcci[oó]n de arte|director\w* (de |d')?art|art director|disseny de producci|diseño de producci|production design/i],
-    [22, /ajudant\w* d['’ ]?art|ayudante de arte|art assistant|atrezz|attrezz|ambientaci|props/i],
-    [20, /editor\w* de so|editor de sonido|sound editor|di[aà]legs|di[aá]logos|dialog|mescla|mezcla|\bmix/i],
-    [8, /supervisi[oó] sonora|sound design|dise[ñn]o de sonido|disseny de so|sound supervisor/i],
-    [19, /so directe|sonido directo|sonidista|\bboom|perchista|sound recordist|location sound|\bso\b|\bsonido\b|\bsound\b/i],
-    [9, /m[uú]sica|banda sonora|composi|composer|score|soundtrack/i],
-    [18, /colori|\bcolou?r\b|etalonat|grading/i],
-    [11, /\bvfx\b|efectes visuals|efectos visuales|visual effects|postproducci|post-?producci/i],
-    [21, /gr[aà]fic|graphics|t[ií]tols|t[ií]tulos|motion/i],
-    [10, /muntatge|montaje|\beditor\b|editing|editat/i],
-    [13, /\bscript\b|continu[iï]tat|continuidad|continuity/i],
-    [15, /\b[12]\s?ac\b|ajudant\w* de c[aà]mera|ayudante de c[aá]mara|auxiliar\w* de c[aà]mera|auxiliar de c[aá]mara|foquista|focus puller|camera assistant|ronin|steadicam|\bdit\b|operador\w* de c[aà]mera|camera operator/i],
-    [16, /gaffer|el[eè]ctric|el[eé]ctrico|spark|electrician|il·luminaci|iluminaci/i],
-    [17, /\bgrip|maquinista|key grip/i],
-    [14, /cap de producci|jef\w* de producci|production manager|ajudant\w* de producci|ayudante de producci|auxiliar\w* de producci|\bpa\b|production assistant|key set|runner|meritori|localitzaci|localizaci|location/i],
-    [3, /product\w* executi|productor\w* ejecutiv|executive producer|\bproduc|produït|produced|production company/i],
-    [6, /vestuari|vestuario|stylist|estilis|fashion|wardrobe|costume/i],
-    [7, /maquillatge|maquillaje|\bmua\b|muah|make-?up|perruqueri|peluquer|\bhair\b|caracteritzaci/i],
-    [23, /c[aà]sting/i],
-    [24, /foto fixa|foto fija|still|\bphoto\b|fot[oò]graf\w* (de rodatge|fixa|fija)|making of/i],
-    [2, /gui[oó]n?(?![a-z])|guionista|screenplay|written|writer|escrit/i],
-    [1, /direcci[oó]|direcci[oó]n|director|directora|dirigi|directed|creative direction|direcci[oó]n creativa/i],
-    [0, /repartiment|reparto|\bcast\b|actor|actriu|actriz|int[eè]rpret|talent|protagonist/i]
+    [14, "Direcció", /coach|entrenador\w* d['’ ]?actors|acting coach|direcci[oó] d['’ ]?actors|dirección de actores/i],
+    [12, "Direcció", /ajudan\w* de direcci|ayudant\w* de direcci|assistant director|\b[12](st|nd|r|er)?\.?\s?ad\b|\bad\b|meritori\w* de direcci/i],
+    [13, "Direcció", /\bscript\b|continu[iï]tat|continuidad|continuity|scripta/i],
+    [30, "Fotografia", /direcci[oó]n? de fotograf|director\w* de fotograf|\bdop\b|\bd\.o\.p\b|cinematograph|director of photography/i],
+    [40, "Art", /direcci[oó] d['’ ]?art|direcci[oó]n de arte|director\w* (de |d['’])?art|art director|disseny de producci|diseño de producci|production design/i],
+    [41, "Art", /ajudant\w* d['’ ]?art|ayudante de arte|art assistant|atrezz|attrezz|ambientaci|props|decorad/i],
+    [74, "Postproducció", /editor\w* de so|editor de sonido|sound editor|di[aà]legs|di[aá]logos|dialog/i],
+    [75, "Postproducció", /mescla|mezcla|\bmix/i],
+    [73, "Postproducció", /supervisi[oó] sonora|sound design|dise[ñn]o de sonido|disseny de so|sound supervisor/i],
+    [61, "So", /perchista|\bboom\b|microfonist/i],
+    [60, "So", /so directe|sonido directo|sonidista|sound recordist|location sound|t[eè]cnic de so|t[eé]cnico de sonido|\bso\b|\bsonido\b|\bsound\b/i],
+    [76, "Postproducció", /m[uú]sica|banda sonora|composi|composer|\bscore|soundtrack/i],
+    [71, "Postproducció", /colori|\bcolou?r\b|etalonat|grading/i],
+    [72, "Postproducció", /\bvfx\b|efectes visuals|efectos visuales|visual effects|postproducci|post-?producci/i],
+    [77, "Postproducció", /gr[aà]fic|graphics|t[ií]tols|t[ií]tulos|motion/i],
+    [70, "Postproducció", /muntatge|montaje|\beditor\b|editing|editat/i],
+    [34, "Fotografia", /\bdit\b|data wrangler|digital imaging/i],
+    [35, "Fotografia", /ronin|steadicam|gimbal|dron/i],
+    [32, "Fotografia", /\b1\s?(st)?\s?ac\b|primer\w* ajudant\w* de c[aà]mera|primer ayudante de c[aá]mara|foquista|focus puller|first assistant camera/i],
+    [33, "Fotografia", /\b2\s?(nd)?\s?ac\b|ajudant\w* de c[aà]mera|ayudante de c[aá]mara|auxiliar\w* de c[aà]mera|auxiliar de c[aá]mara|camera assistant|clapper|loader/i],
+    [31, "Fotografia", /operador\w* de c[aà]mera|operador de c[aá]mara|camera operator|c[aà]mera\b/i],
+    [36, "Fotografia", /gaffer|cap d['’ ]?el[eè]ctrics|jefe de el[eé]ctricos/i],
+    [37, "Fotografia", /el[eè]ctric|el[eé]ctrico|spark|electrician|il·luminaci|iluminaci/i],
+    [38, "Fotografia", /\bgrip|maquinista|key grip/i],
+    [21, "Producció", /cap de producci|jef\w* de producci|production manager|line producer|director\w* de producci/i],
+    [22, "Producció", /ajudant\w* de producci|ayudante de producci|auxiliar\w* de producci|\bpa\b|production assistant|key set|runner|meritori|localitzaci|localizaci|location|coordinad\w* de producci/i],
+    [20, "Producció", /product\w* executi|productor\w* ejecutiv|executive producer|\bproduc|produït|produced|production company/i],
+    [50, "Vestuari", /vestuari|vestuario|stylist|estilis|fashion|wardrobe|costume|sastr/i],
+    [55, "Maquillatge", /maquillatge|maquillaje|\bmua\b|muah|make-?up|perruqueri|peluquer|\bhair\b|caracteritzaci/i],
+    [80, "Càsting", /c[aà]sting/i],
+    [85, "Foto fixa", /foto fixa|foto fija|still|\bphoto\b|fot[oò]graf\w* (de rodatge|fixa|fija|del rodaje)|making of/i],
+    [11, "Direcció", /gui[oó]n?(?![a-z])|guionista|screenplay|written|writer|escrit/i],
+    [10, "Direcció", /direcci[oó]|direcci[oó]n|director|directora|dirigi|directed|creative direction/i],
+    [0, "Repartiment", /repartiment|reparto|\bcast\b|actor|actriu|actriz|int[eè]rpret|talent|protagonist/i]
   ];
-  const rangRol = r => { r = String(r || ""); for (const [n, re] of DEPT) if (re.test(r)) return n; return 30 };
-  // ordena l'equip per departaments; dins el mateix departament es manté l'ordre que tenien
-  const perDepartaments = (eq, pers) => eq.map((x, i) => [x, i]).sort((a, b) => rangRol(a[0].rol || ((pers.find(y => y.id === a[0].id) || {}).rol)) - rangRol(b[0].rol || ((pers.find(y => y.id === b[0].id) || {}).rol)) || a[1] - b[1]).map(x => x[0]);
+  // un rol com «Director i guionista» es parteix i compta la part més amunt de la llista
+  const regla = r => { let m = null; String(r || "").split(/\s+(?:i|y|and)\s+|\s*[&\/,+]\s*/i).filter(Boolean).forEach(t => { const d = DEPT.find(x => x[2].test(t)); if (d && (!m || d[0] < m[0])) m = d }); return m };
+  const rangRol = r => { const d = regla(r); return d ? d[0] : 99 };
+  const deptDe = r => { const d = regla(r); return d ? d[1] : "Altres" };
+  // ordena l'equip per departaments; dins el mateix rang es manté l'ordre que tenien
+  const rolDe = (x, pers) => x.rol || ((pers.find(y => y.id === x.id) || {}).rol) || "";
+  const perDepartaments = (eq, pers) => eq.map((x, i) => [x, i]).sort((a, b) => rangRol(rolDe(a[0], pers)) - rangRol(rolDe(b[0], pers)) || a[1] - b[1]).map(x => x[0]);
   const UNIO = { i: " i ", y: " y ", "&": " & ", ",": ", " };
   // Text dels crèdits: un rol per línia («Rol: @a i @b»), en l'ordre de l'equip; si algú no té Instagram, surt el nom
   function credits(p, eq) {
@@ -107,7 +121,9 @@
   }
   async function equip(p, v) {
     const pers = await H.col("persona"); if (v !== ver) return;
-    const eq = (p.equip || []).map(x => Object.assign({}, x, { p: pers.find(y => y.id === x.id) })).filter(x => x.p);
+    // si no l'has reordenat a mà, l'equip surt sempre per departaments
+    const eq0 = p.ordreMa ? (p.equip || []) : perDepartaments(p.equip || [], pers);
+    const eq = eq0.map(x => Object.assign({}, x, { p: pers.find(y => y.id === x.id) })).filter(x => x.p);
     const lliures = pers.filter(x => !eq.some(y => y.id === x.id)).sort((a, b) => (a.titulo || "").localeCompare(b.titulo || ""));
     const c = p.cred || {}, gen = credits(p, eq), txt = p.credits != null && p.credits !== "" ? p.credits : gen, vell = p.credits && p.credGen && p.credGen !== gen;
     el.innerHTML = `<div class="dash eqd">
@@ -117,8 +133,8 @@
         <div class="ls" style="margin-top:8px"><label class="b2" style="cursor:pointer">O puja l'arxiu (CSV o Excel)<input type="file" accept=".csv,.tsv,.xlsx,text/csv" id="eqarx" hidden></label></div></div>
       <div class="card"><h3>Afegir algú a mà</h3><div class="ls" style="gap:10px"><select id="peq" style="flex:2;min-width:200px"><option value="">Tria una persona d'Equip i repartiment…</option>${lliures.map(x => `<option value="${x.id}">${E(x.titulo || "Sense nom")}${x.rol ? " · " + E(x.rol) : x.tipus === "Repartiment" ? " · repartiment" : ""}</option>`).join("")}</select><input id="peqr" placeholder="Rol en aquest projecte" style="flex:1;min-width:160px"><button class="b" data-k="afeq">Afegir</button></div>
         <p class="em" style="margin:10px 0 0">Si no hi és, crea-la primer a Gent → Equip i repartiment.</p></div></div>
-      <div class="ls" style="margin-top:20px;justify-content:space-between"><h2 style="margin:0">Equip <span>${eq.length}</span></h2>${eq.length > 1 ? `<button class="b2" data-k="eqdept">Ordenar per departaments</button>` : ""}</div>
-      <div>${eq.length ? eq.map((x, i) => `<div class="r"><span class="eqo"><button class="t" data-k="eqamunt" data-i="${i}" ${i ? "" : "disabled"} title="Amunt">↑</button><button class="t" data-k="eqavall" data-i="${i}" ${i < eq.length - 1 ? "" : "disabled"} title="Avall">↓</button></span><div class="g" data-k="pers" data-id="${x.id}" style="cursor:pointer"><b>${E(x.p.titulo || "Sense nom")}</b><small>${E([arroba(x.p.insta), x.p.tel, x.p.email].filter(Boolean).join(" · "))}</small></div><input data-rol="${x.id}" value="${E(x.rol || x.p.rol || "")}" placeholder="Rol" style="width:220px;max-width:40%"><button class="x" data-k="treq" data-id="${x.id}" title="Treure del projecte">×</button></div>`).join("") : `<p class="em">Encara no hi ha ningú en aquest projecte.</p>`}</div>
+      <div class="ls" style="margin-top:20px;justify-content:space-between"><h2 style="margin:0">Equip <span>${eq.length}</span></h2>${eq.length > 1 && p.ordreMa ? `<button class="b2" data-k="eqdept">Tornar a ordenar per departaments</button>` : ""}</div>
+      <div>${eq.length ? eq.map((x, i) => { const dp = deptDe(x.rol || x.p.rol), cap = !p.ordreMa && (i === 0 || deptDe(eq[i - 1].rol || eq[i - 1].p.rol) !== dp) ? `<h2 style="margin:${i ? 18 : 6}px 0 4px">${E(dp)}</h2>` : ""; return cap + `<div class="r"><span class="eqo"><button class="t" data-k="eqamunt" data-i="${i}" ${i ? "" : "disabled"} title="Amunt">↑</button><button class="t" data-k="eqavall" data-i="${i}" ${i < eq.length - 1 ? "" : "disabled"} title="Avall">↓</button></span><div class="g" data-k="pers" data-id="${x.id}" style="cursor:pointer"><b>${E(x.p.titulo || "Sense nom")}</b><small>${E([arroba(x.p.insta), x.p.tel, x.p.email].filter(Boolean).join(" · "))}</small></div><input data-rol="${x.id}" value="${E(x.rol || x.p.rol || "")}" placeholder="Rol" style="width:220px;max-width:40%"><button class="x" data-k="treq" data-id="${x.id}" title="Treure del projecte">×</button></div>` }).join("") : `<p class="em">Encara no hi ha ningú en aquest projecte.</p>`}</div>
       ${eq.length ? `<div class="card" style="margin-top:20px"><h3>Crèdits per a Instagram</h3>
         <p class="em" style="margin-top:0">Surten en l'ordre de la llista (canvia'l amb ↑ ↓) i els rols repetits s'ajunten. Pots retocar el text: es guarda.</p>
         <div class="ls" style="gap:10px;margin-bottom:10px">
@@ -231,8 +247,8 @@
     if (k === "pers") return H.abrir("persona", b.dataset.id);
     if (k === "afeq") { const s = document.getElementById("peq"); if (!s.value) return s.focus(); p.equip = (p.equip || []).concat({ id: s.value, rol: document.getElementById("peqr").value.trim() }); await H.put(p, 1); return pintar() }
     if (k === "eqllegeix") { let u = document.getElementById("eqf").value.trim(); if (!u) return document.getElementById("eqf").focus(); if (!/^https?:\/\//.test(u)) u = "https://" + u; b.disabled = true; b.textContent = "Llegint…"; await llegeixFormulari(p, u); b.disabled = false; b.textContent = "Tornar a llegir"; return }
-    if (k === "eqamunt" || k === "eqavall") { const pers = await H.col("persona"), eq = (p.equip || []).filter(x => pers.some(y => y.id === x.id)), i = +b.dataset.i, j = k === "eqamunt" ? i - 1 : i + 1;[eq[i], eq[j]] = [eq[j], eq[i]]; p.equip = eq.concat((p.equip || []).filter(x => !eq.includes(x))); if (!p.credits) delete p.credits; delete p.credGen; await H.put(p, 1); return pintar() }
-    if (k === "eqdept") { p.equip = perDepartaments(p.equip || [], await H.col("persona")); await H.put(p, 1); H.toast("Ordenat per departaments"); return pintar() }
+    if (k === "eqamunt" || k === "eqavall") { const pers = await H.col("persona"), eq = (p.ordreMa ? (p.equip || []) : perDepartaments(p.equip || [], pers)).filter(x => pers.some(y => y.id === x.id)), i = +b.dataset.i, j = k === "eqamunt" ? i - 1 : i + 1;[eq[i], eq[j]] = [eq[j], eq[i]]; p.equip = eq.concat((p.equip || []).filter(x => !eq.includes(x))); p.ordreMa = true; if (!p.credits) delete p.credits; delete p.credGen; await H.put(p, 1); return pintar() }
+    if (k === "eqdept") { p.equip = perDepartaments(p.equip || [], await H.col("persona")); delete p.ordreMa; if (!p.credits) delete p.credGen; await H.put(p, 1); H.toast("Ordenat per departaments"); return pintar() }
     if (k === "eqregen") { e.preventDefault(); if (p.credits && !confirm("Es perdran els retocs que hagis fet al text. Tornar a generar-lo?")) return; delete p.credits; delete p.credGen; await H.put(p, 1); return pintar() }
     if (k === "treq") { p.equip = (p.equip || []).filter(x => x.id !== b.dataset.id); await H.put(p, 1); return pintar() }
     if (k === "trar") { if (!confirm("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.id).catch(() => { }); p.archivos = (p.archivos || []).filter(a => a.id !== b.dataset.id); await H.put(p, 1); return pintar() }
