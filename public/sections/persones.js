@@ -4,7 +4,7 @@
   const rolTxt = d => [].concat(d.rol || []).join(", ");
   const rang = d => d.tipus === "Repartiment" ? -1 : H.rangRol(rolTxt(d));
   const dept = d => d.tipus === "Repartiment" ? "Repartiment" : rolTxt(d) ? H.deptDe(rolTxt(d)) : "Sense rol";
-  const COL = { "Repartiment": "#1d1d1f", "Direcció": "#30b27a", "Producció": "#30b27a", "Fotografia": "#0a84ff", "Foto fixa": "#0a84ff", "Art": "#ff9f0a", "Vestuari": "#ff9f0a", "Maquillatge": "#ff9f0a", "So": "#5ac8fa", "Postproducció": "#ff375f", "Càsting": "#af52de" };
+  const COL = { "Repartiment": "#1d1d1f", "Direcció": "#30b27a", "Ajudants de direcció": "#30b27a", "Script": "#30b27a", "Coach": "#30b27a", "Muntatge": "#ff375f", "Color": "#ff375f", "Producció": "#30b27a", "Fotografia": "#0a84ff", "Foto fixa": "#0a84ff", "Art": "#ff9f0a", "Vestuari": "#ff9f0a", "Maquillatge": "#ff9f0a", "So": "#5ac8fa", "Postproducció": "#ff375f", "Càsting": "#af52de" };
   H.coleccion({
     sec: "persones", tipo: "persona", nuevo: "Persona",
     tabs: { f: "tipus", op: ["Equip", "Repartiment"] },
