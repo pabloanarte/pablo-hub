@@ -64,51 +64,7 @@
     else { const m = t.match(/@([\w.]{1,30})/); t = m ? m[1] : t.replace(/^@+/, "") }
     t = t.trim(); return /^[\w.]{1,30}$/.test(t) && /[a-z]/i.test(t) ? "@" + t : "";
   };
-  // Ordre de crèdits per departaments: repartiment, direcció (amb guió, ajudantia, script i coach), producció,
-  // fotografia (amb càmera, DIT, elèctrics i grip), art, vestuari, maquillatge, so, postproducció, càsting i foto fixa.
-  // Cada regla és [rang, departament, patró]; es comproven primer les més concretes.
-  const DEPT = [
-    [80, "Càsting", /c[aà]sting|direct\w* de reparto|director\w* de repartiment/i],
-    [14, "Direcció", /coach|entrenador\w*|preparador\w* d|actoral|direcci[oó]n? d['’e ]+a?actor|director\w* d['’e ]+a?actor/i],
-    [12, "Direcció", /ajudan\w* de direcci|ayudant\w* de direcci|asistent\w* de direcci|assistent\w* de direcci|auxiliar\w* de direcci|ayte\.? (de )?direcci|assistant director|\b[12](st|nd|r|er)?\.?\s?ad\b|\bad\b|meritori\w* de direcci/i],
-    [13, "Direcció", /\bscript|continu[iï]tat|continuidad|continuity|scripta/i],
-    [30, "Fotografia", /direcci[oó]n? de fotograf|director\w* de fotograf|\bdop\b|\bd\.o\.p\b|cinematograph|director of photography|director\w* de foto\b|dir\.? (de )?fotograf|\bd\.?f\.?$|\bdf\b/i],
-    [72, "Postproducció", /compositing|composicio digital|\bvfx\b|\bsfx\b|efectes|efectos|visual effects/i],
-    [40, "Art", /direcci[oó] d['’ ]?art|direcci[oó]n de arte|director\w* (de |d['’])?art|direccion artistica|direcci[oó] art[ií]stica|art director|disseny de producci|dise[ñn]\w* de producci|production design|set design/i],
-    [41, "Art", /ajudant\w* d['’ ]?art|ayudante de arte|art assistant|atrezz|attrezz|ambientaci|props|decora/i],
-    [74, "Postproducció", /postproducci\w* de so|post-?producci\w* de so|muntatge de so|montaje de sonido|edicio\w* de so|editor\w* de so|editor de sonido|sound editor|di[aà]legs|di[aá]logos|dialog/i],
-    [60, "So", /sound mixer/i],
-    [75, "Postproducció", /mescla|mezcla|\bmix/i],
-    [73, "Postproducció", /supervisi[oó] sonora|sound design|dise[ñn]o de sonido|disseny de so|sound supervisor/i],
-    [61, "So", /perchista|\bboom|microfonist/i],
-    [60, "So", /so directe|sonido directo|sonidista|sound recordist|location sound|t[eè]cnic de so|t[eé]cnico de sonido|\bso\b|\bsonido\b|\bsound\b/i],
-    [76, "Postproducció", /m[uú]sica|banda sonora|composi|composer|\bscore|soundtrack/i],
-    [71, "Postproducció", /colou?ri|\bcolou?r\b|etalona|grading/i],
-    [72, "Postproducció", /postproducci|post-?producci/i],
-    [77, "Postproducció", /grafi|graphics|t[ií]tols|t[ií]tulos|motion/i],
-    [70, "Postproducció", /muntat|montaje|montador|\beditor|editing|editat|edicio/i],
-    [34, "Fotografia", /\bdit\b|data wrangler|data manager|digital imaging|video ?assist/i],
-    [35, "Fotografia", /ronin|steadicam|gimbal|dron/i],
-    [32, "Fotografia", /\b1\s?(st|º|ª|o|a|r|er)?\.?\s?ac\b|primer\w* ajudant\w* de c[aà]mera|\b1\w*\.? (ajudant|ayudant|asistent|assistent)\w* de c|primer ayudante de c[aá]mara|foquista|focus puller|first assistant camera/i],
-    [33, "Fotografia", /\b2\s?(nd|º|ª|o|a|n)?\.?\s?ac\b|^ac$|(aux|ayte)\.? (de )?c[aá]m|ajudant\w* de c[aà]mera|ayudante de c[aá]mara|auxiliar\w* de c[aà]mera|auxiliar de c[aá]mara|camera assistant|clapper|loader/i],
-    [31, "Fotografia", /operador\w* de c[aàá]m|camera operator|c[aà]mera\b|c[aá]mara\b/i],
-    [36, "Fotografia", /gaffer|best boy|cap d['’ ]?el[eè]ctrics|jef\w* de el[eé]ctric/i],
-    [37, "Fotografia", /el[eéè]ctri|spark|electrician|il·luminaci|iluminaci/i],
-    [38, "Fotografia", /\bgrip|maquinista|key grip/i],
-    [21, "Producció", /cap de producci|jef\w* de producci|production manager|line producer|director\w* de producci/i],
-    [22, "Producció", /ajudant\w* de producci|ayudante de producci|auxiliar\w* de producci|asistent\w* de producci|\bpa\b|production assistant|key set|runner|catering|meritori|localitzaci|localizaci|location|coordinad\w* de producci/i],
-    [20, "Producció", /product\w* executi|productor\w* ejecutiv|executive producer|\bproduc|produït|produced|production company/i],
-    [50, "Vestuari", /vestuari|vestuario|figurinist|stylist|estilis|fashion|wardrobe|costume|sastr/i],
-    [55, "Maquillatge", /maquilla|\bmua\b|muah|make-?up|perruqueri|peluquer|\bhair\b|caracteri[tz]/i],
-    [85, "Foto fixa", /foto fixa|foto fija|still|\bphoto\b|fot[oò]graf\w* (de rodatge|fixa|fija|del rodaje)|making.?of|\bbts\b|behind the scenes|^fotograf\w*$|^photograph\w*$/i],
-    [11, "Direcció", /gui[oó]n?(?![a-z])|guionista|screenplay|written|writer|escrit|idea original/i],
-    [10, "Direcció", /direcci[oó]|direcci[oó]n|director|directora|dirigi|directed|creative direction/i],
-    [0, "Repartiment", /repartiment|reparto|\bcast\b|actor|actress|actriu|actriz|int[eè]rpret|talent|protagonist|figuraci|\bextras?\b/i]
-  ];
-  // un rol com «Director i guionista» es parteix i compta la part més amunt de la llista
-  const regla = r => { let m = null; String(r || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+(?:i|y|and)\s+|\s*[&\/,+]\s*/i).filter(Boolean).forEach(t => { const d = DEPT.find(x => x[2].test(t)); if (d && (!m || d[0] < m[0])) m = d }); return m };
-  const rangRol = r => { const d = regla(r); return d ? d[0] : 99 };
-  const deptDe = r => { const d = regla(r); return d ? d[1] : "Altres" };
+  const rangRol = H.rangRol, deptDe = H.deptDe; // a lib.js
   // ordena l'equip per departaments; dins el mateix rang es manté l'ordre que tenien
   const rolDe = (x, pers) => x.rol || ((pers.find(y => y.id === x.id) || {}).rol) || "";
   const perDepartaments = (eq, pers) => eq.map((x, i) => [x, i]).sort((a, b) => rangRol(rolDe(a[0], pers)) - rangRol(rolDe(b[0], pers)) || a[1] - b[1]).map(x => x[0]);

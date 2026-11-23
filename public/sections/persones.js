@@ -1,6 +1,10 @@
 // Equip i repartiment: base de dades de persones de confiança (direcció de fotografia, producció, art… i actors i actrius).
 (() => {
   const ROLS = ["Direcció de fotografia", "Producció", "Ajudant de direcció", "Art", "Vestuari", "Maquillatge i perruqueria", "So", "Muntatge", "Color", "Música", "Gaffer / elèctrics", "Foto fixa"];
+  const rolTxt = d => [].concat(d.rol || []).join(", ");
+  const rang = d => d.tipus === "Repartiment" ? -1 : H.rangRol(rolTxt(d));
+  const dept = d => d.tipus === "Repartiment" ? "Repartiment" : rolTxt(d) ? H.deptDe(rolTxt(d)) : "Sense rol";
+  const COL = { "Repartiment": "#1d1d1f", "Direcció": "#30b27a", "Producció": "#30b27a", "Fotografia": "#0a84ff", "Foto fixa": "#0a84ff", "Art": "#ff9f0a", "Vestuari": "#ff9f0a", "Maquillatge": "#ff9f0a", "So": "#5ac8fa", "Postproducció": "#ff375f", "Càsting": "#af52de" };
   H.coleccion({
     sec: "persones", tipo: "persona", nuevo: "Persona",
     tabs: { f: "tipus", op: ["Equip", "Repartiment"] },
@@ -22,8 +26,9 @@
       { f: "valoracio", l: "Valoració", tipo: "pills", op: ["★", "★★", "★★★"] },
       { f: "notas", l: "Notes", tipo: "textarea" }
     ],
-    orden: (a, b) => (a.rol || "").localeCompare(b.rol || "") || (a.titulo || "").localeCompare(b.titulo || ""),
-    grupos: l => { const g = {}; l.forEach(d => { const k = d.tipus === "Repartiment" ? "Repartiment" : d.rol || "Sense rol"; (g[k] = g[k] || []).push(d) }); return Object.entries(g) },
-    fila: d => ({ t: d.titulo || "Sense nom", s: [d.tipus === "Repartiment" ? d.edat && "edat " + d.edat : d.rol, d.ciutat, d.tarifa, d.valoracio, d.tel].filter(Boolean).join(" · "), c: d.tipus === "Repartiment" ? "#000" : ({ "Direcció de fotografia": "#0a84ff", "Gaffer / elèctrics": "#0a84ff", "Foto fixa": "#0a84ff", "Producció": "#30b27a", "Ajudant de direcció": "#30b27a", "Art": "#ff9f0a", "Vestuari": "#ff9f0a", "Maquillatge i perruqueria": "#ff9f0a", "So": "#5ac8fa", "Muntatge": "#ff375f", "Color": "#ff375f", "Música": "#ff375f" })[d.rol] || "#8e8e93" })
+    // per departaments (com els crèdits), i dins de cada un per càrrec i nom
+    orden: (a, b) => rang(a) - rang(b) || (a.titulo || "").localeCompare(b.titulo || ""),
+    grupos: l => { const g = {}; l.forEach(d => { const k = dept(d); (g[k] = g[k] || []).push(d) }); return Object.entries(g) },
+    fila: d => ({ t: d.titulo || "Sense nom", s: [d.tipus === "Repartiment" ? d.edat && "edat " + d.edat : rolTxt(d), d.ciutat, d.tarifa, d.valoracio, d.tel].filter(Boolean).join(" · "), c: COL[dept(d)] || "#8e8e93" })
   });
 })();
