@@ -42,7 +42,7 @@
       <p class="em" style="margin-top:0">Ordeno els plans per set, després per eix de càmera (angulació/posició) i de pla obert a tancat, reparteixo les jornades i hi afegeixo canvis de set, dinar i wrap. Després pots ajustar-ho tot a mà.</p>
       <label>Guió tècnic</label><select id="g-gt">${gs.map(g => `<option value="${g.id}" ${g.id === gtId ? "selected" : ""}>${E(g.titulo || "Sense títol")}</option>`).join("")}</select>
       <div class="g2"><div><label>Data 1a jornada</label><input type="date" id="g-fecha" value="${H.today()}"></div><div><label>Crew call</label><input type="time" id="g-call" value="08:00"></div>
-      <div><label>Ready to shoot</label><input type="time" id="g-ready" value="09:00"></div><div><label>Hores de rodatge per jornada</label><input type="number" id="g-horas" value="10" step="0.5"></div>
+      <div><label>Ready to shoot</label><input type="time" id="g-ready" value="09:00"></div><div><label>Hores de rodatge per jornada</label><input type="number" id="g-horas" value="${(doc && +doc.horas) || 10}" step="0.5"></div>
       <div><label>Dinar a les</label><input type="time" id="g-comida" value="14:00"></div><div><label>Durada del dinar (min)</label><input type="number" id="g-comdur" value="60"></div>
       <div><label>Canvi de set / muntatge (min)</label><input type="number" id="g-cambio" value="30"></div><div><label>Ordre</label><select id="g-orden"><option value="smart">Set → eix → obert a tancat</option><option value="guion">Ordre del guió</option></select></div></div>
       <label>Minuts per pla si el guió no ho indica</label><input id="g-min" value="${DEF_ESC}">
@@ -92,31 +92,36 @@
   function pintar() {
     const d = D(), hs = horas(d), bl = bloques(d, hs), pl = d.filas.filter(f => f.tipo === "plano"), n = COLS.length + 3;
     const fin = hs.length ? hs.at(-1).fin : aMin(d.ready);
-    el.innerHTML = `<div class="bar tb"><button class="b2" data-k="volver">← Plans de rodatge</button><input data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol" style="max-width:300px;font-weight:700"><input data-d="ad" value="${E(doc.ad || "")}" placeholder="AD i telèfon" style="max-width:240px"><span style="flex:1"></span><button class="del" style="margin:0" data-k="delpdr">Eliminar pla</button></div>
+    el.innerHTML = `<div class="bar tb"><button class="b2" data-k="volver">← Plans de rodatge</button><input data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol" style="max-width:300px;font-weight:700"><input data-d="ad" value="${E(doc.ad || "")}" placeholder="AD i telèfon" style="max-width:240px"><label class="hj" title="Hores de rodatge per jornada: el resum es posa en vermell si una jornada en passa"><input data-d="horas" type="number" min="1" step="0.5" value="${E(doc.horas || "")}" placeholder="10" style="width:72px">h per jornada</label></div>
       <div class="bar tb"><button class="b" data-k="cit">Full de citació</button>${doc.gt ? `<button class="b2" data-k="regen">Regenerar des del guió</button>` : ""}<span style="flex:1"></span>${R.selLang()}<button class="b2" data-k="pdf">PDF</button><button class="b2" data-k="xls">Excel</button></div>
-      <div class="tabs">${doc.dias.map((x, i) => `<button class="t ${i === dia ? "on" : ""}" data-k="dia" data-i="${i}">Jornada ${i + 1}<small>${x.fecha ? " " + H.fecha(x.fecha) : ""}</small></button>`).join("")}<button class="t" data-k="adddia">+ Jornada</button></div>
-      <div class="dhead"><div><label>Data</label><input type="date" data-j="fecha" value="${E(d.fecha || "")}"></div><div><label>Ready to shoot</label><input type="time" data-j="ready" value="${E(d.ready || "09:00")}"></div>
-      <div style="flex:2"><label>Localització / adreça</label><input data-j="lugar" value="${E(d.lugar || "")}"></div><div style="flex:3"><label>Citacions (una per línia)</label><textarea data-j="calls" rows="2">${E(d.calls || "")}</textarea></div>
-      <div class="kpi" style="margin:0;flex:2;min-width:340px;grid-template-columns:repeat(3,1fr)"><div><b>${pl.filter(f => f.rodado).length}/${pl.length}</b><small>Plans rodats</small></div><div><b>${aHora(fin)}</b><small>Wrap previst</small></div><div><b>${Math.round((fin - (aMin(d.ready) ?? 540)) / 6) / 10} h</b><small>De rodatge</small></div></div></div>
-      <div class="shw"><table class="gt pdr" style="table-layout:fixed;width:${70 + 96 + 70 + COLS.reduce((x, c) => x + c.w, 0) + 80}px"><colgroup><col style="width:70px"><col style="width:96px"><col style="width:70px">${COLS.map(c => `<col style="width:${c.w}px">`).join("")}<col style="width:80px"></colgroup><thead><tr><th></th><th>Horari</th><th>Hora</th>${COLS.map(c => `<th>${c.l}</th>`).join("")}<th></th></tr></thead><tbody>` +
+      <div class="tabs">${doc.dias.map((x, i) => { const n = x.filas.filter(f => f.tipo === "plano").length; return `<button class="t ${i === dia ? "on" : ""}" data-k="dia" data-i="${i}">Jornada ${i + 1}<small>${x.fecha ? " " + H.fecha(x.fecha) : ""}</small><small class="n">${n} ${n === 1 ? "pla" : "plans"}${x.lugar ? " · " + E(x.lugar.split(",")[0]) : ""}</small></button>` }).join("")}<button class="t" data-k="adddia">+ Jornada</button></div>
+      <div class="dhead2"><div><label>Data</label><input type="date" data-j="fecha" value="${E(d.fecha || "")}"></div><div><label>Ready to shoot</label><input type="time" data-j="ready" value="${E(d.ready || "09:00")}"></div>
+      <div><label>Localització / adreça</label><input data-j="lugar" value="${E(d.lugar || "")}"></div><div><label>Citacions (una per línia)</label><textarea data-j="calls" rows="${Math.max(1, (d.calls || "").split("\n").length)}">${E(d.calls || "")}</textarea></div></div>
+      ${resum(d, pl, fin)}
+      <div class="shw"><table class="gt pdr" style="table-layout:fixed;width:${70 + 96 + 92 + COLS.reduce((x, c) => x + c.w, 0) + 80}px"><colgroup><col style="width:70px"><col style="width:96px"><col style="width:92px">${COLS.map(c => `<col style="width:${c.w}px">`).join("")}<col style="width:80px"></colgroup><thead><tr><th></th><th>Horari</th><th>Hora</th>${COLS.map(c => `<th>${c.l}</th>`).join("")}<th></th></tr></thead><tbody>` +
       d.filas.map((f, i) => {
-        const h = hs[i], mano = `<td class="hdc"><span class="hd" draggable="true" data-drag="${i}">⋮⋮</span>${f.tipo === "plano" ? `<input type="checkbox" data-k="rod" data-i="${i}" ${f.rodado ? "checked" : ""} title="Rodat"><i class="cdot" data-k="color" data-i="${i}" style="background:${FILA[f.color] || "#fff"}"></i>` : ""}</td>`;
+        const h = hs[i], mano = `<td class="hdc"><span class="hd" draggable="true" data-drag="${i}">⋮⋮</span>${f.tipo === "plano" ? `<input type="checkbox" data-k="rod" data-i="${i}" ${f.rodado ? "checked" : ""} title="Rodat"><i class="cdot${f.color ? " on" : ""}" data-k="color" data-i="${i}" style="background:${FILA[f.color] || "#fff"}"></i>` : ""}</td>`;
         const acc = `<td class="acc"><select data-k="mover" data-i="${i}" title="Moure a una altra jornada"><option>→</option>${doc.dias.map((x, j) => j === dia ? "" : `<option value="${j}">J${j + 1}</option>`).join("")}</select><button data-k="del" data-i="${i}" title="Esborrar">×</button></td>`;
         if (f.tipo !== "plano") {
           const c = BANDA[f.tipo] || "#eee", dur = ["proceso", "comida"].includes(f.tipo);
           return `<tr class="pr band" data-i="${i}" style="background:${c};${f.tipo === "wrap" ? "color:#fff" : ""}">${mano}<td colspan="2" class="hora">${f.tipo === "set" ? "" : aHora(h.ini) + (dur ? " – " + aHora(h.fin) : "")}</td><td colspan="${COLS.length - 2}"><input class="cel bt" data-i="${i}" data-f="texto" value="${E(f.texto || "")}" placeholder="${BANDAS[f.tipo]}" style="${f.tipo === "set" ? "text-align:center;font-weight:700" : "font-weight:600"}"></td><td>${dur ? `<input class="cel" data-i="${i}" data-f="dur" value="${E(f.dur || "")}" style="text-align:center">` : ""}</td><td><input class="cel" data-i="${i}" data-f="fija" value="${E(f.fija || "")}" placeholder="hora fixa" title="Hora fixa (opcional)" style="font-size:11px"></td>${acc}</tr>`;
         }
         const b = bl[i];
-        return `<tr class="pr" data-i="${i}" style="${f.color ? "background:" + FILA[f.color] : ""}${f.rodado ? ";opacity:.45" : ""}">${mano}${b ? `<td class="blk" rowspan="${b.n}">${aHora(b.ini)} – ${aHora(b.fin)}</td>` : ""}<td class="hora">${aHora(h.ini)}<br><small>${aHora(h.fin)}</small></td>` +
+        return `<tr class="pr" data-i="${i}" style="${f.color ? "background:" + FILA[f.color] : ""}${f.rodado ? ";opacity:.45" : ""}">${mano}${b ? `<td class="blk" rowspan="${b.n}">${aHora(b.ini)} – ${aHora(b.fin)}</td>` : ""}<td class="hora">${aHora(h.ini)}–${aHora(h.fin)}</td>` +
           COLS.map(c => c.t === "img" ? `<td class="ci" data-i="${i}">${f.img ? `<div class="thumb"><img src="${R.imgUrl(f.img)}" data-k="ver" alt=""><button data-k="qimg" data-i="${i}">×</button></div>` : `<label class="addimg">＋<input type="file" accept="image/*" data-k="img" data-i="${i}" hidden></label>`}</td>`
-            : c.t === "escala" ? `<td style="background:${f.escala ? escColor(f.escala) : ""}"><input class="cel esc" list="dl-esc2" data-i="${i}" data-f="escala" value="${E(f.escala || "")}" style="${f.escala ? "color:#fff" : ""}"></td>`
+            : c.t === "escala" ? `<td class="esct"><input class="cel esc" list="dl-esc2" data-i="${i}" data-f="escala" value="${E(f.escala || "")}" style="${f.escala ? `--e:${escColor(f.escala)};--et:#fff` : ""}" placeholder="—"></td>`
               : c.t === "dur" ? `<td><input class="cel" data-i="${i}" data-f="dur" value="${E(f.dur || "")}" style="text-align:center;font-weight:700"></td>`
                 : `<td><textarea class="cel" rows="1" data-i="${i}" data-f="${c.k}">${E(f[c.k] || "")}</textarea></td>`).join("") + acc + `</tr>`;
       }).join("") +
-      `</tbody></table></div><div class="bar" style="margin-top:12px;flex-wrap:wrap"><button class="b2" data-k="add" data-t="plano">+ Pla</button><button class="b2" data-k="add" data-t="set">+ Set</button><button class="b2" data-k="add" data-t="proceso">+ Procés</button><button class="b2" data-k="add" data-t="comida">+ Dinar</button><button class="b2" data-k="add" data-t="wrap">+ Wrap</button>${doc.gt ? `<button class="b2" data-k="pend">Plans del guió sense programar</button>` : ""}<span style="flex:1"></span>${doc.dias.length > 1 ? `<button class="del" style="margin:0" data-k="deldia">Esborrar jornada</button>` : ""}</div>
-      <div class="lg"><span><i style="background:${BANDA.set}"></i>Set</span><span><i style="background:${BANDA.proceso}"></i>Procés</span><span><i style="background:${BANDA.comida}"></i>Dinar</span><span><i style="background:${BANDA.wrap}"></i>Wrap</span><span style="margin-left:auto">Arrossega ⋮⋮ per reordenar: les hores es recalculen soles · «hora fixa» obliga a començar a aquella hora</span></div>
+      `</tbody></table></div><div class="bar" style="margin-top:12px;flex-wrap:wrap"><button class="b2" data-k="add" data-t="plano">+ Pla</button><button class="b2" data-k="add" data-t="set">+ Set</button><button class="b2" data-k="add" data-t="proceso">+ Procés</button><button class="b2" data-k="add" data-t="comida">+ Dinar</button><button class="b2" data-k="add" data-t="wrap">+ Wrap</button>${doc.gt ? `<button class="b2" data-k="pend">Plans del guió sense programar</button>` : ""}<span style="flex:1"></span>${doc.dias.length > 1 ? `<button class="del" style="margin:0" data-k="deldia">Esborrar jornada</button>` : ""}<button class="del" style="margin:0" data-k="delpdr">Eliminar pla</button></div>
+      <div class="lg"><span>Arrossega ⋮⋮ per reordenar: les hores es recalculen soles · «hora fixa» obliga a començar a aquella hora</span></div>
       <datalist id="dl-esc2">${R.ESC.map(x => `<option value="${x[0]}">`).join("")}</datalist>`;
     R.ajusta(el);
+  }
+  // Resum de la jornada: rodats, wrap previst i hores (en vermell si passa de les hores de rodatge del pla)
+  function resum(d, pl, fin) {
+    const ok = pl.filter(f => f.rodado).length, min = fin - (aMin(d.ready) ?? 540), lim = (+doc.horas || 0) * 60, sobra = lim && min > lim ? min - lim : 0;
+    return `<div class="gtsum"><span><b>${ok}/${pl.length}</b>rodats</span><span class="gtbar"><i style="width:${pl.length ? Math.round(ok / pl.length * 100) : 0}%"></i></span><span><b>${aHora(fin)}</b>wrap previst</span><span class="${sobra ? "mal" : ""}"><b>${String(Math.round(min / 6) / 10).replace(".", ",")} h</b>de rodatge${sobra ? ` · ${sobra} min per sobre de les ${String(doc.horas).replace(".", ",")} h` : lim ? ` (màx. ${String(doc.horas).replace(".", ",")} h)` : ""}</span><span class="lg" style="margin:0 0 0 auto"><span><i style="background:${BANDA.set}"></i>Set</span><span><i style="background:${BANDA.proceso}"></i>Procés</span><span><i style="background:${BANDA.comida}"></i>Dinar</span><span><i style="background:${BANDA.wrap}"></i>Wrap</span></span></div>`;
   }
   const refresca = () => { const y = window.scrollY, x = el.querySelector(".shw")?.scrollLeft; pintar(); window.scrollTo(0, y); const s = el.querySelector(".shw"); if (s && x) s.scrollLeft = x };
 
@@ -159,7 +164,7 @@
       const v = id => document.getElementById(id), gt = (await H.col("gt")).find(x => x.id === v("g-gt").value); if (!gt) return H.toast("Tria un guió tècnic");
       const o = { fecha: v("g-fecha").value, call: v("g-call").value, ready: v("g-ready").value, horas: +v("g-horas").value || 10, comida: v("g-comida").value, comdur: +v("g-comdur").value || 0, cambio: +v("g-cambio").value || 0, orden: v("g-orden").value, min: v("g-min").value, hechos: v("g-hechos").checked };
       const dias = construir(gt, o);
-      if (regenerando) { doc = regenerando; doc.dias = dias; regenerando = null } else doc = { id: H.uid("pdr"), titulo: gt.titulo || "", proyecto: gt.proyecto || "", gt: gt.id, ad: "", dias };
+      if (regenerando) { doc = regenerando; doc.dias = dias; doc.horas = o.horas; regenerando = null } else doc = { id: H.uid("pdr"), titulo: gt.titulo || "", proyecto: gt.proyecto || "", gt: gt.id, ad: "", horas: o.horas, dias };
       await H.put(doc, 1); dia = 0; H.cerrar(); pintar(); H.toast(`Pla creat: ${dias.length} ${dias.length > 1 ? "jornades" : "jornada"}`);
     }
     if (b.dataset.k === "addpend" && doc) {
@@ -170,15 +175,15 @@
   });
   el.addEventListener("input", e => {
     const t = e.target; if (!doc) return;
-    if (t.dataset.d) { doc[t.dataset.d] = t.value; return save() }
-    if (t.dataset.j) { D()[t.dataset.j] = t.value; save(); if (t.dataset.j === "ready") debRef(); return }
+    if (t.dataset.d) { doc[t.dataset.d] = t.dataset.d === "horas" ? +t.value || "" : t.value; save(); if (t.dataset.d === "horas") debRef(); return }
+    if (t.dataset.j) { D()[t.dataset.j] = t.value; save(); if (t.dataset.j === "calls") t.rows = Math.max(1, t.value.split("\n").length); if (t.dataset.j === "ready") debRef(); return }
     if (t.dataset.f && t.dataset.i != null && !t.dataset.k) {
       const f = D().filas[+t.dataset.i]; f[t.dataset.f] = t.value; save();
       if (t.dataset.f === "dur" || t.dataset.f === "fija") debRef();
-      if (t.dataset.f === "escala") { const c = escColor(t.value); t.style.borderLeftColor = t.value ? c : "transparent"; t.parentNode.style.background = t.value ? c : ""; t.style.color = t.value ? "#fff" : "" }
+      if (t.dataset.f === "escala") t.style.cssText = t.value ? `--e:${escColor(t.value)};--et:#fff` : "";
     }
   });
-  let tr; const debRef = () => { clearTimeout(tr); tr = setTimeout(() => { const a = document.activeElement, s = a && [a.dataset.i, a.dataset.f, a.dataset.j]; refresca(); if (s) { const n = el.querySelector(s[2] ? `[data-j="${s[2]}"]` : `[data-i="${s[0]}"][data-f="${s[1]}"]`); if (n) { n.focus(); n.setSelectionRange && n.setSelectionRange(n.value.length, n.value.length) } } }, 700) };
+  let tr; const debRef = () => { clearTimeout(tr); tr = setTimeout(() => { const a = document.activeElement, s = a && [a.dataset.i, a.dataset.f, a.dataset.j, a.dataset.d]; refresca(); if (s) { const n = el.querySelector(s[3] ? `[data-d="${s[3]}"]` : s[2] ? `[data-j="${s[2]}"]` : `[data-i="${s[0]}"][data-f="${s[1]}"]`); if (n) { n.focus(); try { n.setSelectionRange && n.setSelectionRange(n.value.length, n.value.length) } catch (e) { } } } }, 700) };
   el.addEventListener("change", async e => {
     const t = e.target; if (!doc) return;
     if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { D().filas[+t.dataset.i].img = id; delete D().filas[+t.dataset.i].imgSb; save(); refresca() } }

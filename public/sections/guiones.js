@@ -40,7 +40,7 @@
   function celda(c, p, ei, pi) {
     const d = `data-e="${ei}" data-p="${pi}" data-f="${c.k}"`;
     if (c.t === "img") return `<td class="ci" ${d}>${p.img ? `<div class="thumb"><img src="${R.imgUrl(p.img)}" data-k="ver" alt=""><button data-k="qimg" ${d} title="Treure">×</button></div>` : `<label class="addimg">＋ imatge<input type="file" accept="image/*" data-k="img" ${d} hidden></label>`}</td>`;
-    if (c.t === "escala") return `<td style="background:${p.escala ? escColor(p.escala) : ""}"><input class="cel esc" list="dl-esc" value="${E(p.escala || "")}" ${d} style="${p.escala ? "color:#fff" : ""}"></td>`;
+    if (c.t === "escala") return `<td class="esct"><input class="cel esc" list="dl-esc" value="${E(p.escala || "")}" ${d} style="${pastilla(p.escala)}" placeholder="—"></td>`;
     if (c.dl) return `<td><input class="cel" list="${c.dl}" ${d} value="${E(p[c.k] || "")}"></td>`;
     return `<td><textarea class="cel" rows="1" ${d}>${E(p[c.k] || "")}</textarea></td>`;
   }
@@ -78,29 +78,30 @@
     const pl = planos();
     el.innerHTML = `<div class="bar tb"><button class="b2" data-k="volver">← Guions</button><input class="tt" data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol del guió" style="max-width:320px;font-weight:700">
       <select id="gt-proy" data-d="proyecto" style="width:auto"></select><input data-d="version" value="${E(doc.version || "")}" placeholder="Versió" style="width:110px">
-      <span class="cnt">${doc.escenas.length} ${doc.escenas.length === 1 ? "escena" : "escenes"} · ${pl.length} ${pl.length === 1 ? "pla" : "plans"}${minTot(pl) ? " · " + Math.round(minTot(pl) / 6) / 10 + " h" : ""}</span><span style="flex:1"></span><button class="del" style="margin:0" data-k="delgt">Eliminar guió</button></div>
+      </div>
       <div class="bar tb"><button class="b2" data-k="pegar">Enganxar des de Sheets</button><button class="b2" data-k="cols">Columnes</button><button class="b2" data-k="renum">Renumerar</button><span style="flex:1"></span>
       ${R.selLang()}<button class="b2" data-k="pdf">PDF</button><button class="b2" data-k="xls">Excel</button><button class="b" data-k="plan">Crear pla de rodatge →</button></div>
       <div id="gtav"></div>
-      <div class="lg">${ESC.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}<span style="margin-left:auto">Arrossega ⋮⋮ per reordenar · deixa anar una imatge sobre una fila per afegir-la</span></div>
-      <div class="shw"><table class="gt" style="table-layout:fixed;width:${70 + cs.reduce((a, c) => a + c.w, 0) + 64}px"><colgroup><col style="width:70px">${cs.map(c => `<col style="width:${c.w}px">`).join("")}<col style="width:64px"></colgroup><tbody>` +
+      <div class="gtsum"><span><b>${doc.escenas.length}</b>${doc.escenas.length === 1 ? "escena" : "escenes"}</span><span><b>${pl.length}</b>${pl.length === 1 ? "pla" : "plans"}</span>${minTot(pl) ? `<span><b>${String(Math.round(minTot(pl) / 6) / 10).replace(".", ",")} h</b>de rodatge</span>` : ""}<span><b>${pl.filter(p => p.ok).length}/${pl.length}</b>fets</span><span class="gtbar"><i style="width:${pl.length ? Math.round(pl.filter(p => p.ok).length / pl.length * 100) : 0}%"></i></span>
+        <span class="lg" style="margin:0 0 0 auto">${ESC.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}</span></div>
+      <div class="shw"><table class="gt" style="table-layout:fixed;width:${70 + cs.reduce((a, c) => a + c.w, 0) + 64}px"><colgroup><col style="width:70px">${cs.map(c => `<col style="width:${c.w}px">`).join("")}<col style="width:64px"></colgroup><thead><tr><th></th>${cs.map(c => `<th>${E(c.l)}</th>`).join("")}<th></th></tr></thead><tbody>` +
       doc.escenas.map((e, ei) => `<tr class="eh" data-e="${ei}" style="--c:${e.color || BANDA.escena}"><td colspan="${cs.length + 2}"><div class="ehd">
-        <span class="hd" draggable="true" data-dragesc="${ei}">⋮⋮</span><b>ESC</b><input data-se="${ei}" data-f="num" value="${E(e.num || "")}" style="width:46px">
+        <span class="hd" draggable="true" data-dragesc="${ei}">⋮⋮</span><i class="scol" data-k="cesc" data-e="${ei}" title="Canviar el color de l'escena"></i><b class="num">ESC</b><input data-se="${ei}" data-f="num" value="${E(e.num || "")}" style="width:46px;font-weight:700">
         <select data-se="${ei}" data-f="intext">${["", "INT", "EXT", "INT/EXT"].map(o => `<option ${o === (e.intext || "") ? "selected" : ""}>${o}</option>`).join("")}</select>
         <input data-se="${ei}" data-f="lugar" value="${E(e.lugar || "")}" placeholder="Lloc / set" style="width:200px"><input data-se="${ei}" data-f="momento" list="dl-mom" value="${E(e.momento || "")}" placeholder="Dia / nit" style="width:110px">
         <input data-se="${ei}" data-f="paginas" value="${E(e.paginas || "")}" placeholder="Pàg." style="width:64px"><input data-se="${ei}" data-f="sinopsis" value="${E(e.sinopsis || "")}" placeholder="Sinopsi de l'escena" style="flex:1;min-width:160px">
-        <small>${e.planos.length} ${e.planos.length === 1 ? "pla" : "plans"}${minTot(e.planos) ? " · " + minTot(e.planos) + " min" : ""}</small>
-        <span class="sw">${["#3b4a5a", "#7a1f2b", "#1f4e79", "#2e6b3a", "#6b3fa0", "#b35c00", "#555"].map(c => `<i data-k="cesc" data-e="${ei}" data-c="${c}" style="background:${c}"></i>`).join("")}</span>
-        <button class="x" data-k="delesc" data-e="${ei}" title="Esborrar escena">×</button></div></td></tr><tr class="ch"><th style="width:44px"></th>${cs.map(c => `<th style="min-width:${c.w}px">${E(c.l)}</th>`).join("")}<th style="width:60px"></th></tr>` +
+        <small class="meta">${e.planos.filter(p => p.ok).length ? e.planos.filter(p => p.ok).length + "/" : ""}${e.planos.length} ${e.planos.length === 1 ? "pla" : "plans"}${minTot(e.planos) ? " · " + minTot(e.planos) + " min" : ""}</small>
+        <button class="x" data-k="delesc" data-e="${ei}" title="Esborrar escena">×</button></div></td></tr>` +
         e.planos.map((p, pi) => `<tr class="pr" draggable="false" data-e="${ei}" data-p="${pi}" style="${p.color ? "background:" + FILA[p.color] : ""}${p.ok ? ";opacity:.55" : ""}">
-          <td class="hdc"><span class="hd" draggable="true" data-drag="${ei},${pi}">⋮⋮</span><input type="checkbox" data-k="ok" data-e="${ei}" data-p="${pi}" ${p.ok ? "checked" : ""} title="Fet"><i class="cdot" data-k="color" data-e="${ei}" data-p="${pi}" style="background:${FILA[p.color] || "#fff"}" title="Color de fila"></i></td>` +
+          <td class="hdc"><span class="hd" draggable="true" data-drag="${ei},${pi}">⋮⋮</span><input type="checkbox" data-k="ok" data-e="${ei}" data-p="${pi}" ${p.ok ? "checked" : ""} title="Fet"><i class="cdot${p.color ? " on" : ""}" data-k="color" data-e="${ei}" data-p="${pi}" style="background:${FILA[p.color] || "#fff"}" title="Color de fila"></i></td>` +
           cs.map(c => celda(c, p, ei, pi)).join("") + `<td class="acc"><button data-k="dup" data-e="${ei}" data-p="${pi}" title="Duplicar">⧉</button><button data-k="del" data-e="${ei}" data-p="${pi}" title="Esborrar">×</button></td></tr>`).join("") +
         `<tr><td></td><td colspan="${cs.length + 1}"><button class="addrow" data-k="addp" data-e="${ei}">+ pla</button></td></tr>`).join("") +
-      `</tbody></table></div><button class="b2" style="margin-top:12px" data-k="addesc">+ Escena</button>
+      `</tbody></table></div><div class="gtfoot"><button class="b2" data-k="addesc">+ Escena</button><span class="lg" style="margin:0 0 0 8px">Arrossega ⋮⋮ per reordenar · deixa anar una imatge sobre una fila per afegir-la</span><button class="del" data-k="delgt">Eliminar guió</button></div>
       <datalist id="dl-av">${["Normal", "Picat", "Contrapicat", "Zenital", "Nadir", "Holandès"].map(x => `<option value="${x}">`).join("")}</datalist><datalist id="dl-ah">${["Frontal", "3/4", "Perfil", "Dorsal", "POV"].map(x => `<option value="${x}">`).join("")}</datalist><datalist id="dl-esc">${ESC.map(x => `<option value="${x[0]}">`).join("")}</datalist><datalist id="dl-set">${sets.map(s => `<option value="${E(s)}">`).join("")}</datalist>
       <datalist id="dl-mom">${["DIA", "NIT", "MATINADA", "CAPVESPRE", "HORA MÀGICA"].map(x => `<option value="${x}">`).join("")}</datalist>`;
     R.ajusta(el);
   }
+  const pastilla = v => v ? `--e:${escColor(v)};--et:#fff` : "";
   const nuevoPlano = e => ({ id: uid(), num: String((e.planos.length ? +e.planos.at(-1).num || e.planos.length : 0) + 1), set: e.lugar || "" });
 
   // ---------- eventos ----------
@@ -116,12 +117,12 @@
     if (k === "addp") { doc.escenas[ei].planos.push(nuevoPlano(doc.escenas[ei])); save(); pintar(); const t = el.querySelectorAll(`tr.pr[data-e="${ei}"] textarea`); t.length && t[t.length - (vis().length - 2)]?.focus() }
     if (k === "addesc") { const u = doc.escenas.at(-1); const n = { id: uid(), num: String((+(u && u.num) || doc.escenas.length) + 1), intext: "INT", lugar: "", planos: [] }; n.planos.push(nuevoPlano(n)); doc.escenas.push(n); save(); pintar() }
     if (k === "delesc" && confirm("Esborrar l'escena i els seus plans?")) { doc.escenas.splice(ei, 1); save(); pintar() }
-    if (k === "cesc") { doc.escenas[ei].color = b.dataset.c; save(); pintar() }
+    if (k === "cesc") { const C = ["#3b4a5a", "#7a1f2b", "#1f4e79", "#2e6b3a", "#6b3fa0", "#b35c00", "#555"], i = C.indexOf(doc.escenas[ei].color || C[0]); doc.escenas[ei].color = C[(i + 1) % C.length]; save(); pintar() }
     if (k === "dup") { const p = doc.escenas[ei].planos[pi]; doc.escenas[ei].planos.splice(pi + 1, 0, { ...p, id: uid(), ok: false }); save(); pintar() }
     if (k === "del" && confirm("Esborrar aquest pla?")) { doc.escenas[ei].planos.splice(pi, 1); save(); pintar() }
     if (k === "delgt" && confirm("Eliminar aquest guió tècnic sencer? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Guió eliminat"); return lista() }
-    if (k === "ok") { doc.escenas[ei].planos[pi].ok = b.checked; save(); b.closest("tr").style.opacity = b.checked ? .55 : 1 }
-    if (k === "color") { const p = doc.escenas[ei].planos[pi]; p.color = ((p.color || 0) + 1) % FILA.length; save(); b.closest("tr").style.background = FILA[p.color]; b.style.background = FILA[p.color] || "#fff" }
+    if (k === "ok") { doc.escenas[ei].planos[pi].ok = b.checked; save(); const y = window.scrollY, x = el.querySelector(".shw")?.scrollLeft, sy = el.querySelector(".shw")?.scrollTop; pintar(); window.scrollTo(0, y); const w = el.querySelector(".shw"); if (w) { w.scrollLeft = x || 0; w.scrollTop = sy || 0 } }
+    if (k === "color") { const p = doc.escenas[ei].planos[pi]; p.color = ((p.color || 0) + 1) % FILA.length; save(); b.closest("tr").style.background = FILA[p.color]; b.style.background = FILA[p.color] || "#fff"; b.classList.toggle("on", !!p.color) }
     if (k === "qimg") { const p = doc.escenas[ei].planos[pi]; if (!p.imgSb) H.api("DELETE", "archivo/" + p.img).catch(() => { }); delete p.img; delete p.imgSb; save(); pintar() }
     if (k === "ver") window.open(b.src, "_blank");
     if (k === "renum") { doc.escenas.forEach((s, i) => { s.num = String(i + 1); s.planos.forEach((p, j) => p.num = String(j + 1)) }); save(); pintar(); H.toast("Escenes i plans renumerats") }
@@ -172,7 +173,7 @@
     if (t.dataset.se != null) { doc.escenas[+t.dataset.se][t.dataset.f] = t.value; return save() }
     if (t.dataset.f && t.dataset.p != null && !t.dataset.k) {
       const p = doc.escenas[+t.dataset.e].planos[+t.dataset.p]; p[t.dataset.f] = t.value; save();
-      if (t.dataset.f === "escala") { const c = escColor(t.value); t.style.borderLeftColor = t.value ? c : "transparent"; t.parentNode.style.background = t.value ? c : ""; t.style.color = t.value ? "#fff" : "" }
+      if (t.dataset.f === "escala") t.style.cssText = pastilla(t.value);
     }
   });
   el.addEventListener("change", async e => {
