@@ -42,6 +42,8 @@ const SECTIONS = [
  {id:"festivales",label:"Festivals",desc:"Festivals, labs i residències",src:"sections/festivales.js"},
  {id:"docencia",label:"Docència",desc:"Cursos, sessions i visionats per exercici",src:"sections/docencia.js"},
  {id:"feines",label:"Diners",desc:"Feines, factures i cobraments",src:"sections/feines.js"},
+ {id:"comptes",label:"Diners",desc:"Despeses, ingressos, subscripcions i límits",src:"sections/comptes.js"},
+ {id:"pressupost",label:"Pressupost",desc:"Partides, despesa real i finançament del projecte",src:"sections/pressupost.js"},
  {id:"brainstorm",label:"Idees",desc:"Idees soltes",src:"sections/brainstorm.js"},
  {id:"web",label:"pabloanarte.com",desc:"La meva web",src:"sections/web.js"},
  {id:"ajustos",label:"Configuració",desc:"Còpia, calendari, dreceres, resum diari, objectius i factures",src:"sections/ajustos.js"}
@@ -54,13 +56,13 @@ const GRUPS = [
  {id:"projectes",label:"Projectes",ic:"proyectos",tabs:[["proyectos","Projectes"],["festivales","Festivals"],["decks","Dossiers"],["brainstorm","Idees"]]},
  {id:"correu",label:"Correu",ic:"correu",tabs:[["correu","Correu"]]},
  {id:"docencia",label:"Docència",ic:"docencia",tabs:[["docencia","Docència"]]},
- {id:"diners",label:"Diners",ic:"feines",tabs:[["feines","Feines i factures"]]},
+ {id:"diners",label:"Diners",ic:"feines",tabs:[["feines","Feines i factures"],["comptes","Comptes personals"]]},
  {sep:1},
  {id:"web",label:"pabloanarte.com",ic:"web",tabs:[["web","pabloanarte.com"]]},
  {id:"ajustos",label:"Configuració",ic:"ajustos",tabs:[["ajustos","Configuració"]]}
 ];
 // Dins d'un projecte: pestanyes amb només el que és d'aquell projecte
-const PTABS = [["resum","Resum"],["desenvolupament","Desenvolupament"],["decks","Dossiers"],["preproduccion","Preproducció"],["guio","Guió i pla"],["postproduccion","Postproducció"],["festivales","Festivals"],["equip","Equip"],["arxius","Arxius"]];
+const PTABS = [["resum","Resum"],["desenvolupament","Desenvolupament"],["decks","Dossiers"],["preproduccion","Preproducció"],["guio","Guió i pla"],["postproduccion","Postproducció"],["pressupost","Pressupost"],["festivales","Festivals"],["equip","Equip"],["arxius","Arxius"]];
 const GUIO = [["desglossament","Desglossament"],["guiones","Guió tècnic"],["storyboard","Storyboard"],["planes","Pla de rodatge"]];
 const nav = document.getElementById("hubnav"), wrap = document.querySelector(".w"), sub = document.getElementById("subnav");
 SECTIONS.forEach(s => { if (!document.getElementById("s-" + s.id)) { const e = document.createElement("section"); e.id = "s-" + s.id; e.hidden = true; wrap.appendChild(e) } });
@@ -77,7 +79,7 @@ async function pintaSub() {
   PNOM = P === "-" ? "Sense projecte" : (p && p.titulo) || "Sense títol";
   document.getElementById("stitle").textContent = PNOM;
   document.getElementById("sdesc").textContent = p ? [p.categoria, H.rols(p).join(", "), p.estado].filter(Boolean).join(" · ") : "Documents que no són de cap projecte";
-  sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${PTABS.filter(t => P !== "-" || !["resum", "equip", "arxius", "desenvolupament"].includes(t[0])).map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
+  sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${PTABS.filter(t => P !== "-" || !["resum", "equip", "arxius", "desenvolupament", "pressupost"].includes(t[0])).map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
    (PT === "guio" ? `<div class="seg" style="margin:0 0 14px">${GUIO.map(t => `<button class="t ${ACT === t[0] ? "on" : ""}" data-sec="${t[0]}">${t[1]}</button>`).join("")}</div>` : "");
   { const on = sub.querySelector(".ptabs .on"); if (on) { const t = on.parentElement; t.scrollLeft = on.offsetLeft - (t.clientWidth - on.offsetWidth) / 2 } }
   sub.hidden = false; return;
