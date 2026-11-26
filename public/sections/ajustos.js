@@ -78,6 +78,8 @@
         <h4 style="margin:22px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">Sense connexió</h4>
         <p class="em" style="margin-top:0">Cada cop que obres el hub amb internet, es desa una còpia en aquest aparell. Sense connexió s'obre igual, amb les dades d'aquella última vegada, i el que escriguis (reunions, tasques, idees, projectes, contactes…) es guarda aquí i es puja quan tornes a tenir connexió amb el hub obert. A dalt surt «Sense connexió» i quants canvis queden per pujar.</p>
         <p class="em">Sense connexió no funcionen el correu, Instagram, pujar arxius ni la web. Si un mateix document s'ha canviat també en un altre aparell, es combinen; si tots dos han canviat el mateix text, es queden els dos i el de l'altre aparell surt marcat. Millor instal·lat com a app: a Safari, si no s'obre en uns dies, el navegador pot esborrar la còpia i els canvis que encara no s'hagin pujat. En tancar la sessió s'esborra tot el que s'ha desat en aquest aparell.</p>
+        <p class="em">L'app es posa al dia sola quan hi tornes després d'haver-la deixat una estona. Si mai no veus un canvi que t'han dit que ja està publicat:</p>
+        <button class="b2" data-k="forca">Forçar l'actualització</button>
       </div>
       <div class="card"><h3>Pont de Google</h3>
         <p>${cor.connectat ? "Connectat a <b>pablo.anarte.film@gmail.com</b>." : "Encara no està connectat. Ves a la secció Correu."}</p>
@@ -87,6 +89,7 @@
   }
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
+    if (k === "forca") { if (window.OFF && OFF.actualitza) return OFF.actualitza(true); return location.reload() }
     if (k === "baixa") setTimeout(() => { H.col("ajust", true).then(pintar) }, 1500);
     if (k === "drcp") { try { await navigator.clipboard.writeText(document.getElementById("dru").value); H.toast("Copiat") } catch (er) { document.getElementById("dru").select() } }
     if (k === "drnou" && confirm("L'enllaç actual deixarà de funcionar i l'hauràs de canviar a la drecera. Continuar?")) { await H.api("POST", "drecera", {}); pintar(); H.toast("Enllaç nou creat") }

@@ -11,11 +11,12 @@ window.OFF = (() => {
   function pinta() {
     if (!el) return;
     const curt = matchMedia("(max-width:700px)").matches; // al mòbil, més curt
-    const t = sinc ? "Sincronitzant…" : sense ? "Sense connexió" + (n ? " · " + n + (curt ? "" : (n > 1 ? " canvis" : " canvi") + " en aquest aparell") : "") : n ? n + (curt ? " per pujar" : (n > 1 ? " canvis" : " canvi") + " per pujar") : "";
+    const t = sinc ? "Sincronitzant…" : !sense && !n && nova ? "Versió nova · actualitzar" : sense ? "Sense connexió" + (n ? " · " + n + (curt ? "" : (n > 1 ? " canvis" : " canvi") + " en aquest aparell") : "") : n ? n + (curt ? " per pujar" : (n > 1 ? " canvis" : " canvi") + " per pujar") : "";
     el.textContent = t; el.hidden = !t;
     el.classList.toggle("on", sense);
     el.classList.toggle("sinc", sinc);
-    el.title = sense ? "Pots continuar treballant: el que desis es guarda en aquest aparell i es puja quan torni la connexió amb el hub obert." : n ? "Toca per pujar-los ara" : "";
+    el.classList.toggle("nova", nova && !sense && !n && !sinc);
+    el.title = nova && !sense && !n ? "Hi ha una versió nova del hub. Toca per carregar-la." : sense ? "Pots continuar treballant: el que desis es guarda en aquest aparell i es puja quan torni la connexió amb el hub obert." : n ? "Toca per pujar-los ara" : "";
   }
   const envia = m => sw.controller && sw.controller.postMessage(m);
   const sincronitza = () => { if (navigator.onLine) envia({ t: "sincronitza" }) };
@@ -51,7 +52,7 @@ window.OFF = (() => {
   addEventListener("offline", () => { sense = true; pinta() });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { envia({ t: "estat" }); sincronitza() } });
   setInterval(() => { if (n && !document.hidden) sincronitza() }, 30000);
-  if (el) el.addEventListener("click", () => { if (navigator.onLine) sincronitza(); else H.toast(el.title) });
+  if (el) el.addEventListener("click", () => { if (nova && !n && navigator.onLine) return actualitza(); if (navigator.onLine) sincronitza(); else H.toast(el.title) });
 
   // tancar la sessió: avisa si queden canvis per pujar i esborra la còpia de les dades d'aquest aparell
   document.addEventListener("click", async e => {
@@ -75,8 +76,42 @@ window.OFF = (() => {
     const go = () => { envia({ t: "estat" }); sincronitza(); setTimeout(escalfa, 4000) };
     sw.controller ? go() : sw.addEventListener("controllerchange", go, { once: true });
   }).catch(() => { });
+  // ---------- versió nova publicada ----------
+  // L'app instal·lada (Dock, pantalla d'inici) es queda oberta i no recarrega mai sola. Es mira l'ETag de cada arxiu
+  // de l'app (petició HEAD, sense baixar res): en tornar a l'app, si alguna cosa ha canviat, es recarrega; mentre
+  // s'hi està treballant, només surt l'avís «Versió nova» a la capçalera (tocar-lo recarrega).
+  const fitxers = () => [...new Set(["/"].concat(performance.getEntriesByType("resource").map(r => new URL(r.name)).filter(u => u.origin === location.origin && !u.pathname.startsWith("/api/") && /\.(js|mjs|css|html)$/.test(u.pathname)).map(u => u.pathname)))];
+  const empremta = async () => (await Promise.all(fitxers().map(u => fetch(u, { method: "HEAD", cache: "no-cache", credentials: "same-origin" }).then(r => r.ok && !r.headers.get("x-hub-login") ? u + "=" + (r.headers.get("etag") || r.headers.get("last-modified") || "") : null).catch(() => null)))).filter(Boolean);
+  let base = null, nova = false, ultima = 0, amagada = 0;
+  async function revisa(alTornar) {
+    if (!navigator.onLine || Date.now() - ultima < (alTornar ? 5000 : 60000)) return; ultima = Date.now();
+    const e = await empremta(); if (!e.length) return;
+    if (!base) { base = new Map(e.map(x => x.split("="))); return }
+    const canvi = e.some(x => { const [u, v] = x.split("="); return base.has(u) ? base.get(u) !== v : false });
+    if (!canvi) return;
+    const ocupat = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (alTornar && !ocupat && !document.querySelector("#hsh:not([hidden])")) return actualitza();
+    nova = true; pinta();
+  }
+  async function actualitza(forcar) {
+    if (n && !confirm("Hi ha canvis sense pujar; es conserven igualment. Actualitzar ara?")) return;
+    try {
+      if (forcar && sw.controller) await new Promise(ok => { const c = new MessageChannel(); c.port1.onmessage = ok; setTimeout(ok, 3000); sw.controller.postMessage({ t: "actualitza" }, [c.port2]) });
+      const r = await sw.getRegistration(); r && await r.update();
+    } catch (e) { }
+    location.reload();
+  }
+  // quan s'instal·la un service worker nou, la pàgina es recarrega una vegada per fer servir l'app nova
+  let teniaSW = !!sw.controller, recarregant = false;
+  sw.addEventListener("controllerchange", () => { if (teniaSW && !recarregant && !n) { recarregant = true; location.reload() } teniaSW = true });
+  setTimeout(() => revisa(), 8000); // la primera, per saber com és ara
+  setInterval(() => { if (!document.hidden) revisa() }, 10 * 60000);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) amagada = Date.now(); else if (amagada && Date.now() - amagada > 20000) revisa(true) });
+  addEventListener("focus", () => { if (amagada && Date.now() - amagada > 20000) { amagada = 0; revisa(true) } });
+  addEventListener("blur", () => { amagada = Date.now() });
+
   // que el navegador no esborri les dades desades si en necessita l'espai
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist() } catch (e) { }
   pinta();
-  return { pendents: () => n, sense: () => sense };
+  return { pendents: () => n, sense: () => sense, actualitza };
 })();

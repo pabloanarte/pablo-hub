@@ -8,7 +8,7 @@
 //   es combinen camp per camp (fusiona); si tots dos han canviat el mateix text, es queden els dos, el de l'altre marcat.
 //   Un esborrat d'un document que s'ha canviat en un altre aparell no s'aplica.
 // - Arxius (/api/archivo/<id>): els que ja s'han obert sencers es desen (fins a 8 MB) i es poden obrir sense xarxa.
-const APP = "hub-app-2", DADES = "hub-dades-2", ARX = "hub-arxius-2";
+const APP = "hub-app-3", DADES = "hub-dades-3", ARX = "hub-arxius-3";
 const T_APP = 3500, T_DADES = 5000, T_DESAR = 15000;
 const MARCA = "\n\n— Versió d'un altre aparell —\n";
 const deCopia = new Set(); // pàgines obertes des de la còpia
@@ -70,7 +70,9 @@ self.addEventListener("fetch", e => {
 async function app(e, nav) {
   const r = e.request, clau = nav ? "/" : r.url.split("#")[0];
   // la xarxa comença ja, i la còpia s'actualitza encara que es respongui amb la còpia
-  const xarxa = fetch(r).then(res => {
+  // sense la memòria cau del navegador (si no, l'app instal·lada al Dock podia quedar-se amb la versió vella)
+  const pet = nav ? new Request(r.url, { credentials: "same-origin", cache: "no-cache", headers: { accept: "text/html" } }) : new Request(r, { cache: "no-cache" });
+  const xarxa = fetch(pet).then(res => {
     const tipus = res.headers.get("content-type") || "";
     const bona = res.ok && !res.headers.get("x-hub-login") && !(r.destination === "script" && tipus.includes("html")) && !(nav && !tipus.includes("html"));
     return { res, copia: bona ? res.clone() : null };
@@ -240,6 +242,10 @@ self.addEventListener("message", e => {
     try { const d = await dbp; d && d.close() } catch (err) { } dbp = null;
     await new Promise(ok => { const q = indexedDB.deleteDatabase("hub-offline"); q.onsuccess = q.onerror = q.onblocked = ok });
     for (const k of await caches.keys()) if (k.startsWith("hub-")) await caches.delete(k);
+    e.ports[0] && e.ports[0].postMessage("ok");
+  })());
+  if (m.t === "actualitza") e.waitUntil((async () => { // «Forçar l'actualització»: fora la còpia de l'app (les dades i la cua es queden)
+    for (const k of await caches.keys()) if (k.startsWith("hub-app")) await caches.delete(k);
     e.ports[0] && e.ports[0].postMessage("ok");
   })());
   if (m.t === "escalfa") e.waitUntil((async () => { // desa l'app i les dades per tenir-les sense xarxa
