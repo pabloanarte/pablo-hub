@@ -28,8 +28,12 @@ window.H = (() => {
     const l = cache[tipo(d)] || (cache[tipo(d)] = []); if (!l.includes(d)) { const i = l.findIndex(x => x.id === d.id); i >= 0 ? l[i] = d : l.push(d) }
     clearTimeout(tSave[d.id]);
     const go = () => { const { id, ...o } = d; return api("PUT", "doc/" + encodeURIComponent(id), o).then(changed).catch(() => toast("No s'ha pogut desar")) };
-    if (ya) return go(); tSave[d.id] = setTimeout(go, 500);
+    if (ya) { delete pendD[d.id]; return go() } pendD[d.id] = go; tSave[d.id] = setTimeout(() => { delete pendD[d.id]; go() }, 500);
   }
+  // en tancar o amagar la pàgina (bloquejar el mòbil, canviar d'app), es desa al moment el que estava esperant
+  const pendD = {};
+  const buida = () => { for (const id in pendD) { clearTimeout(tSave[id]); const go = pendD[id]; delete pendD[id]; go() } };
+  addEventListener("pagehide", buida); document.addEventListener("visibilitychange", () => { if (document.hidden) buida() });
   function del(d) { const l = cache[tipo(d)] || []; const i = l.indexOf(d); if (i >= 0) l.splice(i, 1); clearTimeout(tSave[d.id]); return api("DELETE", "doc/" + encodeURIComponent(d.id)).then(changed) }
   function changed() { subs.forEach(f => f()) }
   const onChange = f => subs.push(f);

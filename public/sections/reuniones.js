@@ -25,6 +25,9 @@
         for (const t of nuevos) await H.put({ id: H.uid("tarea"), titulo: t, proyecto: d.proyecto || "", reunion: d.id, hecha: false }, 1);
         H.toast(nuevos.length ? nuevos.length + (nuevos.length > 1 ? " tasques creades" : " tasca creada") : "Ja eren a Tasques");
       }
+    }, {
+      l: "Briefing del videoclip",
+      fn: async d => { const p = d.proyecto && (await H.col("proyecto")).find(x => x.id === d.proyecto); if (!p || p.categoria !== "Videoclip") return H.toast("Tria primer un projecte de tipus Videoclip"); H.cerrar(); HUB.obreProjecte(p.id, "resum"); let n = 0; const t = setInterval(() => { const b = document.getElementById("brief"); if (b || ++n > 30) { clearInterval(t); b && b.scrollIntoView({ behavior: "smooth", block: "start" }) } }, 100) }
     }]
   });
 })();
