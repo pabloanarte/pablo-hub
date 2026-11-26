@@ -386,7 +386,7 @@ async function pontDiari(request, db, j) {
   if (!await clauPont(request, db)) return j({ error: "no" }, 403);
   const b = await request.json().catch(() => ({})) || {};
   const avui = diaMadrid(), base = new URL(request.url).origin;
-  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'curs:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'convocatoria:%' OR id LIKE 'proyecto:%' OR id LIKE 'visionat:%' OR id = 'ajust:vigila' OR id = 'ajust:objectius' OR substr(id,1,2)='c_'").all();
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'tarea:%' OR id LIKE 'reunion:%' OR id LIKE 'curs:%' OR id LIKE 'pdr:%' OR id LIKE 'feina:%' OR id LIKE 'convocatoria:%' OR id LIKE 'proyecto:%' OR id LIKE 'visionat:%' OR id = 'ajust:vigila' OR id = 'ajust:objectius' OR id = 'fin:subs' OR substr(id,1,2)='c_'").all();
   const D = {}; for (const r of results) { try { const o = JSON.parse(r.data); o.id = r.id; const t = r.id.startsWith("c_") ? "c" : r.id.split(":")[0]; (D[t] = D[t] || []).push(o) } catch (e) { } }
   const L = t => D[t] || [], esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const pn = id => (L("proyecto").find(x => x.id === id) || {}).titulo || "";
@@ -421,6 +421,27 @@ async function pontDiari(request, db, j) {
   // convocatòries vigilades que han canviat avui
   const vg = (L("ajust").find(x => x.id === "ajust:vigila") || {}).llista || [];
   sec("Convocatòries amb novetats", vg.filter(x => x.canvi === avui).map(x => `<a href="${esc(x.url)}"><b>${esc(x.nom)}</b></a> ha canviat la seva pàgina`));
+  // despeses fixes trimestrals o anuals: avís 7 dies abans i el dia abans
+  const subs = ((L("fin").find(x => x.id === "fin:subs") || {}).l || []).filter(x => x && x.actiu !== false && /^\d{4}-\d\d-\d\d$/.test(x.data || "") && ["Trimestral", "Anual"].includes(x.per));
+  const mesos = (d, m) => { const [a, mm, dd] = d.split("-").map(Number), t = a * 12 + mm - 1 + m, y = Math.floor(t / 12), mo = t % 12 + 1, mx = new Date(Date.UTC(y, mo, 0)).getUTCDate(); return `${y}-${String(mo).padStart(2, "0")}-${String(Math.min(dd, mx)).padStart(2, "0")}` };
+  const propera = x => { let d = x.data, k = 0; const pas = x.per === "Anual" ? 12 : 3; while (d < avui && k < 2400) { k += pas; d = mesos(x.data, k) } return d };
+  sec("Renovacions", subs.map(x => [x, propera(x)]).filter(([, d]) => d === sumaDies(avui, 7) || d === sumaDies(avui, 1)).map(([x, d]) => `<b>${esc(x.nom)}</b> · ${esc(x.per.toLowerCase())}, ${esc((Math.abs(+String(x.import).replace(",", ".") || 0)).toLocaleString("ca-ES", { maximumFractionDigits: 2 }))} € · es cobra ${d === sumaDies(avui, 1) ? "<b>demà</b>" : "el " + esc(d.split("-").reverse().join("/"))}. Si no la vols, cancel·la-la abans.`));
+  // els dilluns, la setmana sencera (de demà a diumenge)
+  if (new Date(avui + "T12:00:00Z").getUTCDay() === 1) {
+    const fi = sumaDies(avui, 6), dins = d => d && d > avui && d <= fi, dia = d => new Date(d + "T12:00:00Z").toLocaleDateString("ca-ES", { weekday: "short", day: "numeric", timeZone: "UTC" });
+    const st = [];
+    L("reunion").filter(x => dins(x.fecha)).forEach(x => st.push([x.fecha + (x.hora || ""), `${dia(x.fecha)}${x.hora ? " " + esc(x.hora) : ""} · Reunió: <b>${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
+    L("pdr").forEach(x => (x.dias || []).forEach((d, i) => { const h = (String(d && d.calls || "").match(/\d{1,2}:\d{2}/) || [""])[0]; if (d && dins(d.fecha)) st.push([d.fecha + h, `${dia(d.fecha)}${h ? " " + esc(h) : ""} · Rodatge: <b>${esc(x.titulo || pn(x.proyecto) || "Pla de rodatge")}</b>, jornada ${i + 1}`]) }));
+    for (const c of L("curs")) for (const s2 of (Array.isArray(c.setmanes) ? c.setmanes : [])) if (s2 && dins(s2.data)) st.push([s2.data + (s2.hora || ""), `${dia(s2.data)}${s2.hora ? " " + esc(s2.hora) : ""} · Classe: <b>${esc(c.titulo)}</b>${s2.tema ? " · " + esc(s2.tema) : ""}`]);
+    L("convocatoria").filter(x => (!x.estado || x.estado === "Per presentar") && dins(x.limite)).forEach(x => st.push([x.limite, `${dia(x.limite)} · Acaba el termini: <b>${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
+    L("feina").filter(x => dins(x.ini) && x.estado !== "Pressupostat").forEach(x => st.push([x.ini, `${dia(x.ini)} · Comença la feina: <b>${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""}`]));
+    L("convocatoria").filter(x => ["Seleccionat", "Premiat", "Presentat"].includes(x.estado) && dins(x.evento)).forEach(x => st.push([x.evento, `${dia(x.evento)} · Festival: <b>${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
+    L("tarea").filter(x => !x.hecha && dins(x.fecha)).forEach(x => st.push([x.fecha, `${dia(x.fecha)} · ${esc(x.titulo)}${x.proyecto ? ` <span style="color:#666">· ${esc(pn(x.proyecto))}</span>` : ""}`]));
+    sec("Aquesta setmana", st.sort((a, b) => a[0].localeCompare(b[0])).map(x => x[1]));
+    const pend = L("c").filter(c => c.estado === "Contactat" && Array.isArray(c.msgs) && c.msgs.length > 0 && c.msgs.length < 3 && c.msgs[c.msgs.length - 1].d <= sumaDies(avui, -7)).length;
+    const ret = L("tarea").filter(x => !x.hecha && x.fecha && x.fecha < avui).length;
+    sec("Pendent", [pend && `${pend} ${pend === 1 ? "contacte espera" : "contactes esperen"} un seguiment`, ret && `${ret} ${ret === 1 ? "tasca endarrerida" : "tasques endarrerides"}`].filter(Boolean));
+  }
   if (b.festivals > 0) sec("Festivals", [`${b.festivals} ${b.festivals === 1 ? "avís nou" : "avisos nous"} de FilmFreeway o Festhome. Obre Avui al hub per confirmar-los.`]);
   const nom = new Date().toLocaleDateString("ca-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Madrid" });
   const html = `<div style="font-family:Helvetica,Arial,sans-serif;color:#000;max-width:600px;font-size:15px;line-height:1.5"><h2 style="font-size:22px;margin:0 0 4px">${esc(nom[0].toUpperCase() + nom.slice(1))}</h2>${secs.join("")}<p style="margin-top:26px"><a href="${base}" style="color:#000">Obrir el hub</a></p></div>`;

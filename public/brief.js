@@ -30,7 +30,7 @@ window.BRIEF = (() => {
     return `<div class="card" id="brief" style="grid-column:1/-1">
       <div class="ls" style="justify-content:space-between;align-items:baseline;margin:0"><h3 style="margin:0">Briefing amb l'artista</h3><span class="em">${n} de ${pr.length}</span></div>
       <div class="bfq">${pr.map(q => `<div><label for="bf-${E(q.id)}">${E(q.t)}</label><textarea id="bf-${E(q.id)}" data-bf="${E(q.id)}" rows="1">${E(r[q.id] || "")}</textarea></div>`).join("")}</div>
-      <div class="ls" style="margin-top:14px"><button class="b2" data-bfk="copia">Copiar</button><button class="b2" data-bfk="edita">Editar les preguntes</button></div>
+      <div class="ls" style="margin-top:14px"><button class="b2" data-bfk="copia">Copiar</button><button class="b2" data-bfk="edita">Editar les preguntes</button><button class="b2" data-bfk="pres">Al pressupost</button></div>
     </div>`;
   }
   const creix = t => { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px" };
@@ -64,6 +64,26 @@ window.BRIEF = (() => {
     H.cerrar(); H.toast("Preguntes desades"); alDesar && alDesar();
   });
 
+  // Briefing → pressupost del projecte: el crea (partides de videoclip) si no n'hi ha, posa el que diu l'artista que hi ha
+  // de pressupost com a font de finançament (id "brief", s'actualitza si es torna a passar) i el material i el que aporten a les notes.
+  // la xifra més alta del text («entre 800 i 1.000» → 1000); «2k», «3 mil»; els anys sols (2026) no compten
+  const xifra = t => { let m = 0; String(t || "").replace(/(\d[\d.,]*)(\s*(?:k|mil)(?![a-zà-ú]))?(\s*(?:€|eur))?/gi, (_, n, k, e) => { n = n.replace(/[.,]+$/, ""); if (!k && !e && /^(19|20)\d\d$/.test(n)) return; let s = n.replace(/[.,](?=\d{3}(\D|$))/g, "").replace(",", "."); const v = (+s || 0) * (k ? 1000 : 1); if (v > m) m = v }); return m };
+  async function alPressupost(p) {
+    if (!p) return; const r = p.brief || {}, id = "pres:" + p.id.split(":")[1];
+    let d = (await H.col("pres")).find(x => x.id === id);
+    if (!d) d = { id, proyecto: p.id, titulo: "Pressupost · " + (p.titulo || ""), partides: window.PRES ? PRES.plantilla(p.categoria) : [], fin: [], impr: 10 };
+    const imp = xifra(r.presu), nota = [r.material && "Material: " + r.material.trim(), r.aporta && "Aporten: " + r.aporta.trim()].filter(Boolean).join(" · ");
+    if (imp || (r.presu || "").trim()) {
+      const f = (d.fin = d.fin || []).find(x => x.id === "brief") || (d.fin.push({ id: "brief", font: "Artista", tipus: "Altres", estat: "Previst" }), d.fin.at(-1));
+      // si l'import o les notes s'han canviat a mà al pressupost, no es toquen
+      if (imp && (!f.import || f.import === f.brImp)) { f.import = imp; f.brImp = imp }
+      const nt = "Del briefing: " + (r.presu || "").trim(); if (!f.notes || f.notes === f.brNotes) { f.notes = nt; f.brNotes = nt }
+    }
+    if (nota) { const x = d.partides.find(y => y.brief) || (d.partides.push({ id: Math.random().toString(36).slice(2, 9), cap: "Material i lloguers", concepte: "Material de l'artista", brief: 1 }), d.partides.at(-1)); if (!x.notes || x.notes === x.brNotes) { x.notes = x.brNotes = nota.slice(0, 400) } }
+    await H.put(d, 1);
+    H.toast(imp ? `Pressupost de l'artista: ${imp.toLocaleString("ca-ES")} €` : (r.presu || nota) ? "Passat al pressupost" : "Encara no hi ha respostes de pressupost ni de material");
+    window.HUB && HUB.obreProjecte(p.id, "pressupost");
+  }
   // Ho fa servir projecte.js: desa en escriure, copia i edita
   function connecta(el, doc, pintar) {
     el.addEventListener("input", async e => {
@@ -76,6 +96,7 @@ window.BRIEF = (() => {
     el.addEventListener("click", async e => {
       const b = e.target.closest("[data-bfk]"); if (!b) return;
       if (b.dataset.bfk === "edita") return editaPreguntes(pintar);
+      if (b.dataset.bfk === "pres") return alPressupost(await doc());
       if (b.dataset.bfk === "copia") {
         // el text es fa amb el que hi ha a la pantalla, sense esperes, perquè Safari ho compti com a part del toc
         const c = b.closest("#brief"), tit = (document.getElementById("stitle") || {}).textContent || "";

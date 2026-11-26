@@ -30,11 +30,11 @@
       card("Contactes", "contactos", setmana(c) +
         (seg.length ? `<h2>Toca fer seguiment</h2>` + seg.slice(0, 5).map(x => `<div class="r"><i class="dot" style="background:#0a84ff"></i><div class="g" data-ct="${x.id}"><b>${E(x.nombre)}</b><small>Últim missatge fa ${dias(M(x).at(-1).d)} dies per ${E(M(x).at(-1).v || "missatge")}</small></div><button class="b2" data-seg="${x.id}">${x.email ? "Escriure" : "Copiar el missatge"}</button></div>`).join("") + mes(seg.length - 5, "contactos") : "")) +
       (() => { const av = lim.map(x => [x, Math.round((new Date(x.limite) - new Date(hoy)) / 864e5)]).filter(([, n]) => n === 0 || n === 2 || n === 7); return av.length ? card("Recordatoris de terminis", "", av.map(([x, n]) => `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 2 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto), x.estado].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;color:${n <= 2 ? "#ff3b30" : "#ff9f0a"}">${n === 0 ? "acaba avui" : "queden " + n + " dies"}</small></div>`).join("")) : "" })() +
-      `<div id="ifest" hidden></div><div id="iclas" hidden></div><div id="iesc" hidden></div><div id="icob" hidden></div><div id="ivig" hidden></div><div id="icop" hidden></div><div id="icor" hidden></div>` +
+      `<div id="ifest" hidden></div><div id="iclas" hidden></div><div id="iesc" hidden></div><div id="icob" hidden></div><div id="iren" hidden></div><div id="ivig" hidden></div><div id="icop" hidden></div><div id="icor" hidden></div>` +
       card("Projectes en marxa", "proyectos", vivos.length ? vivos.slice(0, 5).map(x => `<div class="r" data-pj="${x.id}"><i class="dot" style="background:${PE[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.categoria, x.estado].filter(Boolean).join(" · "))}</small></div><small>${(n => n ? n + (n > 1 ? " tasques" : " tasca") : "")(pend.filter(y => y.proyecto === x.id).length)}</small></div>`).join("") + mes(vivos.length - 5, "proyectos") : vacio("Afegeix els teus projectes a la secció Projectes.")) +
       card("Últimes idees", "brainstorm", i.length ? i.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")).slice(0, 5).map(x => `<div class="r" data-k="idea" data-id="${x.id}"><i class="dot" style="background:#ffcc00"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E((x.texto || "").split("\n")[0].slice(0, 90))}</small></div></div>`).join("") : vacio("Apunta aquí qualsevol idea solta.")) +
       `</div>`;
-    mur(); correu(c); copiaAvis(); festivals(); classes(); escriptura(); cobrar(); vigila();
+    mur(); correu(c); copiaAvis(); festivals(); classes(); escriptura(); cobrar(); renovacions(); vigila();
   }
   const aj = async id => (await H.col("ajust")).find(x => x.id === id);
   const dilluns = d => { const x = new Date(d + "T12:00:00"); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); return x.toISOString().slice(0, 10) };
@@ -45,7 +45,7 @@
     return `<div style="margin:-2px 0 12px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>${n} de ${obj} contactes nous aquesta setmana</b><span class="em" style="white-space:nowrap;margin:0">${n >= obj ? "Fet ✓" : `en falten ${obj - n}`}</span></div><div class="pbar"><i style="width:${pc}%"></i></div></div>`;
   }
   // Avui en columnes que s'omplen soles (sense forats) i ordenat per urgència
-  const ORDRE = ["Per avui", "Agenda", "Classes", "Recordatoris de terminis", "Dates límit", "Novetats de festivals", "Contactes", "Per reclamar", "Correu", "Convocatòries amb novetats", "Escriptura", "Projectes en marxa", "Últimes idees", "Còpia de seguretat"];
+  const ORDRE = ["Per avui", "Agenda", "Classes", "Recordatoris de terminis", "Dates límit", "Novetats de festivals", "Contactes", "Per reclamar", "Renovacions", "Correu", "Convocatòries amb novetats", "Escriptura", "Projectes en marxa", "Últimes idees", "Còpia de seguretat"];
   const lloc = c => { const t = (c.querySelector("h3") || {}).textContent || ""; const i = ORDRE.findIndex(o => t.startsWith(o)); return i < 0 ? 50 : i };
   let ro = null, mo = null, ocupat = false;
   function mur() {
@@ -106,6 +106,15 @@
     if (!fe.length) return posa("icob");
     posa("icob", card("Per reclamar", "feines", fe.map(x => `<div class="r" data-k="feina" data-id="${x.id}"><i class="dot" style="background:#ff3b30"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.productora, "factura " + (x.factura || ""), "fa " + Math.floor((Date.now() - new Date(x.facturat)) / 864e5) + " dies"].filter(Boolean).join(" · "))}</small></div></div>`).join("")));
   }
+  // Despeses fixes trimestrals o anuals que es cobren els propers 10 dies (Diners → Despeses fixes, doc fin:subs)
+  async function renovacions() {
+    const s = (await H.col("fin")).find(x => x.id === "fin:subs"), hoy = today(), lim = addDays(hoy, 10);
+    const seg = (d, m) => { const [a, mm, dd] = d.split("-").map(Number), t = a * 12 + mm - 1 + m, y = Math.floor(t / 12), mo = t % 12 + 1, max = new Date(Date.UTC(y, mo, 0)).getUTCDate(); return `${y}-${String(mo).padStart(2, "0")}-${String(Math.min(dd, max)).padStart(2, "0")}` };
+    const propera = x => { let d = x.data, k = 0; const pas = x.per === "Anual" ? 12 : 3; while (d < hoy && k < 2400) { k += pas; d = seg(x.data, k) } return d };
+    const l = ((s || {}).l || []).filter(x => x.actiu !== false && x.data && ["Trimestral", "Anual"].includes(x.per)).map(x => [x, propera(x)]).filter(([, d]) => d <= lim).sort((a, b) => a[1].localeCompare(b[1]));
+    if (!l.length) return posa("iren");
+    posa("iren", card("Renovacions", "", l.map(([x, d]) => { const n = Math.round((new Date(d) - new Date(hoy)) / 864e5); return `<div class="r" data-ren="1"><i class="dot" style="background:${n <= 3 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.nom || "")}</b><small>${E([x.per, Math.abs(+String(x.import).replace(",", ".") || 0).toLocaleString("ca-ES") + " €", fecha(d)].join(" · "))}</small></div><small style="white-space:nowrap">${n === 0 ? "avui" : n === 1 ? "demà" : "en " + n + " dies"}</small></div>` }).join("") + `<p class="em" style="margin:8px 0 0">Si no la vols renovar, cancel·la-la abans i desmarca «Activa» a Diners → Comptes personals → Despeses fixes.</p>`));
+  }
   // Convocatòries vigilades que han canviat
   async function vigila() {
     const v = await aj("ajust:vigila"), l = ((v || {}).llista || []).filter(x => x.canvi && !x.vist);
@@ -157,6 +166,7 @@
       if (vn.dataset.vnova) { const d = { id: H.uid("convocatoria"), titulo: x.nom, tipo: "Lab / residència", estado: "Per presentar", web: x.url }; await H.put(d, 1); hubShow("festivales"); H.abrir("convocatoria", d.id) } return }
     const hr = e.target.closest("[data-hr]"); if (hr) { window.CONT && CONT.estat(hr.dataset.hr, "Ha respost"); hr.closest(".r").remove(); H.toast("Marcat com a «Ha respost»"); return }
     const ct = e.target.closest("[data-ct]"); if (ct) return window.CONT && CONT.obre(ct.dataset.ct);
+    if (e.target.closest("[data-ren]")) { hubShow("comptes"); return window.CMPT && CMPT.obreFixes && CMPT.obreFixes() }
     const g = e.target.closest("[data-go]"); if (g) return hubShow(g.dataset.go);
     const b = e.target.closest("[data-k]"); if (!b) return;
     b.dataset.k === "tarea" ? H.abrirTarea && H.abrirTarea(b.dataset.id) : H.abrir(b.dataset.k, b.dataset.id);

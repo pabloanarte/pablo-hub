@@ -179,8 +179,11 @@ window.FIMP = (() => {
       let nous = 0, act = 0;
       for (const p of props.filter(p => p.on && p.festival.trim())) {
         const c = p.cid && cs.find(x => x.id === p.cid);
+        // seleccions antigues (arxiu, llista o avisos de fa més de 30 dies): sense tasques automàtiques (festivales.js, tsel)
+        const vella = ["Seleccionat", "Premiat"].includes(p.estado) && (!["FilmFreeway", "Festhome"].includes(p.font) || !p.data || p.data < H.addDays(H.today(), -30));
+        if (vella && c && !c.tsel) c.tsel = "importat";
         if (c) { Object.assign(c, { estado: p.estado }, p.proyecto && !c.proyecto ? { proyecto: p.proyecto } : {}, p.premi && !c.premi ? { premi: p.premi } : {}, p.cost && !c.cost ? { cost: p.cost } : {}, p.plat && !c.plataforma ? { plataforma: p.plat } : {}); H.put(c); act++ }
-        else { H.put({ id: H.uid("convocatoria"), titulo: p.festival.trim(), tipo: "Festival", estado: p.estado, proyecto: p.proyecto, premi: p.premi || "", cost: p.cost || "", plataforma: p.plat || "", notas: "Importat de " + (p.font === "Llista" ? "la llista enganxada" : p.font === "Arxiu" ? "l'arxiu exportat" : p.font) + (p.data ? " (" + p.data + ")" : "") }, 1); nous++ }
+        else { H.put({ id: H.uid("convocatoria"), titulo: p.festival.trim(), tipo: "Festival", estado: p.estado, proyecto: p.proyecto, premi: p.premi || "", cost: p.cost || "", plataforma: p.plat || "", ...(vella ? { tsel: "importat" } : {}), notas: "Importat de " + (p.font === "Llista" ? "la llista enganxada" : p.font === "Arxiu" ? "l'arxiu exportat" : p.font) + (p.data ? " (" + p.data + ")" : "") }, 1); nous++ }
       }
       // es donen per vistos els avisos importats i els que no aportaven res; els desmarcats amb canvis tornaran a sortir
       if (aj) { aj.vistos = [...new Set(aj.vistos.concat(props.filter(p => p.on || !p.canvis).flatMap(p => p.mids || [])))].slice(-3000); H.put(aj, 1) }

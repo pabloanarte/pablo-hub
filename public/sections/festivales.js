@@ -36,6 +36,49 @@
   });
 
   carregaPS(); H.onChange(carregaPS);
+
+  // Seleccions noves → tasques soles (només festivals, no labs): «Enviar X a F» per al que demanen i encara no s'ha enviat
+  // (camp `nec` de la tasca) i «Confirmar assistència i projeccions a F». Data: 21 dies abans del festival (o d'aquí a 7 dies), mai abans d'avui;
+  // si després s'hi posa la data del festival o s'hi afegeix què demanen, les tasques pendents es posen al dia.
+  // `tsel` a la convocatòria: data en què es van crear; «abans» (seleccions que ja hi havia, migració `ajust:migtsel`) o «importat»
+  // (seleccions antigues de l'importador) = sense tasques. Si es treu l'estat (marcat per error), s'esborren les pendents i `tsel`.
+  // Tasca «Enviar X…» feta → X a «Ja enviat», un sol cop (`aplicat`), així si es desmarca no torna.
+  let tselOcupat = false, tselAltre = false;
+  const sel = d => ["Seleccionat", "Premiat"].includes(d.estado) && d.tipo !== "Lab / residència";
+  const dataT = d => d.evento ? [H.addDays(d.evento, -21), H.today()].sort().pop() : null;
+  async function tasquesSeleccio() {
+    if (tselOcupat) { tselAltre = true; return } tselOcupat = true;
+    try {
+      const [cs, aj] = await Promise.all([H.col("convocatoria"), H.col("ajust")]);
+      if (!aj.some(x => x.id === "ajust:migtsel")) {
+        for (const d of cs) if (["Seleccionat", "Premiat"].includes(d.estado) && !d.tsel) { d.tsel = "abans"; await H.put(d, 1) }
+        await H.put({ id: "ajust:migtsel", fet: 1 }, 1); return;
+      }
+      const auto = d => /^\d{4}-/.test(d.tsel || "");
+      if (!cs.some(d => (sel(d) && !d.tsel) || auto(d))) return;
+      const ts = await H.col("tarea", true); // del servidor, per no duplicar si un altre aparell ja les ha creades
+      for (const d of cs) {
+        const meves = ts.filter(t => t.conv === d.id && t.auto);
+        if (auto(d) && !sel(d)) { // ja no és una selecció: fora les pendents
+          for (const t of meves.filter(t => !t.hecha)) await H.del(t);
+          delete d.tsel; await H.put(d, 1); continue;
+        }
+        if (!sel(d) || (d.tsel && !auto(d))) continue;
+        if (!d.tsel) { if (d.evento && d.evento < H.today()) { d.tsel = "abans"; await H.put(d, 1); continue } d.tsel = H.today(); await H.put(d, 1) }
+        const enviat = [].concat(d.enviat || []); let canviEnv = false;
+        for (const t of meves.filter(t => t.hecha && t.nec && !t.aplicat)) { if (!enviat.includes(t.nec)) { enviat.push(t.nec); canviEnv = true } t.aplicat = 1; await H.put(t, 1) }
+        if (canviEnv) { d.enviat = enviat; await H.put(d, 1) }
+        const data = dataT(d) || H.addDays(d.tsel, 7), fes = [];
+        [].concat(d.necessitats || []).filter(x => !enviat.includes(x) && !meves.some(t => t.nec === x)).forEach(x => fes.push({ titulo: `Enviar ${x} a ${d.titulo}`, nec: x }));
+        if (!meves.some(t => !t.nec)) fes.push({ titulo: `Confirmar assistència i projeccions a ${d.titulo}` });
+        for (const f of fes) await H.put(Object.assign({ id: H.uid("tarea"), fecha: data, proyecto: d.proyecto || "", conv: d.id, auto: 1, hecha: false }, f), 1);
+        if (fes.length) H.toast(`${d.titulo}: ${fes.length} ${fes.length > 1 ? "tasques noves" : "tasca nova"}`);
+        // la data del festival ha arribat més tard: es mouen les pendents que encara tenien la data provisional
+        if (dataT(d)) for (const t of meves.filter(t => !t.hecha && t.fecha === H.addDays(d.tsel, 7) && t.fecha !== dataT(d))) { t.fecha = dataT(d); await H.put(t, 1) }
+      }
+    } catch (e) { } finally { tselOcupat = false; if (tselAltre) { tselAltre = false; setTimeout(tasquesSeleccio, 300) } }
+  }
+  tasquesSeleccio(); H.onChange(tasquesSeleccio);
   // Un sol cop: omple la plataforma dels festivals importats abans que existís el camp
   (async () => {
     const aj = await H.col("ajust"); if (aj.some(x => x.id === "ajust:migplat")) return;

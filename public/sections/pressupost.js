@@ -28,6 +28,7 @@
     CAP.forEach(c => (t[c] || []).forEach(n => l.push({ id: uid(), cap: c, concepte: n })));
     return l;
   }
+  window.PRES = { plantilla }; // el fa servir el briefing del videoclip (brief.js)
   async function pinta() {
     const pid = H.pj(); if (el.hidden) return;
     if (!pid || pid === "-") { el.innerHTML = `<p class="em">El pressupost es fa dins de cada projecte: obre un projecte i ves a la pestanya «Pressupost».</p>`; return }

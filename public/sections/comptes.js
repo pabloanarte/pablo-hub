@@ -99,7 +99,9 @@
   }
   function pintaSubs(seg) {
     const l = subs.l || [], act = l.filter(s => s.actiu !== false), sm = act.reduce((a, s) => a + mensual(s), 0), avui = H.today();
-    const propera = s => { if (!s.data) return ""; let d = s.data; const pas = { Mensual: 1, Trimestral: 3, Anual: 12 }[s.per || "Mensual"]; let g = 0; while (d < avui && g++ < 600) d = mesDe(d.slice(0, 7), pas) + d.slice(7); return d };
+    // sempre des de la data original i amb el dia retallat a l'últim del mes (31 de gener + 1 mes = 28 de febrer)
+    const dmes = (d, k) => { const m = mesDe(d.slice(0, 7), k), mx = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate(); return m + "-" + String(Math.min(+d.slice(8, 10), mx)).padStart(2, "0") };
+    const propera = s => { if (!s.data) return ""; let d = s.data, k = 0; const pas = { Mensual: 1, Trimestral: 3, Anual: 12 }[s.per || "Mensual"]; while (d < avui && k < 2400) { k += pas; d = dmes(s.data, k) } return d };
     el.innerHTML = seg + `<div class="bar"><span style="flex:1"></span><button class="b" data-c="nousub">+ Despesa fixa</button></div>
       <div class="kpi" style="grid-template-columns:repeat(3,1fr)"><div><b>${eur(sm)}</b><small>Al mes</small></div><div><b>${eur(sm * 12)}</b><small>A l'any</small></div><div><b>${act.length}</b><small>Actives</small></div></div>
       <div class="card"><h3>Despeses fixes</h3>${l.length ? l.slice().sort((a, b) => (b.actiu !== false) - (a.actiu !== false) || mensual(b) - mensual(a)).map(s => { const pr = propera(s);
@@ -233,5 +235,5 @@
   });
   window.addEventListener("hub-sec", e => { if (e.detail === "comptes") pinta() });
   H.onChange(() => { if (!el.hidden) pinta() });
-  window.CMPT = { categoria, interpreta, files, num };
+  window.CMPT = { categoria, interpreta, files, num, obreFixes: () => { vista = "subs"; return pinta() } };
 })();
