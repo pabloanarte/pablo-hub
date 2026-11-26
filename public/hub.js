@@ -42,7 +42,7 @@ const SECTIONS = [
  {id:"festivales",label:"Festivals",desc:"Festivals, labs i residències",src:"sections/festivales.js"},
  {id:"docencia",label:"Docència",desc:"Cursos, sessions i visionats per exercici",src:"sections/docencia.js"},
  {id:"feines",label:"Diners",desc:"Feines, factures i cobraments",src:"sections/feines.js"},
- {id:"comptes",label:"Diners",desc:"Despeses, ingressos, subscripcions i límits",src:"sections/comptes.js"},
+ {id:"comptes",label:"Diners",desc:"Despeses, ingressos, despeses fixes i límits",src:"sections/comptes.js"},
  {id:"pressupost",label:"Pressupost",desc:"Partides, despesa real i finançament del projecte",src:"sections/pressupost.js"},
  {id:"brainstorm",label:"Idees",desc:"Idees soltes",src:"sections/brainstorm.js"},
  {id:"web",label:"pabloanarte.com",desc:"La meva web",src:"sections/web.js"},

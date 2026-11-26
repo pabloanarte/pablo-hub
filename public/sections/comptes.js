@@ -1,6 +1,6 @@
-// Diners → Comptes personals: despeses, ingressos, subscripcions i límits mensuals per categoria.
+// Diners → Comptes personals: despeses, ingressos, despeses fixes (abans «subscripcions») i límits mensuals per categoria.
 // Documents: "fin:AAAA-MM" (moviments del mes, {movs:[{id,data,concepte,import,cat}]}, import negatiu = despesa),
-// "fin:subs" (subscripcions, {l:[{id,nom,import,per,data,cat,actiu}]}), "fin:config" ({limits:{cat:n}, regles:{clau:cat}}).
+// "fin:subs" (despeses fixes: lloguer, gimnàs, subscripcions…, {l:[{id,nom,import,per,data,cat,actiu}]}), "fin:config" ({limits:{cat:n}, regles:{clau:cat}}).
 // Les feines cobrades (Diners → Feines) compten soles com a ingressos del mes en què es cobren (net d'IVA i IRPF).
 (() => {
   const { E } = H, el = document.getElementById("s-comptes");
@@ -44,7 +44,7 @@
       if (s.actiu === false && (!s.fi || m > s.fi)) return [];
       const ult = new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate(), dia = String(Math.min(+(s.data || "").slice(8, 10) || 1, ult)).padStart(2, "0"), per = s.per || "Mensual";
       const toca = per === "Mensual" || !ini || (() => { const [a1, m1] = ini.split("-").map(Number), [a2, m2] = m.split("-").map(Number), d = (a2 - a1) * 12 + m2 - m1; return d % (per === "Anual" ? 12 : 3) === 0 })();
-      return toca ? [{ id: "s-" + s.id, sub: s.id, data: m + "-" + dia, concepte: s.nom || "Subscripció", import: -Math.abs(num(s.import)), cat: s.cat || "Subscripcions" }] : [];
+      return toca ? [{ id: "s-" + s.id, sub: s.id, data: m + "-" + dia, concepte: s.nom || "Despesa fixa", import: -Math.abs(num(s.import)), cat: s.cat || "Subscripcions" }] : [];
     });
   }
   const mensual = s => Math.abs(num(s.import)) / ({ Mensual: 1, Trimestral: 3, Anual: 12 }[s.per || "Mensual"]);
@@ -63,7 +63,7 @@
   async function pinta() {
     if (el.hidden) return; const v = ++ver;
     [cfg, subs] = await Promise.all([doc("fin:config", { limits: {}, regles: {} }), doc("fin:subs", { l: [] })]); if (v !== ver) return;
-    const seg = `<div class="tabs" style="margin:0 0 16px"><button class="t ${vista === "mes" ? "on" : ""}" data-c="vista" data-v="mes">Mes</button><button class="t ${vista === "any" ? "on" : ""}" data-c="vista" data-v="any">Any</button><button class="t ${vista === "subs" ? "on" : ""}" data-c="vista" data-v="subs">Subscripcions</button></div>`;
+    const seg = `<div class="tabs" style="margin:0 0 16px"><button class="t ${vista === "mes" ? "on" : ""}" data-c="vista" data-v="mes">Mes</button><button class="t ${vista === "any" ? "on" : ""}" data-c="vista" data-v="any">Any</button><button class="t ${vista === "subs" ? "on" : ""}" data-c="vista" data-v="subs">Despeses fixes</button></div>`;
     if (vista === "subs") return pintaSubs(seg);
     if (vista === "any") return pintaAny(seg, v);
     const { l } = await movsDe(mes); if (v !== ver) return;
@@ -74,7 +74,7 @@
     const avui = H.today(), dies = mes === avui.slice(0, 7) ? +avui.slice(8, 10) : 0, totalDies = new Date(+mes.slice(0, 4), +mes.slice(5, 7), 0).getDate();
     el.innerHTML = seg + `<div class="bar" style="gap:8px"><button class="b2" data-c="mes" data-v="-1" aria-label="Mes anterior">‹</button><b style="font-size:17px;min-width:150px;text-align:center">${nomMes(mes)}</b><button class="b2" data-c="mes" data-v="1" aria-label="Mes següent">›</button><span style="flex:1"></span><button class="b2" data-c="importa">Importar del banc</button><button class="b2" data-c="nou" data-v="ing">+ Ingrés</button><button class="b" data-c="nou" data-v="des">+ Despesa</button></div>
       <div class="kpi" style="grid-template-columns:repeat(4,1fr)"><div><b>${eur(ing)}</b><small>Ingressos</small></div><div><b>${eur(des)}</b><small>Despeses${dies && des ? ` · ${eur(des / dies)}/dia` : ""}</small></div>
-      <div><b class="${ing - des < 0 ? "vm" : "vd"}">${eur(ing - des, 1)}</b><small>${ing - des < 0 ? "Has gastat més del que ha entrat" : "Estalvi del mes"}</small></div><div><b>${eur(sm)}</b><small>Subscripcions al mes</small></div></div>
+      <div><b class="${ing - des < 0 ? "vm" : "vd"}">${eur(ing - des, 1)}</b><small>${ing - des < 0 ? "Has gastat més del que ha entrat" : "Estalvi del mes"}</small></div><div><b>${eur(sm)}</b><small>Despeses fixes al mes</small></div></div>
       <div class="cmpt"><div class="card"><h3>On se'n va<a data-c="limits">Límits</a></h3>${cats.length ? cats.map(([c, n]) => { const lim = num((cfg.limits || {})[c]), pas = lim && n > lim, prev = dies && lim && !pas && n / dies * totalDies > lim;
         return `<div class="cbar" data-c="filtra" data-v="${E(c)}"><div class="ct"><span><i class="dot" style="background:${COL[c] || "#b0b0b8"}"></i>${E(c)}</span><b class="${pas ? "vm" : ""}">${eur(n)}${lim ? `<small> de ${eur(lim)}</small>` : ""}</b></div><div class="cb"><i style="width:${n / max * 100}%;background:${pas ? "#ff3b30" : COL[c] || "#b0b0b8"}"></i>${lim ? `<u style="left:${lim / max * 100}%"></u>` : ""}</div>${pas ? `<small class="vm">${eur(n - lim)} per sobre del límit</small>` : prev ? `<small style="color:#ff9f0a">A aquest ritme, acabaràs el mes per sobre del límit</small>` : ""}</div>` }).join("") : `<p class="em" style="margin:0">Encara no hi ha despeses aquest mes.</p>`}</div>
       <div class="card"><h3>Moviments <span class="em" style="margin:0;font-weight:400;font-size:13px">${l.length}</span>${filtre ? `<a data-c="filtra" data-v="">Treure el filtre «${E(filtre)}»</a>` : ""}</h3><div id="cmov">${llista(l)}</div></div></div>`;
@@ -83,7 +83,7 @@
   function llista(l) {
     const v = l.filter(x => !filtre || (x.cat || "") === filtre).sort((a, b) => (b.data || "").localeCompare(a.data || "") || (a.concepte || "").localeCompare(b.concepte || ""));
     if (!v.length) return `<p class="em" style="margin:0">Cap moviment${filtre ? " d'aquesta categoria" : ""}. Afegeix-ne amb «+ Despesa» o importa'ls del banc.</p>`;
-    return v.map(x => `<div class="r cmr" data-c="obre" data-v="${x.id}"><i class="dot" style="background:${COL[x.cat] || "#b0b0b8"}"></i><div class="g"><b>${E(x.concepte || "Sense concepte")}</b><small>${E([x.data && H.fecha(x.data), x.cat, x.sub && x.cat !== "Subscripcions" && "subscripció", x.feina && "automàtic"].filter(Boolean).join(" · "))}</small></div><b class="cimp ${x.import > 0 ? "vd" : ""}">${eur(x.import, 1)}</b></div>`).join("");
+    return v.map(x => `<div class="r cmr" data-c="obre" data-v="${x.id}"><i class="dot" style="background:${COL[x.cat] || "#b0b0b8"}"></i><div class="g"><b>${E(x.concepte || "Sense concepte")}</b><small>${E([x.data && H.fecha(x.data), x.cat, x.sub && "despesa fixa", x.feina && "automàtic"].filter(Boolean).join(" · "))}</small></div><b class="cimp ${x.import > 0 ? "vd" : ""}">${eur(x.import, 1)}</b></div>`).join("");
   }
   async function pintaAny(seg, v) {
     const any = mes.slice(0, 4), ms = Array.from({ length: 12 }, (_, i) => any + "-" + String(i + 1).padStart(2, "0")).filter(m => m <= H.today().slice(0, 7) || any < H.today().slice(0, 4));
@@ -100,18 +100,18 @@
   function pintaSubs(seg) {
     const l = subs.l || [], act = l.filter(s => s.actiu !== false), sm = act.reduce((a, s) => a + mensual(s), 0), avui = H.today();
     const propera = s => { if (!s.data) return ""; let d = s.data; const pas = { Mensual: 1, Trimestral: 3, Anual: 12 }[s.per || "Mensual"]; let g = 0; while (d < avui && g++ < 600) d = mesDe(d.slice(0, 7), pas) + d.slice(7); return d };
-    el.innerHTML = seg + `<div class="bar"><span style="flex:1"></span><button class="b" data-c="nousub">+ Subscripció</button></div>
+    el.innerHTML = seg + `<div class="bar"><span style="flex:1"></span><button class="b" data-c="nousub">+ Despesa fixa</button></div>
       <div class="kpi" style="grid-template-columns:repeat(3,1fr)"><div><b>${eur(sm)}</b><small>Al mes</small></div><div><b>${eur(sm * 12)}</b><small>A l'any</small></div><div><b>${act.length}</b><small>Actives</small></div></div>
-      <div class="card"><h3>Subscripcions</h3>${l.length ? l.slice().sort((a, b) => (b.actiu !== false) - (a.actiu !== false) || mensual(b) - mensual(a)).map(s => { const pr = propera(s);
+      <div class="card"><h3>Despeses fixes</h3>${l.length ? l.slice().sort((a, b) => (b.actiu !== false) - (a.actiu !== false) || mensual(b) - mensual(a)).map(s => { const pr = propera(s);
         return `<div class="r cmr" data-c="obresub" data-v="${s.id}" style="${s.actiu === false ? "opacity:.5" : ""}"><i class="dot" style="background:${COL[s.cat || "Subscripcions"] || "#af52de"}"></i><div class="g"><b>${E(s.nom || "Sense nom")}</b><small>${E([s.per || "Mensual", s.cat && s.cat !== "Subscripcions" && s.cat, s.actiu === false ? "cancel·lada" : pr && "propera: " + H.fecha(pr) + (pr.slice(0, 4) !== avui.slice(0, 4) ? " de " + pr.slice(0, 4) : "")].filter(Boolean).join(" · "))}</small></div><b class="cimp">${eur(Math.abs(num(s.import)))}${(s.per || "Mensual") !== "Mensual" ? `<small> · ${eur(mensual(s))}/mes</small>` : ""}</b></div>` }).join("")
-        : `<p class="em" style="margin:0">Apunta aquí Netflix, Spotify, Adobe, el mòbil, el gimnàs… Es compten soles cada mes a les despeses.</p>`}</div>`;
+        : `<p class="em" style="margin:0">Apunta aquí el lloguer, el gimnàs, el mòbil, Netflix, Adobe… Es compten soles cada mes a les despeses.</p>`}</div>`;
   }
 
   // ---------- fitxes (full lateral) ----------
   const opts = (l, v) => l.map(o => `<option ${o === v ? "selected" : ""}>${E(o)}</option>`).join("");
   async function fitxa(x, ingres) {
     const real = !x.sub && !x.feina, imp = Math.abs(num(x.import));
-    if (!real) return H.sheet(`<h2 style="margin-top:0">${E(x.concepte)}</h2><p class="em" style="margin-top:0">${x.sub ? "Ve d'una subscripció. Per canviar-la, ves a la pestanya Subscripcions." : "Ve d'una feina cobrada (Diners → Feines i factures), en net d'IVA i IRPF."}</p><p style="font-size:22px;font-weight:600">${eur(x.import, 1)}</p><button class="b2" data-c="${x.sub ? "anasubs" : "anafeines"}">${x.sub ? "Obrir les subscripcions" : "Obrir les feines"}</button>`);
+    if (!real) return H.sheet(`<h2 style="margin-top:0">${E(x.concepte)}</h2><p class="em" style="margin-top:0">${x.sub ? "Ve d'una despesa fixa. Per canviar-la, ves a la pestanya Despeses fixes." : "Ve d'una feina cobrada (Diners → Feines i factures), en net d'IVA i IRPF."}</p><p style="font-size:22px;font-weight:600">${eur(x.import, 1)}</p><button class="b2" data-c="${x.sub ? "anasubs" : "anafeines"}">${x.sub ? "Obrir les subscripcions" : "Obrir les feines"}</button>`);
     H.sheet(`<h2 style="margin-top:0">${x.id ? (ingres ? "Ingrés" : "Despesa") : ingres ? "Nou ingrés" : "Nova despesa"}</h2>
       <label>Import (€)</label><input id="cf-imp" inputmode="decimal" value="${imp || ""}" placeholder="0,00" class="big" style="font-size:22px;font-weight:600">
       <label>Concepte</label><input id="cf-con" value="${E(x.concepte || "")}" placeholder="${ingres ? "P. ex. classe a ESCAC" : "P. ex. Mercadona"}">
@@ -133,12 +133,12 @@
   }
   async function aprèn(concepte, cat) { if (!clau(concepte)) return; cfg.regles = Object.assign({}, cfg.regles, { [clau(concepte)]: cat }); await H.put(cfg, 1) }
   function fitxaSub(s) {
-    s = s || { per: "Mensual", cat: "Subscripcions", data: H.today() };
-    H.sheet(`<h2 style="margin-top:0">${s.id ? "Subscripció" : "Nova subscripció"}</h2>
-      <label>Nom</label><input id="cs-nom" value="${E(s.nom || "")}" placeholder="P. ex. Spotify, Adobe, el mòbil">
+    s = s || { per: "Mensual", cat: "Casa", data: H.today() };
+    H.sheet(`<h2 style="margin-top:0">${s.id ? "Despesa fixa" : "Nova despesa fixa"}</h2>
+      <label>Nom</label><input id="cs-nom" value="${E(s.nom || "")}" placeholder="P. ex. lloguer, gimnàs, Spotify">
       <div class="g2"><div><label>Import (€)</label><input id="cs-imp" inputmode="decimal" value="${s.import ? Math.abs(num(s.import)) : ""}" placeholder="0,00"></div><div><label>Cada quan</label><select id="cs-per">${opts(["Mensual", "Trimestral", "Anual"], s.per)}</select></div>
-      <div><label>Data del primer cobrament (o del darrer)</label><input id="cs-dat" type="date" value="${E(s.data || "")}"></div><div><label>Categoria</label><select id="cs-cat">${opts(DESP, s.cat || "Subscripcions")}</select></div></div>
-      <label class="ck" style="margin-top:14px"><input type="checkbox" id="cs-act" ${s.actiu === false ? "" : "checked"}> Activa</label><small>Si la cancel·les, desmarca-la: deixa de comptar però en queda el registre.</small>
+      <div><label>Data del primer cobrament (o del darrer)</label><input id="cs-dat" type="date" value="${E(s.data || "")}"></div><div><label>Categoria</label><select id="cs-cat">${opts(DESP, s.cat || "Casa")}</select></div></div>
+      <label class="ck" style="margin-top:14px"><input type="checkbox" id="cs-act" ${s.actiu === false ? "" : "checked"}> Activa</label><small>Si la cancel·les o s'acaba, desmarca-la: deixa de comptar però en queda el registre.</small>
       <div class="sfoot">${s.id ? `<button class="del" data-c="delsub" data-v="${s.id}">Esborrar</button>` : "<span></span>"}<button class="b" data-c="desasub" data-v="${s.id || ""}">Desar</button></div>`);
     setTimeout(() => document.getElementById("cs-nom").focus(), 50);
   }
@@ -177,7 +177,7 @@
     const ms = [...new Set(l.map(x => x.data.slice(0, 7)))], ds = await Promise.all(ms.map(m => doc("fin:" + m, { movs: [] }))), ja = new Set(ds.flatMap(d => (d.movs || []).map(x => x.data + "|" + Math.round(num(x.import) * 100) + "|" + clau(x.concepte))));
     const virt = (await Promise.all(ms.map(async m => subsDelMes(m).concat(await feinesDelMes(m))))).flat();
     const igual = x => virt.find(v => v.data.slice(0, 7) === x.data.slice(0, 7) && (v.sub ? Math.abs(Math.abs(v.import) - Math.abs(x.import)) < .02 && x.import < 0 : Math.abs(v.import - x.import) < 1 && x.import > 0));
-    pendents = l.map(x => { const v = igual(x); return Object.assign(x, { cat: categoria(x.concepte, x.import), dup: ja.has(x.data + "|" + Math.round(x.import * 100) + "|" + clau(x.concepte)), ja: v ? (v.sub ? "ja comptat com a subscripció (" + v.concepte + ")" : "ja comptat com a feina cobrada") : "" }) });
+    pendents = l.map(x => { const v = igual(x); return Object.assign(x, { cat: categoria(x.concepte, x.import), dup: ja.has(x.data + "|" + Math.round(x.import * 100) + "|" + clau(x.concepte)), ja: v ? (v.sub ? "ja comptat com a despesa fixa (" + v.concepte + ")" : "ja comptat com a feina cobrada") : "" }) });
     const nous = pendents.filter(x => !x.dup && !x.ja);
     box.innerHTML = `<h2>${nous.length} moviments nous${pendents.length - nous.length ? ` · ${pendents.length - nous.length} ja hi eren (desmarcats)` : ""}</h2><div style="max-height:46vh;overflow:auto">` + pendents.map((x, i) => `<div class="r cmr" style="cursor:default;${x.dup || x.ja ? "opacity:.45" : ""}"><input type="checkbox" data-ci="${i}" ${x.dup || x.ja ? "" : "checked"} style="width:18px;height:18px;margin:0"><div class="g"><b>${E(x.concepte || "—")}</b><small>${E([H.fecha(x.data), x.dup ? "ja importat" : x.ja].filter(Boolean).join(" · "))}</small></div><select data-cic="${i}" style="width:150px;flex:none;height:34px!important;font-size:13px">${opts(x.import > 0 ? ING : DESP, x.cat)}</select><b class="cimp ${x.import > 0 ? "vd" : ""}">${eur(x.import, 1)}</b></div>`).join("") + `</div><button class="b" data-c="cidesa" style="margin-top:12px;width:100%" ${nous.length ? "" : "disabled"}>${nous.length ? "Importar els marcats" : "No hi ha res de nou per importar"}</button>`;
   }
@@ -211,7 +211,7 @@
       if (!s.nom || !s.import) return H.toast("Posa el nom i l'import");
       subs.l = (subs.l || []).filter(x => x.id !== id).concat(s); await H.put(subs, 1); H.cerrar(); return pinta();
     }
-    if (c === "delsub" && confirm("Esborrar aquesta subscripció? Si només l'has cancel·lada, millor desmarca «Activa».")) { subs.l = (subs.l || []).filter(x => x.id !== b.dataset.v); await H.put(subs, 1); H.cerrar(); return pinta() }
+    if (c === "delsub" && confirm("Esborrar aquesta despesa fixa? Si només l'has cancel·lada o s'ha acabat, millor desmarca «Activa».")) { subs.l = (subs.l || []).filter(x => x.id !== b.dataset.v); await H.put(subs, 1); H.cerrar(); return pinta() }
     if (c === "desalim") { const l = {}; document.querySelectorAll("[data-lim]").forEach(i => { const n = num(i.value); if (n) l[i.dataset.lim] = n }); cfg.limits = l; await H.put(cfg, 1); H.cerrar(); return pinta() }
     if (c === "anasubs") { H.cerrar(); vista = "subs"; return pinta() }
     if (c === "anafeines") { H.cerrar(); return hubShow("feines") }
