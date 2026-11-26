@@ -5,14 +5,14 @@ window.PAS = (() => {
   const E = s => String(s ?? "").replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
   const uid = () => Math.random().toString(36).slice(2, 9);
   const VAL = [["diners", "Diners"], ["portfolio", "Portfolio"], ["contactes", "Contactes"], ["aprenentatge", "Aprenentatge"]];
-  const FEE = ["Gangster", "Factura", "Alta", "Sense fee"];
+  const FEE = ["Factura", "Alta", "Sense fee"]; // «Gangster» = sense fee (els valors antics es llegeixen com a «Sense fee»)
   const nota = p => { const v = p.val || {}; const s = VAL.reduce((a, [k]) => a + (+v[k] || 0), 0); return s / 2 }; // 4 × 5 = 20 → /10
   const valorat = p => VAL.some(([k]) => +(p.val || {})[k]);
   const fmtNota = n => String(Math.round(n * 10) / 10).replace(".", ",") + "/10";
   // «1.200,50», «1.000», «1200.5», «200» → número
   const num = v => { let t = String(v || "").replace(/[€\s]/g, ""); if (!t) return NaN; if (t.includes(",")) t = t.replace(/\./g, "").replace(",", "."); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, ""); return parseFloat(t) };
   const eur = n => (+n).toLocaleString("ca-ES", { maximumFractionDigits: 2 }) + " €";
-  const feeTxt = p => p.feeTipus === "Sense fee" ? "Sense fee" : +p.fee ? eur(p.fee) : "";
+  const feeTxt = p => (fixaFee(p), p.feeTipus === "Sense fee" ? "Sense fee" : +p.fee ? eur(p.fee) : "");
 
   // ---------- plantilles de passos ----------
   // [fase, text, auto]
@@ -39,6 +39,7 @@ window.PAS = (() => {
   // ids fixos (t0, t1…): el que es marca abans de desar la plantilla es troba igual en desar-la
   const plantilla = p => (!H.meu(p) ? EQUIP : ["Videoclip", "Publicitat"].includes(p.categoria) ? DIR_VC.filter(x => p.categoria === "Videoclip" || x[2] !== "brief") : DIR_CURT).map(([fase, t, auto], i) => ({ id: "t" + i, fase, t, ...(auto ? { auto } : {}) }));
   const perEstat = (x, p) => ORD.includes(x.fase) && ORD.indexOf(x.fase) < (ORDE[p.estado] ?? 0); // fase ja passada segons l'estat del projecte
+  const fixaFee = p => { if (p && p.feeTipus === "Gangster") p.feeTipus = "Sense fee"; return p };
   const llista = p => Array.isArray(p.passos) ? p.passos : plantilla(p);
   const fases = l => [...new Set(l.map(x => x.fase))];
 
@@ -71,14 +72,14 @@ window.PAS = (() => {
   };
   const fet = (x, p, c) => !!x.ok || perEstat(x, p) || !!(x.auto && c && AUTO[x.auto] && (() => { try { return AUTO[x.auto](p, c) } catch (e) { return false } })());
   // passos que no toquen (p. ex. factura i cobrament si és «Sense fee»)
-  const compta = (x, p) => !(p.feeTipus === "Sense fee" && ["facturat", "cobrat"].includes(x.auto)) && !(x.auto === "facturat" && ["Gangster", "Alta"].includes(p.feeTipus));
-  function progres(p, c) { const l = llista(p).filter(x => compta(x, p)), n = l.filter(x => fet(x, p, c)).length; return { n, tot: l.length, f: l.length ? n / l.length : 0 } }
+  const compta = (x, p) => !(p.feeTipus === "Sense fee" && ["facturat", "cobrat"].includes(x.auto)) && !(x.auto === "facturat" && p.feeTipus === "Alta");
+  function progres(p, c) { fixaFee(p); const l = llista(p).filter(x => compta(x, p)), n = l.filter(x => fet(x, p, c)).length; return { n, tot: l.length, f: l.length ? n / l.length : 0 } }
   // fase on és ara: la primera que no està acabada
   function faseActual(p, c) { const l = llista(p).filter(x => compta(x, p)); return fases(l).find(f => l.filter(x => x.fase === f).some(x => !fet(x, p, c))) || "Acabat" }
 
   // ---------- targetes (Resum del projecte) ----------
   const obert = {}; // fases plegades/desplegades (per projecte, només en aquesta sessió)
-  function cardValora(p, feines) {
+  function cardValora(p, feines) { fixaFee(p);
     const v = p.val || {}, n = nota(p);
     const cob = feines.filter(x => x.proyecto === p.id);
     return `<div class="card pfx"><h3>Valorar<span class="pnota">${valorat(p) ? fmtNota(n) : "—"}</span></h3>
@@ -89,7 +90,7 @@ window.PAS = (() => {
       ${cob.map(x => `<div class="r" data-pas="feina" data-id="${x.id}"><i class="dot" style="background:${{ "Pressupostat": "#8e8e93", "Confirmat": "#0a84ff", "Fet": "#ff9f0a", "Facturat": "#af52de", "Cobrat": "#30b27a" }[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "Cobrament")}</b><small>${E([x.estado, (+x.total || (+x.tarifa || 0) * (+x.jornades || 0)) ? eur(+x.total || (+x.tarifa || 0) * (+x.jornades || 0)) : "", x.factura && "Factura " + x.factura].filter(Boolean).join(" · "))}</small></div></div>`).join("")}
       ${p.feeTipus === "Sense fee" ? "" : `<button class="b2" data-pas="cobra" style="margin-top:10px">+ Cobrament</button>`}</div>`;
   }
-  function cardPassos(p, c) {
+  function cardPassos(p, c) { fixaFee(p);
     const l = llista(p), pr = progres(p, c), fs = fases(l), act = faseActual(p, c);
     const oberta = f => obert[p.id + f] ?? f === act;
     return `<div class="card pps" style="grid-column:1/-1"><h3>Passos<span class="ppn">${pr.n}/${pr.tot}</span></h3>
@@ -118,7 +119,7 @@ window.PAS = (() => {
       if (k === "feina") return H.abrir("feina", b.dataset.id);
       if (k === "cobra") {
         const rol = H.rols(p), r = rol.includes("Ajudant de direcció") && !H.meu(p) ? "Ajudant de direcció" : rol.includes("Script") && !H.meu(p) ? "Script" : "Direcció";
-        const d = { id: H.uid("feina"), titulo: p.titulo || "", rol: r, estado: "Confirmat", proyecto: p.id, ...(+p.fee ? { total: +p.fee } : {}), ...(p.feeTipus === "Gangster" ? { iva: 0, irpf: 0 } : {}), ...(p.feeTipus ? { notas: "Modalitat: " + p.feeTipus } : {}) };
+        const d = { id: H.uid("feina"), titulo: p.titulo || "", rol: r, estado: "Confirmat", proyecto: p.id, ...(+p.fee ? { total: +p.fee } : {}), ...(p.feeTipus ? { notas: "Modalitat: " + p.feeTipus } : {}) };
         await H.put(d, 1); H.toast("Cobrament creat a Diners"); repinta(); return H.abrir("feina", d.id);
       }
     });
