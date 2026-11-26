@@ -1,5 +1,6 @@
 // Pressupost d'un projecte (pestanya «Pressupost» dins el projecte). Un document "pres:<id del projecte>":
-// partides per capítols (quantitat × dies/unitats × preu = previst; real gastat; pagat), imprevistos en %, i finançament.
+// partides per capítols (quantitat × dies/unitats × preu = previst; real gastat; pagat), imprevistos i IVA en %, i finançament.
+// A l'exportar, «Només les partides amb import» (localStorage pres-usades, marcat per defecte) deixa fora les partides i fonts a 0 €.
 (() => {
   const { E } = H, el = document.getElementById("s-pressupost");
   const CAP = ["Guió i drets", "Repartiment", "Equip tècnic", "Art i vestuari", "Localitzacions", "Material i lloguers", "Transport i dietes", "Postproducció", "Música i so", "Assegurances i permisos", "Festivals i distribució", "Altres"];
@@ -17,6 +18,10 @@
   const prev = x => (x.q === "" || x.q == null ? 1 : num(x.q)) * (x.u === "" || x.u == null ? 1 : num(x.u)) * num(x.preu);
   let p = null, d = null, ver = 0;
   const save = () => H.put(d);
+  // Previst + imprevistos (% sobre el previst) + IVA (% sobre previst i imprevistos; 21 % per defecte)
+  const calc = () => { const pr = d.partides.reduce((a, x) => a + prev(x), 0), im = pr * num(d.impr ?? 10) / 100, iv = (pr + im) * num(d.iva ?? 21) / 100; return { pr, im, iv, tp: pr + im + iv, re: d.partides.reduce((a, x) => a + num(x.real), 0) } };
+  const usada = x => prev(x) > 0 || num(x.real) > 0;
+  const nomesUsades = () => { try { return localStorage.getItem("pres-usades") !== "0" } catch (e) { return true } };
 
   function plantilla(cat) {
     const t = Object.assign({}, PLANT.base, ["Llarg", "Curt"].includes(cat) ? PLANT.curt : PLANT.videoclip), l = [];
@@ -37,12 +42,12 @@
       <td><input class="cel nm" data-f="real" value="${E(x.real ?? "")}" placeholder="—" inputmode="decimal"></td><td class="pg"><input type="checkbox" data-k="pagat" ${x.pagat ? "checked" : ""} title="Pagat"></td>
       <td><input class="cel" data-f="notes" value="${E(x.notes || "")}" placeholder=""></td><td class="acc"><button data-k="del" title="Esborrar">×</button></td></tr>`;
     el.innerHTML = `<div id="prsum"></div>
-      <div class="bar tb" style="flex-wrap:wrap"><button class="b2" data-k="addcap">+ Capítol</button><span style="flex:1"></span>${R.selLang()}<button class="b2" data-k="pdf">PDF</button><button class="b2" data-k="xls">Excel</button></div>
+      <div class="bar tb" style="flex-wrap:wrap"><button class="b2" data-k="addcap">+ Capítol</button><span style="flex:1"></span><label class="ck" style="margin:0;font-size:13px" title="A l'exportar, deixa fora les partides a 0 € o sense tocar"><input type="checkbox" data-k="usades" ${nomesUsades() ? "checked" : ""}> Només les partides amb import</label>${R.selLang()}<button class="b2" data-k="pdf">PDF</button><button class="b2" data-k="xls">Excel</button></div>
       <div class="shw" style="max-height:none"><table class="gt pres"><colgroup><col style="width:34%"><col style="width:7%"><col style="width:8%"><col style="width:10%"><col style="width:11%"><col style="width:10%"><col style="width:5%"><col style="width:13%"><col style="width:2%"></colgroup>
       <thead><tr><th>Concepte</th><th class="n">Quant.</th><th class="n">Dies / u.</th><th class="n">Preu</th><th class="n">Previst</th><th class="n">Real</th><th style="text-align:center">Pagat</th><th>Notes</th><th></th></tr></thead><tbody>` +
       caps.filter(c => d.partides.some(x => x.cap === c) || (d.capsBuits || []).includes(c)).map(c => `<tr class="pcap"><td colspan="4"><b>${E(c)}</b></td><td class="tot" data-sc="${E(c)}"></td><td class="tot" data-capr="${E(c)}"></td><td colspan="2"><button class="addrow" data-k="add" data-cap="${E(c)}">+ partida</button></td><td></td></tr>` + d.partides.filter(x => x.cap === c).map(fila).join("")).join("") +
       `</tbody></table></div>
-      <div class="ls" style="margin:12px 0 0;gap:12px"><label class="ck" style="margin:0">Imprevistos <input data-d="impr" value="${E(d.impr ?? 10)}" inputmode="decimal" style="width:64px;margin:0 4px"> % sobre el previst</label></div>
+      <div class="ls" style="margin:12px 0 0;gap:12px"><label class="ck" style="margin:0">Imprevistos <input data-d="impr" value="${E(d.impr ?? 10)}" inputmode="decimal" style="width:64px;margin:0 4px"> % sobre el previst</label><label class="ck" style="margin:0">IVA <input data-d="iva" value="${E(d.iva ?? 21)}" inputmode="decimal" style="width:64px;margin:0 4px"> % sobre el previst i els imprevistos</label></div>
       <h2>Finançament</h2>
       <div class="shw" style="max-height:none"><table class="gt pres"><colgroup><col style="width:34%"><col style="width:18%"><col style="width:14%"><col style="width:16%"><col style="width:16%"><col style="width:2%"></colgroup>
       <thead><tr><th>D'on surt</th><th>Tipus</th><th class="n">Import</th><th>Estat</th><th>Notes</th><th></th></tr></thead><tbody>` +
@@ -56,14 +61,13 @@
   // Totals: per capítol, resum de dalt (sense tornar a pintar la taula, per no perdre el cursor)
   function sumes() {
     if (!d) return;
-    const pr = d.partides.reduce((a, x) => a + prev(x), 0), im = pr * num(d.impr ?? 10) / 100, tp = pr + im;
-    const re = d.partides.reduce((a, x) => a + num(x.real), 0), pag = d.partides.filter(x => x.pagat).reduce((a, x) => a + (num(x.real) || prev(x)), 0);
+    const { im, iv, tp, re } = calc(), pag = d.partides.filter(x => x.pagat).reduce((a, x) => a + (num(x.real) || prev(x)), 0);
     const fi = (d.fin || []).filter(f => f.estat === "Concedit" || f.estat === "Cobrat").reduce((a, f) => a + num(f.import), 0), fp = (d.fin || []).reduce((a, f) => a + num(f.import), 0);
     const falta = tp - fi;
     el.querySelectorAll("[data-sc]").forEach(t => { const s = d.partides.filter(x => x.cap === t.dataset.sc).reduce((a, x) => a + prev(x), 0); t.textContent = s ? eur(s) : "" });
     el.querySelectorAll("[data-capr]").forEach(t => { const s = d.partides.filter(x => x.cap === t.dataset.capr).reduce((a, x) => a + num(x.real), 0); t.textContent = s ? eur(s) : "" });
     const box = el.querySelector("#prsum"); if (!box) return;
-    box.innerHTML = `<div class="kpi" style="grid-template-columns:repeat(4,1fr)"><div><b>${eur(tp)}</b><small>Previst${im ? ` (amb ${eur(im)} d'imprevistos)` : ""}</small></div>
+    box.innerHTML = `<div class="kpi" style="grid-template-columns:repeat(4,1fr)"><div><b>${eur(tp)}</b><small>Previst${im || iv ? ` (amb ${[im && eur(im) + " d'imprevistos", iv && eur(iv) + " d'IVA"].filter(Boolean).join(" i ")})` : ""}</small></div>
       <div><b class="${re > tp && tp ? "vm" : ""}">${eur(re)}</b><small>Gastat${tp ? ` · ${Math.round(re / tp * 100)} %` : ""}${pag ? ` · ${eur(pag)} pagat` : ""}</small></div>
       <div><b>${eur(fi)}</b><small>Finançament assegurat${fp > fi ? ` · ${eur(fp - fi)} per confirmar` : ""}</small></div>
       <div><b class="${falta > 0 ? "vm" : "vd"}">${eur(Math.abs(falta))}</b><small>${falta > 0 ? "Falta per finançar" : "Sobra"}</small></div></div>
@@ -83,6 +87,7 @@
     if (k === "addf") { d.fin = (d.fin || []).concat({ id: uid(), tipus: "Aportació pròpia", estat: "Previst" }); save(); pinta(); setTimeout(() => el.querySelectorAll("tr[data-fid] input")[(d.fin.length - 1) * 3]?.focus(), 30) }
     if (k === "delf" && confirm("Esborrar aquesta font de finançament?")) { const f = font(b); d.fin = d.fin.filter(y => y !== f); save(); pinta() }
     if (k === "delpres" && confirm("Eliminar tot el pressupost d'aquest projecte? No es pot desfer.")) { await H.del(d); d = null; pinta() }
+    if (k === "usades") { try { localStorage.setItem("pres-usades", b.checked ? "1" : "0") } catch (e) { } }
     if (k === "pdf") exportaPDF();
     if (k === "xls") exportaExcel();
   });
@@ -96,29 +101,31 @@
 
   // ---------- exportar ----------
   const files = () => {
-    const caps = [...new Set(CAP.concat(d.partides.map(x => x.cap)))].filter(c => d.partides.some(x => x.cap === c)), o = [];
-    caps.forEach(c => { const l = d.partides.filter(x => x.cap === c); o.push({ cap: c, prev: l.reduce((a, x) => a + prev(x), 0), real: l.reduce((a, x) => a + num(x.real), 0) }); l.forEach(x => o.push({ x })) });
+    const nu = nomesUsades(), ps = d.partides.filter(x => !nu || usada(x));
+    const caps = [...new Set(CAP.concat(ps.map(x => x.cap)))].filter(c => ps.some(x => x.cap === c)), o = [];
+    caps.forEach(c => { const l = ps.filter(x => x.cap === c); o.push({ cap: c, prev: l.reduce((a, x) => a + prev(x), 0), real: l.reduce((a, x) => a + num(x.real), 0) }); l.forEach(x => o.push({ x })) });
     return o;
   };
-  const tots = () => { const pr = d.partides.reduce((a, x) => a + prev(x), 0), im = pr * num(d.impr ?? 10) / 100; return { pr, im, tp: pr + im, re: d.partides.reduce((a, x) => a + num(x.real), 0) } };
-  const T = { ca: ["Pressupost", "Concepte", "Quant.", "Dies / u.", "Preu", "Previst", "Real", "Notes", "Subtotal", "Imprevistos", "Total", "Finançament", "Font", "Tipus", "Import", "Estat"], es: ["Presupuesto", "Concepto", "Cant.", "Días / u.", "Precio", "Previsto", "Real", "Notas", "Subtotal", "Imprevistos", "Total", "Financiación", "Fuente", "Tipo", "Importe", "Estado"], en: ["Budget", "Item", "Qty.", "Days / units", "Rate", "Estimated", "Actual", "Notes", "Subtotal", "Contingency", "Total", "Financing", "Source", "Type", "Amount", "Status"] };
+  const tots = calc, fins = () => (d.fin || []).filter(f => !nomesUsades() || num(f.import) > 0);
+  const T = { ca: ["Pressupost", "Concepte", "Quant.", "Dies / u.", "Preu", "Previst", "Real", "Notes", "Subtotal", "Imprevistos", "Total", "Finançament", "Font", "Tipus", "Import", "Estat", "IVA"], es: ["Presupuesto", "Concepto", "Cant.", "Días / u.", "Precio", "Previsto", "Real", "Notas", "Subtotal", "Imprevistos", "Total", "Financiación", "Fuente", "Tipo", "Importe", "Estado", "IVA"], en: ["Budget", "Item", "Qty.", "Days / units", "Rate", "Estimated", "Actual", "Notes", "Subtotal", "Contingency", "Total", "Financing", "Source", "Type", "Amount", "Status", "VAT"] };
   const t = i => (T[R.lang()] || T.ca)[i], q = v => v === "" || v == null ? "" : v;
   function exportaPDF() {
-    const { pr, im, tp, re } = tots(), th = "background:#f0f0f2;text-align:left";
+    const { pr, im, iv, tp, re } = tots(), th = "background:#f0f0f2;text-align:left";
     R.pdf(`<div class="pz"><h1>${E(t(0))} · ${E(p.titulo || "")}</h1><p>${E(H.fecha(H.today()))}</p><table><thead><tr>${[1, 2, 3, 4, 5, 6, 7].map(i => `<th style="${th}">${t(i)}</th>`).join("")}</tr></thead><tbody>` +
       files().map(f => f.cap ? `<tr><td colspan="4" class="band" style="background:#3b4a5a;color:#fff;text-align:left">${E(R.tv(f.cap))}</td><td class="band" style="background:#3b4a5a;color:#fff">${eur(f.prev)}</td><td class="band" style="background:#3b4a5a;color:#fff">${f.real ? eur(f.real) : ""}</td><td class="band" style="background:#3b4a5a"></td></tr>`
         : `<tr><td style="text-align:left">${E(f.x.concepte || "")}</td><td>${E(q(f.x.q))}</td><td>${E(q(f.x.u))}</td><td>${num(f.x.preu) ? eur(num(f.x.preu)) : ""}</td><td>${prev(f.x) ? eur(prev(f.x)) : ""}</td><td>${num(f.x.real) ? eur(num(f.x.real)) : ""}</td><td style="text-align:left">${E(f.x.notes || "")}</td></tr>`).join("") +
       `<tr><td colspan="4" style="text-align:right;font-weight:700">${t(8)}</td><td style="font-weight:700">${eur(pr)}</td><td style="font-weight:700">${re ? eur(re) : ""}</td><td></td></tr>` +
       (im ? `<tr><td colspan="4" style="text-align:right">${t(9)} (${num(d.impr)} %)</td><td>${eur(im)}</td><td colspan="2"></td></tr>` : "") +
+      (iv ? `<tr><td colspan="4" style="text-align:right">${t(16)} (${num(d.iva ?? 21)} %)</td><td>${eur(iv)}</td><td colspan="2"></td></tr>` : "") +
       `<tr><td colspan="4" style="text-align:right;font-weight:700;font-size:9px">${t(10)}</td><td style="font-weight:700;font-size:9px">${eur(tp)}</td><td colspan="2"></td></tr></tbody></table>` +
-      ((d.fin || []).length ? `<h1 style="margin-top:14px;font-size:13px">${t(11)}</h1><table><thead><tr>${[12, 13, 14, 15].map(i => `<th style="${th}">${t(i)}</th>`).join("")}</tr></thead><tbody>${d.fin.map(f => `<tr><td style="text-align:left">${E(f.font || "")}</td><td>${E(R.tv(f.tipus || ""))}</td><td>${num(f.import) ? eur(num(f.import)) : ""}</td><td>${E(R.tv(f.estat || ""))}</td></tr>`).join("")}</tbody></table>` : "") + `</div>`, false);
+      (fins().length ? `<h1 style="margin-top:14px;font-size:13px">${t(11)}</h1><table><thead><tr>${[12, 13, 14, 15].map(i => `<th style="${th}">${t(i)}</th>`).join("")}</tr></thead><tbody>${fins().map(f => `<tr><td style="text-align:left">${E(f.font || "")}</td><td>${E(R.tv(f.tipus || ""))}</td><td>${num(f.import) ? eur(num(f.import)) : ""}</td><td>${E(R.tv(f.estat || ""))}</td></tr>`).join("")}</tbody></table>` : "") + `</div>`, false);
   }
   function exportaExcel() {
-    const { pr, im, tp } = tots();
+    const { pr, im, iv, tp } = tots();
     const fs = files().map(f => f.cap ? { banda: `${R.tv(f.cap)} · ${eur(f.prev)}`, color: "#3b4a5a", blanco: 1 } : { celdas: [f.x.concepte || "", q(f.x.q), q(f.x.u), num(f.x.preu) || "", prev(f.x) || "", num(f.x.real) || "", f.x.notes || ""] });
-    fs.push({ celdas: [t(8), "", "", "", pr, "", ""] }); if (im) fs.push({ celdas: [`${t(9)} (${num(d.impr)} %)`, "", "", "", im, "", ""] }); fs.push({ celdas: [t(10), "", "", "", tp, "", ""], color: "#f0f0f2" });
+    fs.push({ celdas: [t(8), "", "", "", pr, "", ""] }); if (im) fs.push({ celdas: [`${t(9)} (${num(d.impr)} %)`, "", "", "", im, "", ""] }); if (iv) fs.push({ celdas: [`${t(16)} (${num(d.iva ?? 21)} %)`, "", "", "", iv, "", ""] }); fs.push({ celdas: [t(10), "", "", "", tp, "", ""], color: "#f0f0f2" });
     const fulls = [{ nombre: t(0), titulo: t(0) + " · " + (p.titulo || "").toUpperCase(), cols: [{ l: t(1), w: 40, izq: 1 }, { l: t(2), w: 8 }, { l: t(3), w: 10 }, { l: t(4), w: 12 }, { l: t(5), w: 13 }, { l: t(6), w: 12 }, { l: t(7), w: 30, izq: 1 }], filas: fs }];
-    if ((d.fin || []).length) fulls.push({ nombre: t(11), titulo: t(11) + " · " + (p.titulo || "").toUpperCase(), cols: [{ l: t(12), w: 40, izq: 1 }, { l: t(13), w: 20 }, { l: t(14), w: 14 }, { l: t(15), w: 14 }], filas: d.fin.map(f => ({ celdas: [f.font || "", R.tv(f.tipus || ""), num(f.import) || "", R.tv(f.estat || "")] })) });
+    if (fins().length) fulls.push({ nombre: t(11), titulo: t(11) + " · " + (p.titulo || "").toUpperCase(), cols: [{ l: t(12), w: 40, izq: 1 }, { l: t(13), w: 20 }, { l: t(14), w: 14 }, { l: t(15), w: 14 }], filas: fins().map(f => ({ celdas: [f.font || "", R.tv(f.tipus || ""), num(f.import) || "", R.tv(f.estat || "")] })) });
     R.excel(t(0) + " " + (p.titulo || ""), fulls);
   }
 
