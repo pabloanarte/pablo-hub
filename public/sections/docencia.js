@@ -70,7 +70,8 @@ window.DOC = (() => {
       ${s.map(sessio).join("") || `<p class="em">Afegeix la primera sessió.</p>`}
       <button class="b" data-k="nses" style="margin-top:6px">+ Sessió</button>`;
   }
-  const EXS2 = () => H.opsDe(CEX);
+  // Ordre de la llista; «Documental» sempre just abans de «Curts» (ho va demanar Pablo)
+  const EXS2 = () => { const l = H.opsDe(CEX).slice(), i = l.indexOf("Documental"), j = l.indexOf("Curts"); if (i > j && j >= 0) { l.splice(i, 1); l.splice(j, 0, "Documental") } return l };
 
   // ---------- visionats ----------
   const CAMPS = [
