@@ -6,8 +6,10 @@
   const vacio = t => `<p class="em" style="margin:6px 0">${t}</p>`;
   const PE = { "Idea": "#8e8e93", "Desenvolupament": "#ff9f0a", "Finançament": "#af52de", "Preproducció": "#5ac8fa", "Rodatge": "#ff375f", "Postproducció": "#0a84ff", "Distribució": "#30b27a" };
 
+  let PXC = null; // passos dels projectes (passos.js), per a la barra de progrés
   async function pintar() {
     OB = (await aj("ajust:objectius")) || {};
+    if (window.PAS) PXC = await PAS.ctx().catch(() => null);
     const [t, r, f, p, i, c] = await Promise.all(["tarea", "reunion", "convocatoria", "proyecto", "idea"].map(x => H.col(x)).concat(H.contactos()));
     const hoy = today(), d7 = addDays(hoy, 7), d14 = addDays(hoy, 14);
     const pend = t.filter(x => !x.hecha), urg = pend.filter(x => x.fecha && x.fecha <= hoy).sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -23,7 +25,7 @@
     const vivos = p.filter(x => x.estado && x.estado !== "Acabat" && H.meu(x)).sort((a, b) => (a.ord ?? -1) - (b.ord ?? -1));
     const kpi = [["Tasques per avui", urg.length, "tareas", urg.some(x => x.fecha < hoy) ? "#ff3b30" : ""], ["Reunions (14 dies)", reu.length, "reuniones"], ["Dates límit (14 dies)", lim.filter(x => x.limite <= d14).length, "festivales", lim.some(x => x.limite <= d7) ? "#ff3b30" : ""], ["Seguiments pendents", seg.length, "contactos"], ["Contactes per contactar", porC, "contactos"], ["Projectes en marxa", vivos.length, "proyectos"]];
 
-    el.innerHTML = `<div class="kpi">${kpi.map(([l, n, go, col]) => `<div data-go="${go}"><b style="${col && n ? "color:" + col : ""}">${n}</b><small>${l}</small></div>`).join("")}</div><div class="dash">` +
+    el.innerHTML = `<div id="agbox">${(document.getElementById("agbox") || {}).innerHTML || ""}</div><div class="kpi">${kpi.map(([l, n, go, col]) => `<div data-go="${go}"><b style="${col && n ? "color:" + col : ""}">${n}</b><small>${l}</small></div>`).join("")}</div><div class="dash">` +
       card("Per avui", "tareas", (urg.length ? urg.slice(0, 5).map(tf).join("") + mes(urg.length - 5, "tareas") : vacio("Res urgent avui.")) + (prox.length ? `<h2>Aquesta setmana</h2>` + prox.slice(0, 3).map(tf).join("") + mes(prox.length - 3, "tareas") : "") + `<input id="inew" placeholder="Nova tasca per avui… (Retorn)" style="margin-top:10px">`) +
       card("Agenda", "reuniones", reu.length ? reu.slice(0, 5).map(x => `<div class="r" data-k="reunion" data-id="${x.id}"><i class="dot" style="background:#0a84ff"></i><div class="g"><b>${E(x.titulo || "Reunió")}</b><small>${E([fecha(x.fecha), x.hora, x.lugar, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div></div>`).join("") : vacio("Cap reunió les properes dues setmanes.")) +
       card("Dates límit", "festivales", lim.length ? lim.slice(0, 5).map(x => { const n = Math.round((new Date(x.limite) - new Date(hoy)) / 864e5); return `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 7 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;${n <= 7 ? "color:#ff3b30" : ""}">${n === 0 ? "avui" : n === 1 ? "demà" : "en " + n + " dies"}</small></div>` }).join("") : vacio("No hi ha convocatòries obertes amb data.")) +
@@ -31,12 +33,14 @@
         (seg.length ? `<h2>Toca fer seguiment</h2>` + seg.slice(0, 5).map(x => `<div class="r"><i class="dot" style="background:#0a84ff"></i><div class="g" data-ct="${x.id}"><b>${E(x.nombre)}</b><small>Últim missatge fa ${dias(M(x).at(-1).d)} dies per ${E(M(x).at(-1).v || "missatge")}</small></div><button class="b2" data-seg="${x.id}">${x.email ? "Escriure" : "Copiar el missatge"}</button></div>`).join("") + mes(seg.length - 5, "contactos") : "")) +
       (() => { const av = lim.map(x => [x, Math.round((new Date(x.limite) - new Date(hoy)) / 864e5)]).filter(([, n]) => n === 0 || n === 2 || n === 7); return av.length ? card("Recordatoris de terminis", "", av.map(([x, n]) => `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 2 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto), x.estado].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;color:${n <= 2 ? "#ff3b30" : "#ff9f0a"}">${n === 0 ? "acaba avui" : "queden " + n + " dies"}</small></div>`).join("")) : "" })() +
       `<div id="ifest" hidden></div><div id="iclas" hidden></div><div id="iesc" hidden></div><div id="icob" hidden></div><div id="iren" hidden></div><div id="ivig" hidden></div><div id="icop" hidden></div><div id="icor" hidden></div>` +
-      card("Projectes en marxa", "proyectos", vivos.length ? vivos.slice(0, 5).map(x => `<div class="r" data-pj="${x.id}"><i class="dot" style="background:${PE[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.categoria, x.estado].filter(Boolean).join(" · "))}</small></div><small>${(n => n ? n + (n > 1 ? " tasques" : " tasca") : "")(pend.filter(y => y.proyecto === x.id).length)}</small></div>`).join("") + mes(vivos.length - 5, "proyectos") : vacio("Afegeix els teus projectes a la secció Projectes.")) +
+      card("Projectes en marxa", "proyectos", vivos.length ? vivos.slice(0, 5).map(x => `<div class="r" data-pj="${x.id}"><i class="dot" style="background:${PE[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.categoria, PXC ? PAS.faseActual(x, PXC) : x.estado].filter(Boolean).join(" · "))}</small>${PXC ? (pr => pr.tot ? `<span class="pbar" style="display:block;max-width:260px;margin-top:6px"><i style="width:${Math.round(pr.f * 100)}%"></i></span>` : "")(PAS.progres(x, PXC)) : ""}</div><small>${(n => n ? n + (n > 1 ? " tasques" : " tasca") : "")(pend.filter(y => y.proyecto === x.id).length)}</small></div>`).join("") + mes(vivos.length - 5, "proyectos") : vacio("Afegeix els teus projectes a la secció Projectes.")) +
       card("Últimes idees", "brainstorm", i.length ? i.slice().sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")).slice(0, 5).map(x => `<div class="r" data-k="idea" data-id="${x.id}"><i class="dot" style="background:#ffcc00"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E((x.texto || "").split("\n")[0].slice(0, 90))}</small></div></div>`).join("") : vacio("Apunta aquí qualsevol idea solta.")) +
       `</div>`;
+    if (window.AG) AG.pinta(document.getElementById("agbox"));
     mur(); correu(c); copiaAvis(); festivals(); classes(); escriptura(); cobrar(); renovacions(); vigila();
   }
   const aj = async id => (await H.col("ajust")).find(x => x.id === id);
+  if (window.AG) AG.connecta(el, () => AG.pinta(document.getElementById("agbox")));
   const dilluns = d => { const x = new Date(d + "T12:00:00"); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); return x.toISOString().slice(0, 10) };
   let OB = {};
   // Contactes nous aquesta setmana (objectiu a Configuració, 10 per defecte)

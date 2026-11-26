@@ -57,6 +57,23 @@ const ACCIONS = {
     return { nom: ss.getName(), rows: sh.getDataRange().getDisplayValues() };
   },
   vigila: () => vigila(),
+  // Esdeveniments de tots els calendaris de Google (també els que l'iPhone hi posa) entre dues dates, per a l'inici del hub.
+  // El calendari «PABLO hub» no s'hi inclou: el hub ja té aquests esdeveniments.
+  agenda: q => {
+    const de = /^\d{4}-\d\d-\d\d$/.test(q.de || "") ? q.de : Utilities.formatDate(new Date(), ZONA, "yyyy-MM-dd"), ini = Utilities.parseDate(de + " 00:00", ZONA, "yyyy-MM-dd HH:mm");
+    let fi = /^\d{4}-\d\d-\d\d$/.test(q.a || "") ? Utilities.parseDate(q.a + " 23:59", ZONA, "yyyy-MM-dd HH:mm") : new Date(ini.getTime() + 7 * 864e5);
+    if (fi - ini > 75 * 864e5) fi = new Date(ini.getTime() + 75 * 864e5);
+    const hub = PropertiesService.getScriptProperties().getProperty("CAL_ID"), out = [], cals = [];
+    CalendarApp.getAllCalendars().forEach(c => {
+      if (c.getId() === hub || c.isHidden()) return;
+      cals.push({ nom: c.getName(), color: c.getColor() });
+      c.getEvents(ini, fi).forEach(e => {
+        const tot = e.isAllDayEvent();
+        out.push({ t: e.getTitle() || "(sense títol)", tot, ini: tot ? fmtCal(e.getAllDayStartDate(), "yyyy-MM-dd") : fmtCal(e.getStartTime(), "yyyy-MM-dd'T'HH:mm"), fi: tot ? fmtCal(new Date(e.getAllDayEndDate().getTime() - 864e5), "yyyy-MM-dd") : fmtCal(e.getEndTime(), "yyyy-MM-dd'T'HH:mm"), lloc: e.getLocation() || "", cal: c.getName(), color: c.getColor() });
+      });
+    });
+    return { ev: out, cals };
+  },
   // «Enviar-me'l ara»: compta com el resum del dia (no n'arribarà un altre a les 8:30)
   diari: () => { const r = resumDiari(); if (r && !r.buit) PropertiesService.getScriptProperties().setProperty("RESUM_DIA", Utilities.formatDate(new Date(), "Europe/Madrid", "yyyy-MM-dd")); return r },
   // llista de fils: q amb la sintaxi de Gmail (in:inbox, in:sent, from:…)

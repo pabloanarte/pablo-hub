@@ -4,7 +4,7 @@ window.OFF = (() => {
   const sw = navigator.serviceWorker;
   if (!sw) return { pendents: () => 0 };
   // dades que es desen per tenir-les sense xarxa (les reunions, projectes, contactes… tot el que és text)
-  const TIPUS = ["reunion", "tarea", "proyecto", "idea", "persona", "ajust", "convocatoria", "curs", "visionat", "feina", "dev", "desg", "gt", "pdr", "sb", "pres", "pre", "post", "deck", "fin"];
+  const TIPUS = ["reunion", "tarea", "proyecto", "idea", "persona", "ajust", "convocatoria", "curs", "visionat", "feina", "dev", "desg", "gt", "pdr", "sb", "pres", "pre", "post", "deck", "fin", "ref", "recce"];
   let n = 0, sense = !navigator.onLine, sinc = false, avisat = false, errAbans = 0;
   const el = document.getElementById("offl");
 

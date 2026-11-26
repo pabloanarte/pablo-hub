@@ -32,6 +32,8 @@ const SECTIONS = [
  {id:"proyectos",label:"Projectes",desc:"Llargs, curts, videoclips i publicitat",src:"sections/proyectos.js"},
  {id:"projecte",label:"Projecte",desc:"",src:"sections/projecte.js"},
  {id:"decks",label:"Dossiers",desc:"Dossiers i presentacions",src:"sections/decks.js"},
+ {id:"referencies",label:"Referències",desc:"Imatges i vídeos de referència, per reutilitzar-los entre projectes",src:"sections/referencies.js"},
+ {id:"recce",label:"Recce",desc:"Fotos, vídeos i visor de les localitzacions tècniques",src:"sections/recce.js"},
  {id:"desenvolupament",label:"Desenvolupament",desc:"Versions, lectures i convocatòries",src:"sections/desenvolupament.js"},
  {id:"preproduccion",label:"Preproducció",desc:"Calendari per setmanes, dies o mesos",src:"sections/preproduccion.js"},
  {id:"desglossament",label:"Desglossament",desc:"Del guió en PDF a escenes, sets i personatges",src:"sections/desglossament.js"},
@@ -53,7 +55,7 @@ const GRUPS = [
  {id:"avui",label:"Avui",ic:"inicio",tabs:[["inicio","Avui"]]},
  {id:"agenda",label:"Agenda",ic:"tareas",tabs:[["tareas","Tasques i calendari"],["reuniones","Reunions"]]},
  {id:"gent",label:"Gent",ic:"contactos",tabs:[["contactos","Contactes"],["persones","Equip i repartiment"]]},
- {id:"projectes",label:"Projectes",ic:"proyectos",tabs:[["proyectos","Projectes"],["festivales","Festivals"],["decks","Dossiers"],["brainstorm","Idees"]]},
+ {id:"projectes",label:"Projectes",ic:"proyectos",tabs:[["proyectos","Projectes"],["festivales","Festivals"],["decks","Dossiers"],["referencies","Referències"],["brainstorm","Idees"]]},
  {id:"correu",label:"Correu",ic:"correu",tabs:[["correu","Correu"]]},
  {id:"docencia",label:"Docència",ic:"docencia",tabs:[["docencia","Docència"]]},
  {id:"diners",label:"Diners",ic:"feines",tabs:[["feines","Feines i factures"],["comptes","Comptes personals"]]},
@@ -62,7 +64,7 @@ const GRUPS = [
  {id:"ajustos",label:"Configuració",ic:"ajustos",tabs:[["ajustos","Configuració"]]}
 ];
 // Dins d'un projecte: pestanyes amb només el que és d'aquell projecte
-const PTABS = [["resum","Resum"],["desenvolupament","Desenvolupament"],["decks","Dossiers"],["preproduccion","Preproducció"],["guio","Guió i pla"],["postproduccion","Postproducció"],["pressupost","Pressupost"],["festivales","Festivals"],["equip","Equip"],["arxius","Arxius"]];
+const PTABS = [["resum","Resum"],["desenvolupament","Desenvolupament"],["referencies","Referències"],["decks","Dossiers"],["preproduccion","Preproducció"],["recce","Recce"],["guio","Guió i pla"],["postproduccion","Postproducció"],["pressupost","Pressupost"],["festivales","Festivals"],["equip","Equip"],["arxius","Arxius"]];
 const GUIO = [["desglossament","Desglossament"],["guiones","Guió tècnic"],["storyboard","Storyboard"],["planes","Pla de rodatge"]];
 const nav = document.getElementById("hubnav"), wrap = document.querySelector(".w"), sub = document.getElementById("subnav");
 SECTIONS.forEach(s => { if (!document.getElementById("s-" + s.id)) { const e = document.createElement("section"); e.id = "s-" + s.id; e.hidden = true; wrap.appendChild(e) } });
@@ -79,7 +81,7 @@ async function pintaSub() {
   PNOM = P === "-" ? "Sense projecte" : (p && p.titulo) || "Sense títol";
   document.getElementById("stitle").textContent = PNOM;
   document.getElementById("sdesc").textContent = p ? [p.categoria, H.rols(p).join(", "), p.estado].filter(Boolean).join(" · ") : "Documents que no són de cap projecte";
-  sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${PTABS.filter(t => P !== "-" || !["resum", "equip", "arxius", "desenvolupament", "pressupost"].includes(t[0])).map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
+  sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${PTABS.filter(t => P !== "-" || !["resum", "equip", "arxius", "desenvolupament", "pressupost", "recce", "referencies"].includes(t[0])).map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
    (PT === "guio" ? `<div class="seg" style="margin:0 0 14px">${GUIO.map(t => `<button class="t ${ACT === t[0] ? "on" : ""}" data-sec="${t[0]}">${t[1]}</button>`).join("")}</div>` : "");
   { const on = sub.querySelector(".ptabs .on"); if (on) { const t = on.parentElement; t.scrollLeft = on.offsetLeft - (t.clientWidth - on.offsetWidth) / 2 } }
   sub.hidden = false; return;
@@ -166,7 +168,7 @@ async function contar() {
 document.getElementById("gq").addEventListener("keydown", async e => {
  if (e.key !== "Enter" || !e.target.value.trim()) return;
  const q = e.target.value.trim().toLowerCase(), E = H.E, txt = d => H.valors(d).toLowerCase();
- const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Idees"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["sb", "Storyboards", "storyboard"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["feina", "Diners"], ["desg", "Desglossament", "desglossament"], ["curs", "Cursos"], ["visionat", "Visionats"]];
+ const T = [["proyecto", "Projectes"], ["reunion", "Reunions"], ["tarea", "Tasques"], ["convocatoria", "Festivals"], ["idea", "Idees"], ["pre", "Preproducció"], ["post", "Postproducció"], ["gt", "Guions tècnics", "guiones"], ["sb", "Storyboards", "storyboard"], ["pdr", "Plans de rodatge", "planes"], ["persona", "Equip i repartiment"], ["ref", "Referències"], ["feina", "Diners"], ["desg", "Desglossament", "desglossament"], ["curs", "Cursos"], ["visionat", "Visionats"]];
  const ls = await Promise.all(T.map(([t]) => H.col(t))), cs = await H.contactos();
  const data = (t, d) => t === "convocatoria" ? (d.limite ? "Límit " + H.fecha(d.limite) : "") : t === "pre" || t === "post" ? H.fecha(d.ini) : t === "pdr" ? (d.dias && d.dias[0] && d.dias[0].fecha ? H.fecha(d.dias[0].fecha) : "") : d.fecha ? H.fecha(d.fecha) : "";
  let h = `<h2 style="margin-top:0">Resultats de «${E(q)}»</h2>`, n = 0;
@@ -185,6 +187,7 @@ document.getElementById("hsh").addEventListener("click", e => {
  if (t === "sb") { show("storyboard", { proj: "" }); return window.SB && SB.obre(id) }
  if (t === "desg") { show("desglossament", { proj: "" }); return window.DESG && DESG.obre(id) }
  if (t === "pre" || t === "post") { show(t === "pre" ? "preproduccion" : "postproduccion"); return window.CronoAbrir && CronoAbrir[t] && CronoAbrir[t](id) }
+ if (t === "ref") { show("referencies", { proj: "" }); return }
  t === "tarea" ? H.abrirTarea(id) : H.abrir(t, id);
 });
 

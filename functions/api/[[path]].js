@@ -51,6 +51,8 @@ export async function onRequest({ request, env, params }) {
     if (p === "drecera" && (m === "GET" || m === "POST")) return dreceraCfg(m, request, db, j);
     if (p.startsWith("drecera/")) return drecera(decodeURIComponent(p.slice(8)), request, db);
     if (p.startsWith("instagram/")) return instagram(p.slice(10), m, request, env, db, j);
+    if (p.startsWith("drive/")) return drive(p.slice(6), m, request, db, j);
+    if (p === "pontdrive" && m === "POST") return pontDrive(request, env, db, j);
     return j({ error: "not found" }, 404);
   } catch (e) { return j({ error: String(e.message || e) }, 500) }
 }
@@ -181,7 +183,7 @@ async function correu(accio, m, request, db, j) {
     return j({ ok: 1 });
   }
   if (!cfg) return j({ error: "config" }, 503);
-  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia", "festivals", "calendari", "vigila", "diari", "full"].includes(accio)) return j({ error: "no" }, 404);
+  if (!["llista", "fil", "programats", "envia", "cancela", "resum", "copia", "festivals", "calendari", "vigila", "diari", "full", "agenda"].includes(accio)) return j({ error: "no" }, 404);
   // el que envia o cancel·la només per POST amb JSON (un enllaç o un formulari d'una altra web no ho pot fer)
   if (["envia", "cancela", "resum", "copia", "calendari", "vigila", "diari", "full"].includes(accio) && (m !== "POST" || (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json")) return j({ error: "no" }, 405);
   const q = m === "GET" ? Object.fromEntries(new URL(request.url).searchParams) : await request.json();
@@ -690,4 +692,74 @@ async function igRevisa(db, s) {
     }
   }
   return evs.length ? igProcessa(db, s, evs) : 0;
+}
+
+// ---------- Drive del compte de mitjans (Recce i Referències), a través de pont-drive.gs ----------
+// secret:drive = {url, clau, carpetes:{<id projecte>:{recce, refs}}, biblioteca, compte, ultim}. La clau no surt mai cap al navegador.
+async function driveCfg(db) { const r = await db.prepare("SELECT data FROM docs WHERE id='secret:drive'").first(); return r ? JSON.parse(r.data) : null }
+async function driveDesa(db, o) { await db.prepare("INSERT INTO docs(id,data,updated) VALUES('secret:drive',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify(o), Date.now()).run() }
+async function drive(accio, m, request, db, j) {
+  const cfg = await driveCfg(db);
+  if (accio === "estat" && m === "GET") return j(cfg && cfg.url ? { connectat: true, carpetes: cfg.carpetes || {}, biblioteca: cfg.biblioteca || "", compte: cfg.compte || "", ultim: cfg.ultim || 0, arrel: cfg.arrel || "" } : { connectat: false });
+  // tot el que no és llegir l'estat, només per POST amb JSON
+  if (m !== "POST" && m !== "DELETE") return j({ error: "no" }, 405);
+  if (m === "POST" && (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json") return j({ error: "no" }, 405);
+  if (accio === "config") {
+    if (m === "DELETE") { await db.prepare("DELETE FROM docs WHERE id='secret:drive'").run(); return j({ ok: 1 }) }
+    const { url, clau } = await request.json();
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url || "")) return j({ error: "L'adreça ha de ser la de l'aplicació web d'Apps Script (acaba en /exec)." }, 400);
+    const prova = await pont({ url, clau }, { accio: "prova", hub: new URL(request.url).origin });
+    if (prova.error) return j({ error: prova.error === "clau" ? "La clau no coincideix amb la del pont del Drive." : "El pont del Drive no respon: " + prova.error }, 400);
+    await driveDesa(db, { ...(cfg || {}), url, clau, compte: prova.compte || "", arrel: prova.arrel || "" });
+    return j({ ok: 1, compte: prova.compte || "" });
+  }
+  if (!cfg || !cfg.url) return j({ error: "Drive no connectat" }, 503);
+  if (!["puja", "esborra", "sincronitza"].includes(accio)) return j({ error: "no" }, 404);
+  const q = await request.json();
+  if (accio === "puja") { const ps = await projectesMeus(db); q.titol = (ps.find(x => x.id === q.proj) || {}).titol || "" }
+  const { clau, ...o } = await pont(cfg, { ...q, accio, hub: new URL(request.url).origin });
+  return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200);
+}
+async function projectesMeus(db) {
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'proyecto:%'").all();
+  return results.map(r => ({ ...JSON.parse(r.data), id: r.id })).filter(p => { const r = Array.isArray(p.rol) ? p.rol : p.rol ? [p.rol] : []; return !r.length || r.includes("Direcció") || r.includes("Guió") }).map(p => ({ id: p.id, titol: String(p.titulo || "Sense títol").replace(/[\/\\]/g, "-").trim() || "Sense títol", acabat: p.estado === "Acabat" }));
+}
+async function pontDrive(request, env, db, j) {
+  const cfg = await driveCfg(db), clau = request.headers.get("x-clau") || "";
+  if (!cfg || !cfg.clau || clau.length !== cfg.clau.length || !igual(clau, cfg.clau)) return j({ error: "clau" }, 401);
+  const b = await request.json().catch(() => ({}));
+  if (b.pas === "projectes") return j({ projectes: await projectesMeus(db) });
+  if (b.pas === "carpetes") { await driveDesa(db, { ...cfg, carpetes: b.carpetes || {}, biblioteca: b.biblioteca || "", arrel: b.arrel || cfg.arrel || "", ultim: Date.now() }); return j({ ok: 1 }) }
+  if (b.pas !== "nou") return j({ error: "pas" }, 400);
+  // un arxiu nou al Drive: còpia lleugera (JPEG que envia el pont) al magatzem i fitxa al hub
+  if (!/^[\w-]{10,}$/.test(b.id || "")) return j({ error: "id" }, 400);
+  const tipusM = /^video\//.test(b.mime || "") ? "Vídeo" : "Foto";
+  const ja = async () => {
+    if (b.tipus === "recce") { const r = await db.prepare("SELECT data FROM docs WHERE id=?1").bind("recce:" + String(b.proj || "").split(":")[1]).first(); return r && JSON.parse(r.data).llocs.some(l => (l.items || []).some(x => x.drive && x.drive.id === b.id)) }
+    const r = await db.prepare("SELECT id FROM docs WHERE id LIKE 'ref:%' AND data LIKE ?1").bind('%"' + b.id + '"%').first(); return !!r;
+  };
+  if (await ja()) return j({ ok: 1, ja: 1 });
+  let img = "";
+  if (b.b64 && env.ARCHIVOS) {
+    const bin = Uint8Array.from(atob(b.b64), c => c.charCodeAt(0));
+    if (bin.byteLength <= 25 * 1024 * 1024) { img = Date.now().toString(36) + Math.random().toString(36).slice(2, 8); const nom = String(b.nom || "drive").replace(/\.\w+$/, "") + ".jpg"; await env.ARCHIVOS.put("f:" + img, bin.buffer, { metadata: { nombre: nom, tipo: b.previewMime || "image/jpeg", size: bin.byteLength } }) }
+  }
+  const it = { nom: String(b.nom || "").slice(0, 120), tipus: tipusM, data: /^\d{4}-\d\d-\d\d$/.test(b.data || "") ? b.data : diaMadrid(), drive: { id: b.id, url: String(b.url || "") }, ...(img ? { img } : {}), ...(+b.dur ? { dur: Math.round(+b.dur) } : {}), deDrive: 1 };
+  const rid = () => Math.random().toString(36).slice(2, 9);
+  if (b.tipus === "recce") {
+    if (!/^proyecto:/.test(b.proj || "")) return j({ error: "proj" }, 400);
+    const id = "recce:" + b.proj.split(":")[1], r = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(id).first();
+    const d = r ? JSON.parse(r.data) : { proyecto: b.proj, llocs: [] };
+    const parts = String(b.lloc || "").split("/").map(x => x.trim()).filter(Boolean), visor = parts.length > 1 && /^(visor|arri.?cam|artemis|viewfinder)$/i.test(parts.at(-1)), nl = (visor ? parts.slice(0, -1) : parts).join(" / ") || "General";
+    if (visor && tipusM === "Foto") it.tipus = "Visor";
+    let l = (d.llocs || []).find(x => String(x.nom || "").trim().toLowerCase() === nl.toLowerCase());
+    if (!l) { l = { id: rid(), nom: nl, items: [] }; d.llocs = (d.llocs || []).concat(l) }
+    l.items = (l.items || []).concat({ id: rid(), ...it });
+    await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, JSON.stringify(d), Date.now()).run();
+    return j({ ok: 1 });
+  }
+  const id = "ref:" + Date.now().toString(36) + rid().slice(0, 4);
+  const d = { titulo: it.nom.replace(/\.\w+$/, ""), ...it, tags: b.lloc ? String(b.lloc).split("/").map(x => x.trim()).filter(Boolean) : [], proyectos: /^proyecto:/.test(b.proj || "") ? [b.proj] : [] };
+  await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(d), Date.now()).run();
+  return j({ ok: 1 });
 }

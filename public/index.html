@@ -379,6 +379,58 @@ input:focus,select:focus,textarea:focus{outline-color:var(--ink)}input[type=chec
 /* canvi de tema suau, com a Apple: fos de tota la pantalla */
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.45s;animation-timing-function:cubic-bezier(.4,0,.2,1)}
 html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hdr,html.canvitema .kpi div,html.canvitema .r,html.canvitema .b,html.canvitema .b2,html.canvitema .t{transition:background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+
+/* Fitxa del projecte: passos, valoració i fee (passos.js) */
+.pbar{display:block;height:4px;border-radius:4px;background:var(--soft);overflow:hidden;flex:1;min-width:40px}.pbar i{display:block;height:100%;background:var(--ink);border-radius:4px;transition:width .3s}.pbar.big{height:6px;margin:0 0 6px}
+.card h3 .pnota,.card h3 .ppn{margin-left:auto;font-weight:600;font-size:14px;color:var(--mut);font-variant-numeric:tabular-nums}.card h3 .pnota{font-size:20px;color:var(--ink)}
+.pval{display:grid;gap:8px}.pvr{display:flex;align-items:center;gap:12px}.pvr>span{width:110px;flex:none;font-size:14px}.pvq{display:flex;gap:6px}
+.pvq button{width:34px;height:24px;border-radius:6px;border:1px solid var(--bd);background:var(--soft);cursor:pointer;padding:0;transition:background .12s}.pvq button.on{background:var(--ink);border-color:var(--ink)}.pvq button:hover{border-color:var(--ink)}
+@media(pointer:coarse){.pvq button{width:40px;height:32px}}
+.pfee{display:flex;gap:8px;align-items:center}.pfin{position:relative;flex:1}.pfin input{padding-right:30px;margin:0}.pfin span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--mut)}.pfee select{width:auto;flex:0 0 150px;margin:0}
+.pfs{border-top:1px solid var(--bd)}.pfs:first-of-type{border-top:0}
+.pfh{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:12px 0;cursor:pointer;font:inherit;color:var(--ink);text-align:left}.pfh b{font-size:15px;min-width:120px}.pfh .pbar{max-width:220px;margin-left:auto}.pfh .ppn{font-size:13px;color:var(--mut);min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
+.pchev{display:inline-block;transition:transform .15s;color:var(--mut);width:10px}.pfs.ob .pchev{transform:rotate(90deg)}
+.pfb{padding:0 0 12px 22px}.pall{font-size:14px;color:var(--mut);margin:0 0 6px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.pst{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:15px}.pst input{width:18px;height:18px;margin:0;flex:none;accent-color:var(--ink);cursor:pointer}.pst span{flex:1}.pst.ok span{color:var(--mut);text-decoration:line-through;text-decoration-color:var(--bd)}.pst.no{opacity:.5}
+.pst .x{border:0;background:none;color:var(--mut);font-size:18px;cursor:pointer;opacity:0;padding:0 6px}.pst:hover .x{opacity:1}@media(hover:none){.pst .x{opacity:.6}}
+.pau{text-decoration:none;display:inline-block;margin-left:6px;font-size:11px;background:var(--soft);border-radius:999px;padding:1px 8px}
+.pnou{margin-top:6px}.pnou input{margin:0}
+.pcmeta{display:flex;gap:10px;margin-top:4px;font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}.pcmeta .eur{color:#248a3d;font-weight:600}html[data-tema="fosc"] .pcmeta .eur{color:#30d158}
+.pcar .pbar{margin-top:7px;height:3px}.pcar .pcfase{display:block;margin-top:3px;font-size:11px}
+
+/* Recce i Referències (media.js, sections/recce.js, sections/referencies.js) */
+.mddr{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--soft);border-radius:12px;padding:10px 14px;margin:0 0 16px;font-size:13px;color:var(--ink2);line-height:1.45}.mddr a{color:var(--ink)}
+.mdll{margin-bottom:16px;transition:box-shadow .15s}.mdll.drop,#s-referencies.drop .mdmas,#s-referencies.drop #rfdrop{box-shadow:0 0 0 2px var(--ink)}
+.mdlh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.mdlh .mdnom{flex:1;min-width:180px;font-size:18px;font-weight:700;border-color:transparent;background:none;padding-left:0}.mdlh .mdnom:focus{border-color:var(--bd);background:var(--card);padding-left:12px}
+.mdad{margin-top:2px}.mdll textarea{font-size:14px}
+.mdgr{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}.mdgr.sm{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+.mdit{cursor:pointer;min-width:0}.mdit small{display:block;margin-top:4px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mdth{position:relative;aspect-ratio:3/2;border-radius:8px;overflow:hidden;background:var(--soft);display:flex;align-items:center;justify-content:center}.mdth img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}.mdit:hover .mdth img{transform:scale(1.03)}.mdth span{font-size:11px;color:var(--mut);padding:6px;text-align:center;word-break:break-all}
+.mdv{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.72);color:#fff;font-style:normal;font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px}
+.mdgt{font-size:10px;background:var(--ink);color:var(--onT);border-radius:4px;padding:0 4px;margin-left:4px}
+.mddrop{border:1.5px dashed var(--bd);border-radius:10px;padding:18px;text-align:center}
+.mdmas{columns:4 220px;column-gap:12px}.mdref{break-inside:avoid;margin:0 0 12px;cursor:pointer;position:relative;border-radius:8px;overflow:hidden;background:var(--soft)}.mdref img{width:100%;display:block;transition:opacity .15s}.mdref:hover img{opacity:.9}.mdref small{display:block;padding:6px 8px;background:var(--card)}.mdnoimg{display:block;padding:30px 10px;text-align:center;font-size:12px;color:var(--mut)}
+.mdpick{border:0;padding:0;background:none;cursor:pointer;border-radius:10px;outline:3px solid transparent;outline-offset:1px}.mdpick.on{outline-color:var(--ink)}.mdpick .mdth{aspect-ratio:1}
+
+/* Dossier per apartats amb vista prèvia en directe (sections/decks.js) */
+.dkap{display:grid;grid-template-columns:minmax(340px,1fr) minmax(0,1.15fr);gap:28px;align-items:start}
+.dkfm{min-width:0}.dkfm .dkcat{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 18px 16px;margin:0 0 12px;scroll-margin-top:80px}.dkfm .dkcat.off .dkcf{display:none}.dkfm .dkcat.off{background:none}
+.dkct{font-size:16px!important;font-weight:700;color:var(--ink)!important;margin:0!important}.dkcf>label:first-child{margin-top:10px}
+.dknav2{margin:8px 0 14px}.dknav2 .ln.off{opacity:.45;text-decoration:line-through}
+.dkviu{position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto;background:var(--soft);border-radius:14px;padding:12px 14px 16px}
+.dkvh{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin:2px 2px 10px}.dkvh b{color:var(--ink);font-weight:600}
+.dkvs{margin:0 0 12px;border-radius:8px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.08)}.dkvs[data-k]{cursor:pointer}.dkvs[data-k]:hover{box-shadow:0 0 0 2px var(--ink)}
+.dkav{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#fff5e0;color:#5c4200;border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:13px}html[data-tema="fosc"] .dkav{background:#3a2e12;color:#f5d98c}
+@media(max-width:1000px){.dkap{grid-template-columns:1fr}.dkviu{position:static;max-height:none}}
+
+/* Calendari a l'inici (calendari.js) */
+.agc{margin-bottom:16px;padding:14px 16px}.agh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.agh .b2{min-height:34px;padding:0 12px}.agh .agn{width:36px;padding:0;font-size:18px}
+.agg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.agdh{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);padding:0 6px 2px}
+.agd{min-height:120px;border-radius:10px;background:var(--soft);padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0;transition:background .12s}.agd:hover{background:var(--hov)}.agg.mes .agd{min-height:92px}
+.agd>b{font-size:13px;font-weight:600;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%}.agd.avui>b{background:var(--ink);color:var(--onT)}.agd.fora{opacity:.4}.agd.passat:not(.avui){opacity:.7}
+.agev{display:flex;gap:4px;align-items:baseline;font-size:12px;line-height:1.25;border-left:3px solid var(--c);background:var(--card);border-radius:4px;padding:3px 5px;min-width:0;cursor:pointer}.agev i{font-style:normal;color:var(--mut);font-variant-numeric:tabular-nums;flex:none}.agev span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.agev:hover{box-shadow:0 0 0 1px var(--c)}
+.agm{font-size:11px;padding-left:4px}.agwd{display:none;font-style:normal;font-size:12px;color:var(--mut);margin-right:4px}.agpeu{font-size:12px;color:var(--mut);margin-top:8px}.agpeu a{color:var(--ink)}
+@media(max-width:700px){.agg.setmana{grid-template-columns:1fr}.agg.setmana .agdh{display:none}.agg.setmana .agd{min-height:0;flex-direction:row;flex-wrap:wrap;align-items:center}.agg.setmana .agd>b{flex:none}.agg.setmana .agwd{display:inline}.agg.setmana .agev{flex:1 1 100%}.agg.mes .agev span{display:none}.agg.mes .agev{padding:2px;border-left-width:4px}.agg.mes .agev i{display:none}.agg.mes .agd{min-height:64px}}
 </style><script>try{if(localStorage.getItem("hub-tema")==="fosc"){document.documentElement.dataset.tema="fosc";document.querySelector('meta[name="theme-color"]').content="#111110"}}catch(e){}</script></head><body>
 <div class="app">
 <header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><button class="offl" id="offl" hidden></button><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="lluna" id="lluna" title="Sala de muntatge (mode fosc)" aria-label="Mode fosc"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><button class="mb" id="mb">Menú</button></header>
@@ -399,6 +451,9 @@ html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hd
 <script src="importar.js"></script>
 <script src="deck.js"></script><script src="citacio.js"></script><script src="vcard.js"></script><script src="festimport.js"></script>
 <script src="brief.js"></script>
+<script src="passos.js"></script>
+<script src="media.js"></script>
+<script src="calendari.js"></script>
 <script src="hub.js"></script>
 <script src="offline.js"></script>
 </body></html>

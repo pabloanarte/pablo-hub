@@ -123,7 +123,7 @@
     if (k === "delgt" && confirm("Eliminar aquest guió tècnic sencer? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Guió eliminat"); return lista() }
     if (k === "ok") { doc.escenas[ei].planos[pi].ok = b.checked; save(); const y = window.scrollY, x = el.querySelector(".shw")?.scrollLeft, sy = el.querySelector(".shw")?.scrollTop; pintar(); window.scrollTo(0, y); const w = el.querySelector(".shw"); if (w) { w.scrollLeft = x || 0; w.scrollTop = sy || 0 } }
     if (k === "color") { const p = doc.escenas[ei].planos[pi]; p.color = ((p.color || 0) + 1) % FILA.length; save(); b.closest("tr").style.background = FILA[p.color]; b.style.background = FILA[p.color] || "#fff"; b.classList.toggle("on", !!p.color) }
-    if (k === "qimg") { const p = doc.escenas[ei].planos[pi]; if (!p.imgSb) H.api("DELETE", "archivo/" + p.img).catch(() => { }); delete p.img; delete p.imgSb; save(); pintar() }
+    if (k === "qimg") { const p = doc.escenas[ei].planos[pi]; if (!p.imgSb && !p.imgRecce) H.api("DELETE", "archivo/" + p.img).catch(() => { }); delete p.img; delete p.imgSb; delete p.imgRecce; save(); pintar() }
     if (k === "ver") window.open(b.src, "_blank");
     if (k === "renum") { doc.escenas.forEach((s, i) => { s.num = String(i + 1); s.planos.forEach((p, j) => p.num = String(j + 1)) }); save(); pintar(); H.toast("Escenes i plans renumerats") }
     if (k === "cols") panell();
@@ -180,7 +180,7 @@
     const t = e.target; if (!doc) return;
     if (t.dataset.d === "proyecto") { doc.proyecto = t.value; if (doc.colsAuto !== false) await perDefecte(doc); save(); pintar() }
     if (t.dataset.se != null && t.tagName === "SELECT") { doc.escenas[+t.dataset.se][t.dataset.f] = t.value; save() }
-    if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { const pq = doc.escenas[+t.dataset.e].planos[+t.dataset.p]; pq.img = id; delete pq.imgSb; save(); pintar() } }
+    if (t.dataset.k === "img" && t.files[0]) { const id = await R.subirImagen(t.files[0]); if (id) { const pq = doc.escenas[+t.dataset.e].planos[+t.dataset.p]; pq.img = id; delete pq.imgSb; delete pq.imgRecce; save(); pintar() } }
   });
   // arrastrar filas / escenas / imágenes
   let drag = null;
@@ -189,7 +189,7 @@
   el.addEventListener("drop", async e => {
     const tr = e.target.closest("tr.pr,tr.eh"); if (!tr || !doc) return; e.preventDefault(); el.querySelectorAll(".dropb").forEach(x => x.classList.remove("dropb"));
     const te = +tr.dataset.e, tp = tr.dataset.p != null ? +tr.dataset.p : 0;
-    if (!drag && e.dataTransfer.files.length && tr.dataset.p != null) { const id = await R.subirImagen(e.dataTransfer.files[0]); if (id) { doc.escenas[te].planos[tp].img = id; delete doc.escenas[te].planos[tp].imgSb; save(); pintar() } return }
+    if (!drag && e.dataTransfer.files.length && tr.dataset.p != null) { const id = await R.subirImagen(e.dataTransfer.files[0]); if (id) { doc.escenas[te].planos[tp].img = id; delete doc.escenas[te].planos[tp].imgSb; delete doc.escenas[te].planos[tp].imgRecce; save(); pintar() } return }
     if (!drag) return;
     // se coloca delante de la fila sobre la que se suelta (sobre la cabecera de escena: al principio de esa escena)
     if (drag.e != null) { const [s] = doc.escenas.splice(drag.e, 1); doc.escenas.splice(te > drag.e ? te - 1 : te, 0, s) }

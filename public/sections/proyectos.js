@@ -2,7 +2,8 @@
 (() => {
   const EST = ["Idea", "Desenvolupament", "Finançament", "Preproducció", "Rodatge", "Postproducció", "Distribució", "Acabat"];
   const CE = { "Idea": "#8e8e93", "Desenvolupament": "#ff9f0a", "Finançament": "#af52de", "Preproducció": "#5ac8fa", "Rodatge": "#ff375f", "Postproducció": "#0a84ff", "Distribució": "#30b27a", "Acabat": "#000" };
-  H.coleccion({
+  let CX = null; // el que el hub ja sap, per a la barra de progrés de cada projecte (passos.js)
+  const col = H.coleccion({
     sec: "proyectos", tipo: "proyecto", nuevo: "Projecte",
     // Pestanyes: els meus projectes (direcció o guió) i a part els que he fet com a equip (ajudant de direcció, script)
     tabs2: { f: "rol", sense: 1, op: ["Direcció i guió", "Com a equip"], fn: (d, v) => v === "Com a equip" ? !H.meu(d) : H.meu(d), nou: v => ({ rol: v === "Com a equip" ? ["Ajudant de direcció"] : ["Direcció"] }) },
@@ -24,7 +25,10 @@
     orden: (a, b) => EST.indexOf(a.estado) - EST.indexOf(b.estado) || (a.titulo || "").localeCompare(b.titulo || ""),
     cartell: 1,
     obre: d => window.HUB ? HUB.obreProjecte(d.id) : H.abrir("proyecto", d.id),
-    fila: d => ({ img: d.poster && d.poster[0] ? "/api/archivo/" + d.poster[0].id : "", t: d.titulo, s: [d.categoria, H.rols(d).join(", "), d.estado, d.anio, (d.archivos || []).length && d.archivos.length + (d.archivos.length > 1 ? " arxius" : " arxiu")].filter(Boolean).join(" · "), c: CE[d.estado] }),
+    fila: d => { const pr = CX && d.estado !== "Acabat" ? PAS.progres(d, CX) : null, fee = PAS.feeTxt(d), nt = PAS.valorat(d) ? PAS.fmtNota(PAS.nota(d)) : "";
+      return { img: d.poster && d.poster[0] ? "/api/archivo/" + d.poster[0].id : "", t: d.titulo, s: [d.categoria, H.rols(d).join(", "), d.estado, d.anio].filter(Boolean).join(" · "), c: CE[d.estado],
+        meta: nt || fee ? `${nt ? `<span>${H.E(nt)}</span>` : ""}${fee ? `<span class="${fee === "Sense fee" ? "" : "eur"}">${H.E(fee)}</span>` : ""}` : "",
+        ...(pr && pr.tot ? { bar: pr.f, barT: `${PAS.faseActual(d, CX)} · ${pr.n}/${pr.tot}` } : {}) } },
     extra: d => H.relacionados(d.id)
   });
   // Documents que no són de cap projecte (dossiers, guions, plans, calendaris…): s'hi entra com si fos un projecte més
@@ -35,4 +39,6 @@
   }
   box.addEventListener("click", e => { if (e.target.closest('[data-k="orfes"]') && window.HUB) HUB.obreProjecte("-", "decks") });
   H.onChange(() => { if (!el.hidden) orfes() }); orfes();
+  const carregaCX = async () => { try { const c = await PAS.ctx(); const nou = !CX; CX = c; if (nou) col.pintar() } catch (e) { } };
+  H.onChange(() => { if (!el.hidden) PAS.ctx(true).then(c => { CX = c; col.pintar() }).catch(() => { }) }); carregaCX();
 })();

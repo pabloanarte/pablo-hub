@@ -20,6 +20,7 @@
   async function resum(p, v) {
     const [ts, rs, fs, pre, post, pdr, dks, devs, gts, ds, pers] = await Promise.all(["tarea", "reunion", "convocatoria", "pre", "post", "pdr", "deck", "dev", "gt", "desg", "persona"].map(t => H.col(t)));
     const brief = window.BRIEF && BRIEF.es(p) ? BRIEF.card(p, await BRIEF.preguntes()) : ""; // briefing amb l'artista (brief.js)
+    const [cx, feines] = await Promise.all([PAS.ctx(true), H.col("feina")]); // passos, valoració i fee (passos.js)
     if (v !== ver) return;
     const de = l => l.filter(x => x.proyecto === p.id), hoy = avui(), lim = H.addDays(hoy, 60);
     const dates = [];
@@ -48,7 +49,9 @@
           return `<div class="card" style="grid-column:1/-1"><h3>Guió</h3>${u ? `<div class="r" style="padding:4px 0"><i class="dot" style="background:#000"></i><a class="g" href="/api/archivo/${E(u.arxiu.id)}" target="_blank" style="color:inherit;text-decoration:none"><b>Guió ${E(u.versio || "")}</b><small>${E([u.data && H.fecha(u.data), u.pag && u.pag + " pàg.", u.arxiu.nombre].filter(Boolean).join(" · "))}</small></a></div>` : `<p class="em" style="margin-top:0">Puja-hi el guió i en sortiran el desglossament, el guió tècnic, el storyboard i el pla.</p>`}
             ${dg ? `<p class="em" style="margin:6px 0 0">Desglossat: ${dg.escenes.length} escenes · <a href="#" data-pt="guio" style="color:#000">Obrir</a></p>` : ""}
             <div class="ls" style="margin-top:10px;align-items:center"><label class="b" style="cursor:pointer;color:#fff">${u ? "Pujar una versió nova (PDF)" : "Pujar el guió (PDF)"}<input type="file" accept=".pdf,application/pdf" id="prguio" hidden></label>${gs.length > 1 ? `<button class="b2" data-pt="desenvolupament">Totes les versions (${gs.length})</button>` : ""}</div></div>` })()}
+        ${PAS.cardPassos(p, cx)}
         <div class="card w2"><h3>Properes dates</h3>${prop.length ? prop.map(d => `<div class="m pdt"><b>${E(H.fecha(d[0]))}</b><span><span class="em">${E(d[1])}</span> · ${E(d[2] || "")}</span></div>`).join("") : `<p class="em">Res als propers dos mesos.</p>`}</div>
+        ${PAS.cardValora(p, feines)}
         ${targ("festivales", "Festivals", fp.length, fp.length ? `${sel.length} ${sel.length === 1 ? "selecció" : "seleccions"}${prem.length ? ` · ${prem.length} ${prem.length === 1 ? "premi" : "premis"}` : ""}${pend.length ? ` · ${pend.length} sense decidir` : ""}` : "Encara cap inscripció")}
         ${["Llarg", "Curt"].includes(p.categoria) ? targ("desenvolupament", "Desenvolupament", vers.length, vers[0] ? `última: ${[vers[0].tipus, vers[0].versio].filter(Boolean).join(" ")}${vers[0].data ? " · " + H.fecha(vers[0].data) : ""}` : "Cap versió apuntada") : ""}
         ${targ("decks", "Dossiers", de(dks).length, de(dks).map(x => x.titulo).filter(Boolean).slice(0, 2).join(", ") || "Cap dossier encara")}
@@ -262,6 +265,7 @@
   });
   H.onChange(() => { if (!el.hidden && !el.contains(document.activeElement)) pintar() });
   if (window.BRIEF) BRIEF.connecta(el, doc, () => pintar());
+  PAS.connecta(el, doc, () => pintar());
   window.addEventListener("hub-sec", e => { if (e.detail === "projecte") pintar() });
   pintar();
 })();

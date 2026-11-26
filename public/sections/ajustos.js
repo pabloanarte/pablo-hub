@@ -5,7 +5,9 @@
   async function pintar() {
     const [a, cal, cor, gc, dr] = await Promise.all([H.col("ajust").then(l => l.find(x => x.id === "ajust:copia") || {}), H.api("GET", "calendari").catch(() => ({})), H.api("GET", "correu/config").catch(() => ({})), H.col("ajust").then(l => l.find(x => x.id === "ajust:gcal") || {}), H.api("GET", "drecera").catch(() => ({}))]);
     RES = { "Còpia de seguretat": "Última: " + fa(a.ultima), "Dreceres de l'iPhone": dr.url ? "Instagram, Ha respost, Siri i visionats" : "Encara no has creat l'enllaç", "Google Calendar (editable)": cor.connectat ? (gc.ultima ? "Sincronitzat el " + new Date(gc.ultima).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Encara no s'ha sincronitzat") : "Cal connectar el correu", "Calendari al mòbil (només lectura)": "Ja no cal amb Google Calendar", "El hub com a app": "Instal·lar-lo a l'iPhone, Android o Mac", "Pont de Google": cor.connectat ? "Connectat" : "No connectat", "Resum d'avui per correu": cor.connectat ? "Cada dia a les 8:30" : "Cal connectar el correu" };
-    el.innerHTML = `<div class="cfg">
+    const drv = await H.api("GET", "drive/estat").catch(() => ({}));
+    RES["Drive (Recce i Referències)"] = drv.connectat ? "Connectat" + (drv.compte ? " · " + drv.compte : "") + (drv.ultim ? " · revisat " + new Date(drv.ultim).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "") : "No connectat";
+    el.innerHTML = `<div class="cfg">${driveCard(drv)}
       <div class="card"><h3>Còpia de seguretat</h3>
         <p>Última còpia: <b>${fa(a.ultima)}</b>${a.on === "drive" ? " (al Drive)" : a.on ? " (descarregada)" : ""}.</p>
         <p class="em">Tot el que hi ha al hub (contactes, projectes, guions, plans, dossiers…) en un sol arxiu. Els arxius pujats (fotos, vídeos) es queden al servidor i no hi van inclosos.</p>
@@ -48,6 +50,11 @@
           <li>L'enllaç és secret: qui el tingui pot afegir contactes. Si el comparteixes per error, prem «Canviar l'enllaç» i posa el nou a la drecera.</li></ol></details>
       </div>
       <div class="card"><h3>Google Calendar (editable)</h3>
+        <details style="margin:0 0 12px"><summary class="em" style="cursor:pointer;margin:0">Veure-ho tot al Calendari de l'iPhone i el Mac (Apple)</summary><ol class="pasos">
+          <li>iPhone: <b>Configuració → Apps → Calendari → Comptes → Afegeix un compte → Google</b> i entra amb pablo.anarte.film@gmail.com. Activa <b>Calendaris</b>. (Al Mac: Calendari → Configuració → Comptes → +.)</li>
+          <li>Ara el Calendari d'Apple mostra els calendaris de Google, també «PABLO hub», i el que hi creïs o canviïs arriba a Google i a l'inici del hub.</li>
+          <li>Perquè el que apuntes a l'iPhone vagi sempre a Google: <b>Configuració → Apps → Calendari → Calendari per omissió</b> → un calendari de Google.</li>
+          <li>Els calendaris d'iCloud que ja tens no passen sols a Google. Si en vols veure un al hub: a l'app Calendari, ⓘ del calendari → <b>Calendari públic</b> → comparteix l'enllaç, i a Google Calendar (web) → Altres calendaris → <b>Des d'un URL</b>.</li></ol></details>
         ${cor.connectat ? `<p class="em">Un calendari «PABLO hub» al teu Google Calendar, sincronitzat cada 10 minuts en els dos sentits: si hi canvies una data o una hora (també des de l'iPhone), canvia al hub.</p>
         <p>Última sincronització: <b>${gc.ultima ? new Date(gc.ultima).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "encara cap"}</b></p>
         <div class="ls"><button class="b" data-k="gcal">Sincronitzar ara</button><span id="gcs" class="em"></span></div>
@@ -130,9 +137,32 @@
     ["ICEC (ajuts audiovisuals)", "https://icec.gencat.cat/"]
   ];
   const aj = async id => (await H.col("ajust")).find(x => x.id === id);
+  // Drive del compte de mitjans (pont-drive.gs): on es guarden els originals del Recce i les Referències
+  function driveCard(d) {
+    return `<div class="card"><h3>Drive (Recce i Referències)</h3>
+      ${d.connectat ? `<p>Connectat${d.compte ? ` amb <b>${E(d.compte)}</b>` : ""}.${d.arrel ? ` <a href="${E(d.arrel)}" target="_blank" rel="noopener">Obrir la carpeta «PABLO hub»</a>` : ""}</p>
+        <p class="em">Cada projecte té al Drive una carpeta amb <b>Recce</b> (una subcarpeta per localització; dins, «Visor» per a les fotos d'ArriCam) i <b>Referències</b> (les subcarpetes són etiquetes). El que hi pugis des del mòbil arriba al hub sol cada 10 minuts; el que pugis des del hub també hi queda guardat.</p>
+        <div class="ls"><button class="b2" data-dk="sync">Sincronitzar ara</button><button class="b2" data-dk="desc">Desconnectar</button></div>`
+      : `<p class="em" style="margin-top:0">Els originals de les fotos i els vídeos del recce i de les referències es poden guardar al Drive d'un altre compte de Google (per no omplir el de pablo.anarte.film). Al hub hi queda una còpia lleugera.</p>
+        <ol class="pasos">
+          <li>Crea un compte de Google nou (p. ex. pablo.anarte.media@gmail.com) i entra-hi a <a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a> → <b>Nou projecte</b>.</li>
+          <li>Esborra el que hi ha i enganxa-hi el text de <a href="/pont-drive.gs" target="_blank">pont-drive.gs</a>. Desa.</li>
+          <li>A dalt, tria la funció <b>configurar</b> → <b>Executa</b> → accepta els permisos. Al registre surt la <b>clau</b>.</li>
+          <li><b>Implementa</b> → Nova implementació → Aplicació web. Executa com a: <b>Jo</b>. Qui hi té accés: <b>Qualsevol usuari</b>. Copia l'URL (acaba en /exec).</li>
+          <li>Enganxa aquí l'URL i la clau.</li></ol>
+        <label>URL de l'aplicació web</label><input id="dvu" placeholder="https://script.google.com/macros/s/…/exec">
+        <label>Clau</label><input id="dvk" placeholder="La clau del registre">
+        <div class="ls" style="margin-top:10px"><button class="b" data-dk="con">Connectar</button><span id="dvm" class="em"></span></div>`}</div>`;
+  }
+  el.addEventListener("click", async e => {
+    const b = e.target.closest("[data-dk]"); if (!b) return; const k = b.dataset.dk;
+    if (k === "con") { const m = document.getElementById("dvm"); m.textContent = "Provant…"; try { await H.api("POST", "drive/config", { url: document.getElementById("dvu").value.trim(), clau: document.getElementById("dvk").value.trim() }); H.toast("Drive connectat"); pintar() } catch (er) { m.textContent = (er && er.error) || "No s'ha pogut connectar" } }
+    if (k === "desc" && confirm("Desconnectar el Drive? Les fotos que ja hi ha al hub no es toquen.")) { await H.api("DELETE", "drive/config"); pintar() }
+    if (k === "sync") { b.disabled = true; b.textContent = "Sincronitzant…"; try { const r = await H.api("POST", "drive/sincronitza", {}); H.toast(r.nous ? r.nous + (r.nous === 1 ? " arxiu nou" : " arxius nous") : "Tot al dia") } catch (er) { H.toast("Drive: " + ((er && er.error) || "no respon")) } b.disabled = false; b.textContent = "Sincronitzar ara" }
+  });
   // Configuració com els ajustos de l'iPhone: una columna, cada apartat plegat amb una línia de resum
   let RES = {}; const OBERTS = new Set();
-  const ORDRE = ["Resum d'avui per correu", "Objectius", "Instagram (missatges)", "Dreceres de l'iPhone", "Google Calendar (editable)", "Vigilant de convocatòries", "Dades per a les factures", "Còpia de seguretat", "Pont de Google", "El hub com a app", "Calendari al mòbil (només lectura)"];
+  const ORDRE = ["Resum d'avui per correu", "Objectius", "Instagram (missatges)", "Dreceres de l'iPhone", "Google Calendar (editable)", "Drive (Recce i Referències)", "Vigilant de convocatòries", "Dades per a les factures", "Còpia de seguretat", "Pont de Google", "El hub com a app", "Calendari al mòbil (només lectura)"];
   function plega() {
     const cont = el.querySelector(".cfg"); if (!cont) return;
     const cs = [...el.querySelectorAll(".card")];

@@ -20,6 +20,7 @@
       ["personatges", "Personatges", [["items", "Personatges", "items:personatges"]]],
       ["referencies", "Referències visuals", [["imgs", "Imatges", "imgs"]]],
       ["to", "To i estètica", [["text", "Text", "area"], ["img", "Imatge", "img"]]],
+      ["fitxa", "Fitxa tècnica", [["format", "Format (p. ex. Digital · 4K)", "text"], ["camera", "Càmera", "text"], ["optiques", "Òptiques", "text"], ["ratio", "Relació d'aspecte", "text"], ["espais", "Càmera per espai (enquadraments, moviment)", "items:espais"]]],
       ["paleta", "Paleta de color", [["auto", "Treure-la de les imatges", "check"], ["colors", "O escriu els colors (#hex)", "area"]]],
       ["equip", "Equip", [["items", "Equip", "items:equip"]]],
       ["produccio", "Producció", [["items", "Dades (pressupost, rodatge, localitzacions…)", "items:dades"]]],
@@ -31,6 +32,7 @@
       ["narrativa", "Narrativa", [["text", "Narrativa", "area"], ["img", "Imatge", "img"]]],
       ["referencies", "Referències", [["imgs", "Imatges", "imgs"]]],
       ["paleta", "Paleta de color", [["auto", "Treure-la de les imatges", "check"], ["colors", "O escriu els colors (#hex)", "area"]]],
+      ["fitxa", "Fitxa tècnica", [["format", "Format (p. ex. Digital · 4K)", "text"], ["camera", "Càmera", "text"], ["optiques", "Òptiques", "text"], ["ratio", "Relació d'aspecte", "text"], ["espais", "Càmera per espai (enquadraments, moviment)", "items:espais"]]],
       ["localitzacions", "Localitzacions", [["text", "Text", "area"], ["imgs", "Imatges", "imgs"]]],
       ["vestuari", "Vestuari", [["text", "Text", "area"], ["imgs", "Imatges", "imgs"]]],
       ["casting", "Càsting", [["items", "Persones", "items:personatges"]]],
@@ -47,7 +49,7 @@
       ["contacte", "Contacte", [["text", "Dades de contacte", "area"]]]] },
     blanc: { nom: "En blanc", cats: [["projecte", "Portada", [["titol", "Títol", "text"], ["format", "Subtítol", "text"], ["portada", "Imatge", "img"]]]] }
   };
-  const ITEMS = { personatges: [["nom", "Nom"], ["text", "Descripció", "area"], ["img", "Imatge", "img"]], equip: [["nom", "Nom"], ["text", "Rol"], ["img", "Foto", "img"]], dades: [["nom", "Etiqueta"], ["text", "Valor"]], laurels: [["nom", "Festival"], ["text", "Secció o premi i any"]], calendari: [["nom", "Fase"], ["a", "Inici", "date"], ["b", "Fi", "date"]] };
+  const ITEMS = { personatges: [["nom", "Nom"], ["text", "Descripció", "area"], ["img", "Imatge", "img"]], equip: [["nom", "Nom"], ["text", "Rol"], ["img", "Foto", "img"]], dades: [["nom", "Etiqueta"], ["text", "Valor"]], laurels: [["nom", "Festival"], ["text", "Secció o premi i any"]], calendari: [["nom", "Fase"], ["a", "Inici", "date"], ["b", "Fi", "date"]], espais: [["nom", "Espai (p. ex. Shisha bar)"], ["text", "Enquadraments i moviment", "area"]] };
 
   // Converteix les dades de l'assistent en diapositives
   function genera(d) {
@@ -65,6 +67,7 @@
     txt("to", "to i estètica");
     if (ok("paleta") && (g("paleta", "auto") || g("paleta", "colors"))) S.push({ tipus: "paleta", titol: "paleta", auto: !!g("paleta", "auto"), colors: g("paleta", "colors") || "" });
     for (const [c, t] of [["localitzacions", "localitzacions"], ["vestuari", "vestuari"]]) if (ok(c) && (g(c, "text") || (g(c, "imgs") || []).length)) { if (g(c, "text")) S.push({ tipus: "imatgetext", titol: t, text: g(c, "text"), img: (g(c, "imgs") || [])[0] || "", costat: 1 }); if ((g(c, "imgs") || []).length > 1) S.push({ tipus: "moodboard", titol: "", imgs: g(c, "imgs").slice(1, 7) }) }
+    if (ok("fitxa")) { const f = v.fitxa || {}, it = [["Format", f.format], ["Càmera", f.camera], ["Òptiques", f.optiques], ["Relació d'aspecte", f.ratio]].filter(x => String(x[1] || "").trim()).map(([nom, text]) => ({ nom, text })), es = (f.espais || []).filter(x => x.nom || x.text); if (it.length || es.length) S.push({ tipus: "fitxa", titol: "fitxa tècnica", items: it, espais: es }) }
     if (ok("casting") && (g("casting", "items") || []).length) S.push({ tipus: "personatges", titol: "càsting", items: g("casting", "items") });
     if (ok("video") && (g("video", "url") || g("video", "img"))) S.push({ tipus: "video", titol: "referència", url: g("video", "url"), img: g("video", "img") });
     if (ok("equip") && (g("equip", "items") || []).length) S.push({ tipus: "equip", titol: "equip", items: g("equip", "items") });
@@ -86,7 +89,7 @@
 
   // ---------- llista ----------
   async function lista() {
-    doc = null; const v = ++ver;
+    doc = null; mode = "slides"; const v = ++ver;
     const [ls0, ps] = await Promise.all([H.col("deck"), H.col("proyecto")]); if (v !== ver) return; const ls = ls0.filter(H.dePj);
     const pn = id => (ps.find(x => x.id === id) || {}).titulo || "";
     el.innerHTML = `<div class="bar"><span style="flex:1"></span><button class="b2" data-k="impdf">Importar un dossier (PDF)</button><button class="b" data-k="nou">+ Nou dossier</button></div>
@@ -111,12 +114,12 @@
     if (k === "crea") {
       const pl = document.querySelector('#hshc [data-nk="pl"].on').dataset.v, st = document.querySelector('#hshc [data-nk="st"].on').dataset.v;
       const d = { id: H.uid("deck"), titulo: "", plantilla: pl, estil: st, ratio: document.getElementById("nd-f").value, rw: +document.getElementById("nd-rw").value.replace(",", ".") || 16, rh: +document.getElementById("nd-rh").value.replace(",", ".") || 9, proyecto: document.getElementById("nd-p").value, slides: [], dades: {}, mod: Date.now() };
-      await preomple(d); d.titulo = (d.dades.projecte || {}).titol || PL[pl].nom; d.slides = genera(d); await H.put(d, 1); H.cerrar(); doc = d; sel = 0; pintar(); assistent();
+      await preomple(d); d.titulo = (d.dades.projecte || {}).titol || PL[pl].nom; d.slides = genera(d); await H.put(d, 1); H.cerrar(); doc = d; sel = 0; assistent();
     }
   });
 
   // ---------- editor ----------
-  async function obre(id) { ++ver; doc = (await H.col("deck")).find(x => x.id === id); sel = 0; if (doc) pintar() }
+  async function obre(id) { ++ver; doc = (await H.col("deck")).find(x => x.id === id); sel = 0; if (!doc) return; if (doc.dades && Object.keys(doc.dades).length && !doc.ma) assistent(); else { mode = "slides"; pintar() } }
   const S = () => doc.slides[sel];
   async function pintar() {
     if (!doc) return; ++ver;
@@ -124,7 +127,7 @@
     tmp(doc, "_imgs", totesImgs());
     const ps = (await H.col("proyecto")).filter(p => H.meu(p) || p.id === doc.proyecto);
     el.innerHTML = `<div class="bar tb"><button class="b2" data-k="volver">← Dossiers</button><input data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol del dossier" style="flex:1;min-width:180px;max-width:360px;font-weight:700"><select data-d="proyecto" style="width:auto"><option value="">Sense projecte</option>${ps.map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select><span style="flex:1"></span><button class="b2" data-k="rev">Revisió de disseny</button><button class="b2" data-k="share">${doc.compartir && doc.compartir.actiu ? "Compartit ✓" : "Compartir"}</button><button class="b" data-k="down">Descarregar</button></div>
-      <div class="bar tb sec"><button class="b2" data-k="assist">Dades per categories</button><button class="b2" data-k="addpdf">Afegir pàgines d'un PDF</button><button class="b2" data-k="dup">Duplicar (p. ex. per traduir)</button><span style="flex:1"></span><button class="del" data-k="del">Eliminar dossier</button></div>
+      <div class="bar tb sec"><button class="b2" data-k="assist">Omplir per apartats</button><button class="b2" data-k="addpdf">Afegir pàgines d'un PDF</button><button class="b2" data-k="dup">Duplicar (p. ex. per traduir)</button><span style="flex:1"></span><button class="del" data-k="del">Eliminar dossier</button></div>
       <div class="dkcols"><div class="dkmain"><div id="dkprev"></div><div class="dknav"><button class="b2" data-k="prev" ${sel ? "" : "disabled"}>‹</button><span>${doc.slides.length ? sel + 1 : 0} / ${doc.slides.length}</span><button class="b2" data-k="next" ${sel < doc.slides.length - 1 ? "" : "disabled"}>›</button></div>
       <div class="dkth">${doc.slides.map((s, i) => `<div class="dkt ${i === sel ? "on" : ""} ${s.amaga ? "amg" : ""}" data-k="sel" data-i="${i}" draggable="true" data-dr="${i}"><span>${i + 1}</span>${DK.escalada(doc, s, Math.round(Math.min(186, 105 * DK.ratio(doc))), { img: imgUrl })}</div>`).join("")}<button class="b2 dkadd" data-k="add">+ Diapositiva</button></div></div>
       <aside class="dkpan"><div class="tabs"><button class="t ${pan === "slide" ? "on" : ""}" data-k="pan" data-v="slide">Diapositiva</button><button class="t ${pan === "dis" ? "on" : ""}" data-k="pan" data-v="dis">Disseny</button></div><div id="dkpf">${pan === "slide" ? panSlide() : panDis()}</div></aside></div>`;
@@ -147,17 +150,17 @@
     if (t === "area") return `<label>${l}</label><textarea ${d} rows="5">${E(v || "")}</textarea>`;
     if (t === "check") return `<label class="ck"><input type="checkbox" ${d} ${v ? "checked" : ""}> ${l}</label>`;
     if (t === "date") return `<label>${l}</label><input type="date" ${d} value="${E(v || "")}">`;
-    if (t === "img") return `<label>${l}</label><div class="dkim">${v ? `<div class="th" style="background-image:url('${imgUrl(v)}')"></div><button class="b2" data-ik="treu" ${d}>Treure la imatge</button>` : ""}<label class="b2" style="margin:0">${v ? "Canviar" : "Pujar imatge"}<input type="file" accept="image/*" data-up="1" ${d} hidden></label></div>`;
-    if (t === "imgs") return `<label>${l}</label><div class="dkims">${(v || []).map((id, i) => `<div class="th" style="background-image:url('${imgUrl(id)}')"><button data-ik="treui" data-i="${i}" ${d}>×</button></div>`).join("")}<label class="th add">＋<input type="file" accept="image/*" multiple data-up="n" ${d} hidden></label></div>`;
+    if (t === "img") return `<label>${l}</label><div class="dkim">${v ? `<div class="th" style="background-image:url('${imgUrl(v)}')"></div><button class="b2" data-ik="treu" ${d}>Treure la imatge</button>` : ""}<label class="b2" style="margin:0">${v ? "Canviar" : "Pujar imatge"}<input type="file" accept="image/*" data-up="1" ${d} hidden></label>${window.MED ? `<button class="b2" data-ik="refs" ${d}>De les referències</button>` : ""}</div>`;
+    if (t === "imgs") return `<label>${l}</label><div class="dkims">${(v || []).map((id, i) => `<div class="th" style="background-image:url('${imgUrl(id)}')"><button data-ik="treui" data-i="${i}" ${d}>×</button></div>`).join("")}<label class="th add" title="Pujar imatges">＋<input type="file" accept="image/*" multiple data-up="n" ${d} hidden></label></div>${window.MED ? `<button class="b2" data-ik="refs" data-multi="1" ${d} style="margin-top:8px">Triar de les referències${doc && doc.proyecto ? " i el recce" : ""}</button>` : ""}`;
     if (t.startsWith("items")) { const f = ITEMS[t.split(":")[1]] || ITEMS.personatges; return `<label>${l}</label>` + (v || []).map((x, i) => `<div class="dkit">${f.map(([fk, fl, ft]) => camp(fk, fl, ft || "text", x[fk], ctx + "|" + k + "|" + i)).join("")}<button class="del" style="margin:4px 0 0" data-ik="treuit" data-i="${i}" ${d}>Eliminar aquest element</button></div>`).join("") + `<button class="b2" data-ik="addit" ${d}>+ Afegir</button>` }
     return "";
   }
   function panSlide() {
     if (!doc.slides.length) return `<p class="em">Afegeix una diapositiva.</p>`;
     const s = S(), t = DK.TIPUS[s.tipus] || DK.TIPUS.text;
-    const tt = { personatges: "items:personatges", equip: "items:equip", dades: "items:dades", calendari: "items:calendari", laurels: "items:laurels" };
+    const tt = { personatges: "items:personatges", equip: "items:equip", dades: "items:dades", fitxa: "items:dades", calendari: "items:calendari", laurels: "items:laurels" };
     return `<label>Maqueta</label><select data-k="tipus">${Object.entries(DK.TIPUS).map(([k, x]) => `<option value="${k}" ${k === s.tipus ? "selected" : ""}>${E(x.nom)}</option>`).join("")}</select>` +
-      t.camps.map(([k, l, ty]) => camp(k, l, ty === "items" ? tt[s.tipus] || "items:personatges" : ty, s[k], "s")).join("") +
+      t.camps.map(([k, l, ty]) => camp(k, l, ty === "items" ? (k === "espais" ? "items:espais" : tt[s.tipus] || "items:personatges") : ty, s[k], "s")).join("") +
       `<div class="sfoot"><button class="del" data-k="sdel">Esborrar</button><span><button class="b2" data-k="samaga">${s.amaga ? "Mostrar" : "Amagar"}</button> <button class="b2" data-k="sdup">Duplicar</button></span></div>`;
   }
   function panDis() {
@@ -171,15 +174,37 @@
       <button class="b2" data-k="resta" style="margin-top:16px">Tornar als colors de l'estil</button>`;
   }
 
-  // ---------- assistent: dades per categories ----------
-  function assistent() {
+  // ---------- omplir per apartats: formulari a l'esquerra i el dossier es va fent a la dreta ----------
+  // Mentre no es toquin les diapositives a mà (doc.ma), el dossier es refà sol amb cada canvi.
+  // Si s'han retocat a mà, la vista prèvia ensenya com quedaria i «Aplicar al dossier» el refà.
+  let mode = "slides", tViu = 0;
+  function assistent() { mode = "apartats"; pintaAp() }
+  async function pintaAp() {
+    if (!doc) return; ++ver;
     const pl = PL[doc.plantilla] || PL.film, v = doc.dades = doc.dades || {};
-    H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Dades per categories</h2><p class="em" style="margin-top:0">Omple el que tinguis; el dossier es construeix sol amb les categories marcades. Pots canviar de plantilla.</p>
-      <div class="seg">${Object.entries(PL).map(([k, p]) => `<button class="t ${k === (doc.plantilla || "film") ? "on" : ""}" data-ak="pl" data-v="${k}">${E(p.nom)}</button>`).join("")}</div>
-      <div class="ls" style="margin:6px 0 4px">${pl.cats.map(([c, t]) => `<a class="ln" href="#" data-ak="ves" data-v="${c}">${E(t)}</a>`).join("")}</div>` +
-      pl.cats.map(([c, t, fs]) => `<div class="dkcat" id="cat-${c}"><label class="ck" style="font-size:16px;font-weight:700;color:#000;margin-top:0"><input type="checkbox" data-ak="on" data-v="${c}" ${(v[c] || {}).off ? "" : "checked"}> ${E(t)}</label>${fs.map(([k, l, ty]) => camp(k, l, ty, (v[c] || {})[k], "a|" + c)).join("")}</div>`).join("") +
-      `<div class="sfoot stk"><small>Es refaran les diapositives; els canvis fets a mà es perdran.</small><button class="b" data-ak="gen">Construir el dossier</button></div>`, () => { if (doc) pintar() });
+    const ps = (await H.col("proyecto")).filter(p => H.meu(p) || p.id === doc.proyecto);
+    el.innerHTML = `<div class="bar tb"><button class="b2" data-k="volver">← Dossiers</button><input data-d="titulo" value="${E(doc.titulo || "")}" placeholder="Títol del dossier" style="flex:1;min-width:180px;max-width:360px;font-weight:700"><select data-d="proyecto" style="width:auto"><option value="">Sense projecte</option>${ps.map(p => `<option value="${p.id}" ${p.id === doc.proyecto ? "selected" : ""}>${E(p.titulo || "")}</option>`).join("")}</select><span style="flex:1"></span><button class="b2" data-k="mode" data-v="slides">Retocar diapositives</button><button class="b2" data-k="share">${doc.compartir && doc.compartir.actiu ? "Compartit ✓" : "Compartir"}</button><button class="b" data-k="down">Descarregar</button></div>
+      <div class="dkap"><div class="dkfm">
+        <div class="seg" style="margin-top:0">${Object.entries(PL).map(([k, p]) => `<button class="t ${k === (doc.plantilla || "film") ? "on" : ""}" data-ak="pl" data-v="${k}">${E(p.nom)}</button>`).join("")}</div>
+        <div class="ls dknav2">${pl.cats.map(([c, t]) => `<a class="ln ${(v[c] || {}).off ? "off" : ""}" href="#" data-ak="ves" data-v="${c}">${E(t)}</a>`).join("")}</div>
+        <div id="dkma">${avisMa()}</div>
+        ${pl.cats.map(([c, t, fs]) => `<div class="dkcat ${(v[c] || {}).off ? "off" : ""}" id="cat-${c}"><label class="ck dkct"><input type="checkbox" data-ak="on" data-v="${c}" ${(v[c] || {}).off ? "" : "checked"}> ${E(t)}</label><div class="dkcf">${fs.map(([k, l, ty]) => camp(k, l, ty, (v[c] || {})[k], "a|" + c)).join("")}</div></div>`).join("")}
+      </div><aside class="dkviu"><div class="dkvh"><b>Vista prèvia</b><span id="dkvn"></span></div><div id="dkvl"></div></aside></div>`;
+    viu();
   }
+  const avisMa = () => doc.ma ? `<div class="dkav"><span>Has retocat diapositives a mà. La vista prèvia ensenya com quedaria amb aquests apartats.</span><button class="b" data-ak="gen">Aplicar al dossier</button></div>` : "";
+  // refà el dossier (si no s'ha retocat a mà) i pinta la vista prèvia
+  function viu(desa) {
+    const box = el.querySelector("#dkvl"); if (!box || mode !== "apartats") return;
+    if (!doc.ma) { const nou = genera(doc), pt = (doc.dades.projecte || {}).titol; if (pt && !doc.titolMa) { doc.titulo = pt; const ti = el.querySelector('[data-d="titulo"]'); if (ti && document.activeElement !== ti) ti.value = pt } doc.slides = nou; if (desa) { doc.mod = Date.now(); save() } }
+    const ls = doc.ma ? genera(doc) : doc.slides, w = Math.max(200, Math.floor((box.clientWidth || 460) - 2));
+    tmp(doc, "_imgs", ls.flatMap(x => [x.img, ...(x.imgs || []), ...(x.items || []).map(y => y.img)]).filter(Boolean));
+    const pinta = () => { box.innerHTML = ls.map((x, i) => `<div class="dkvs" ${doc.ma ? "" : `data-k="vsel" data-i="${i}"`} title="${doc.ma ? "" : "Retocar aquesta diapositiva"}">${DK.escalada(doc, x, w, { img: imgUrl, n: i + 1 })}</div>`).join("") || `<p class="em">Omple algun apartat i el dossier es construirà aquí.</p>`; aj(box); const n = el.querySelector("#dkvn"); if (n) n.textContent = ls.length + (ls.length === 1 ? " diapositiva" : " diapositives") };
+    if (ls.some(x => x.tipus === "paleta" && x.auto) && !doc._pal) DK.paleta(doc._imgs.map(imgUrl)).then(p => { tmp(doc, "_pal", p); pinta() }); else pinta();
+  }
+  const viuDeb = () => { clearTimeout(tViu); tViu = setTimeout(() => viu(true), 300) };
+  const marcaMa = () => { if (doc && !doc.ma && doc.dades && Object.keys(doc.dades).length) doc.ma = true };
+  new ResizeObserver(() => { if (doc && mode === "apartats") { clearTimeout(tViu); tViu = setTimeout(() => viu(), 150) } }).observe(el);
 
   // ---------- revisió de disseny ----------
   async function revisio() {
@@ -278,16 +303,18 @@
     if (k === "obre") return obre(b.dataset.id);
     if (k === "impdf") { const [f] = await triaFitxer(".pdf"); if (!f) return; const d = { id: H.uid("deck"), titulo: f.name.replace(/\.pdf$/i, "").replace(/^[0-9a-f]{8}-/, "").replace(/[_]+/g, " ").trim(), estil: "minim", ratio: "16:9", slides: [], mod: Date.now(), proyecto: H.pj() === "-" ? "" : H.pj() }; try { await importaPDF(f, d); doc = d; sel = 0; pintar() } catch (er) { H.toast("No s'ha pogut llegir el PDF") } return }
     if (!doc) return;
-    if (k === "volver") return lista();
+    if (k === "volver") { mode = "slides"; return lista() }
+    if (k === "mode") { mode = "slides"; return pintar() }
+    if (k === "vsel") { sel = i; mode = "slides"; return pintar() }
     if (k === "del" && confirm("Eliminar aquest dossier? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Dossier eliminat"); return lista() }
     if (k === "sel") { sel = i; pintar() }
     if (k === "prev" && sel) { sel--; pintar() }
     if (k === "next" && sel < doc.slides.length - 1) { sel++; pintar() }
     if (k === "pan") { pan = b.dataset.v; el.querySelector("#dkpf").innerHTML = pan === "slide" ? panSlide() : panDis(); aj(el.querySelector("#dkpf")); el.querySelectorAll('[data-k="pan"]').forEach(x => x.classList.toggle("on", x === b)) }
-    if (k === "add") { doc.slides.splice(sel + 1, 0, { id: uid(), tipus: "text", titol: "", text: "" }); sel = Math.min(sel + 1, doc.slides.length - 1); pan = "slide"; refresca(1) }
-    if (k === "sdel" && confirm("Esborrar aquesta diapositiva?")) { doc.slides.splice(sel, 1); sel = Math.max(0, sel - 1); refresca(1) }
-    if (k === "sdup") { doc.slides.splice(sel + 1, 0, { ...JSON.parse(JSON.stringify(S())), id: uid(), amaga: false }); sel++; refresca(1) }
-    if (k === "samaga") { S().amaga = !S().amaga; refresca(1) }
+    if (k === "add") { marcaMa(); doc.slides.splice(sel + 1, 0, { id: uid(), tipus: "text", titol: "", text: "" }); sel = Math.min(sel + 1, doc.slides.length - 1); pan = "slide"; refresca(1) }
+    if (k === "sdel" && confirm("Esborrar aquesta diapositiva?")) { marcaMa(); doc.slides.splice(sel, 1); sel = Math.max(0, sel - 1); refresca(1) }
+    if (k === "sdup") { marcaMa(); doc.slides.splice(sel + 1, 0, { ...JSON.parse(JSON.stringify(S())), id: uid(), amaga: false }); sel++; refresca(1) }
+    if (k === "samaga") { marcaMa(); S().amaga = !S().amaga; refresca(1) }
     if (k === "estil") { doc.estil = b.dataset.v; doc.tema = {}; refresca(1) }
     if (k === "resta") { doc.tema = {}; refresca(1) }
     if (k === "assist") assistent();
@@ -295,7 +322,7 @@
     if (k === "down") descarregar();
     if (k === "share") compartir();
     if (k === "dup") { const d = JSON.parse(JSON.stringify(doc)); d.id = H.uid("deck"); d.titulo = (doc.titulo || "") + " (còpia)"; delete d.compartir; d.mod = Date.now(); await H.put(d, 1); doc = d; sel = 0; pintar(); H.toast("Duplicat: ara pots traduir-ne els textos") }
-    if (k === "addpdf") { const [f] = await triaFitxer(".pdf"); if (f) { try { await importaPDF(f, doc); pintar() } catch (er) { H.toast("No s'ha pogut llegir el PDF") } } }
+    if (k === "addpdf") { marcaMa(); const [f] = await triaFitxer(".pdf"); if (f) { try { await importaPDF(f, doc); pintar() } catch (er) { H.toast("No s'ha pogut llegir el PDF") } } }
   });
   // valors dels camps (diapositiva o assistent)
   function dest(ctx, crea) {
@@ -309,13 +336,13 @@
     for (let j = p[0] === "s" ? 1 : 2; j < p.length; j += 2) o = ((o[p[j]] = o[p[j]] || [])[+p[j + 1]]);
     return o;
   }
-  const rp = () => { if (!document.getElementById("hsh").hidden && document.querySelector("#hshc [data-ak]")) assistent(); else el.querySelector("#dkpf").innerHTML = panSlide() };
+  const rp = () => { if (mode === "apartats") assistent(); else el.querySelector("#dkpf").innerHTML = panSlide() };
   function onInput(e) {
     const t = e.target; if (!doc) return;
     if (t.dataset.d) { doc[t.dataset.d] = t.value; if (t.dataset.d === "titulo") doc.titolMa = !!t.value; doc.mod = Date.now(); return save() }
-    if (t.dataset.c && t.dataset.ctx && !t.dataset.up) { const o = obj(t.dataset.ctx); o[t.dataset.c] = t.type === "checkbox" ? t.checked : t.value; if (t.dataset.c === "a" || t.dataset.c === "b") o.text = (o.a || "") + " " + (o.b || ""); if (t.dataset.ctx[0] === "s") { if (t.dataset.c === "auto") tmp(doc, "_pal", null); refresca() } else save(); return }
+    if (t.dataset.c && t.dataset.ctx && !t.dataset.up) { const o = obj(t.dataset.ctx); o[t.dataset.c] = t.type === "checkbox" ? t.checked : t.value; if (t.dataset.c === "a" || t.dataset.c === "b") o.text = (o.a || "") + " " + (o.b || ""); if (t.dataset.ctx[0] === "s") { if (t.dataset.c === "auto") tmp(doc, "_pal", null); marcaMa(); refresca() } else { save(); viuDeb() } return }
     if (t.dataset.sk) { const c = doc.compartir; if (t.dataset.sk === "pw") c.pw = t.value; else c[t.dataset.sk] = t.checked; save(); const sb = el.querySelector('[data-k="share"]'); if (sb) sb.textContent = c.actiu ? "Compartit ✓" : "Compartir"; return }
-    if (t.dataset.ak === "on") { const v = doc.dades[t.dataset.v] = doc.dades[t.dataset.v] || {}; v.off = !t.checked; save(); return }
+    if (t.dataset.ak === "on") { const v = doc.dades[t.dataset.v] = doc.dades[t.dataset.v] || {}; v.off = !t.checked; save(); const c = el.querySelector("#cat-" + t.dataset.v), ln = el.querySelector(`[data-ak="ves"][data-v="${t.dataset.v}"]`); c && c.classList.toggle("off", v.off); ln && ln.classList.toggle("off", v.off); viuDeb(); return }
     const k = t.dataset.k;
     if (k === "col") { doc.tema = { ...(doc.tema || {}), [t.dataset.v]: t.value }; refresca(); el.querySelectorAll(".dkt").forEach((x, i) => { x.innerHTML = `<span>${i + 1}</span>` + DK.escalada(doc, doc.slides[i], Math.round(Math.min(186, 105 * DK.ratio(doc))), { img: imgUrl }); aj(x) }) }
     if (k === "rw" || k === "rh") { doc[k] = t.value; refresca() }
@@ -325,7 +352,7 @@
   async function onChange(e) {
     const t = e.target; if (!doc) return;
     if (t.dataset.d === "proyecto") { doc.proyecto = t.value; save() }
-    if (t.dataset.k === "tipus") { S().tipus = t.value; refresca(); el.querySelector("#dkpf").innerHTML = panSlide() }
+    if (t.dataset.k === "tipus") { S().tipus = t.value; marcaMa(); refresca(); el.querySelector("#dkpf").innerHTML = panSlide() }
     if (t.dataset.k === "ratio") { doc.ratio = t.value; refresca(1) }
     if (t.dataset.k === "font") { doc.tema = { ...(doc.tema || {}), font: t.value }; refresca(1) }
     if (t.dataset.k === "tt") { doc.tema = { ...(doc.tema || {}), tt: t.value }; refresca(1) }
@@ -334,7 +361,7 @@
       for (const f of t.files) { const id = await R.subirImagen(f); if (id) ids.push(id) }
       if (!ids.length) return;
       if (t.dataset.up === "n") o[t.dataset.c] = (o[t.dataset.c] || []).concat(ids); else o[t.dataset.c] = ids[0];
-      tmp(doc, "_pal", null); if (t.dataset.ctx[0] === "s") { refresca(); el.querySelector("#dkpf").innerHTML = panSlide() } else { save(); assistent() }
+      tmp(doc, "_pal", null); if (t.dataset.ctx[0] === "s") { marcaMa(); refresca(); el.querySelector("#dkpf").innerHTML = panSlide() } else { save(); assistent() }
     }
   }
   el.addEventListener("change", onChange);
@@ -346,16 +373,24 @@
     if (k === "treui") o[c].splice(+b.dataset.i, 1);
     if (k === "treuit") o[c].splice(+b.dataset.i, 1);
     if (k === "addit") o[c] = (o[c] || []).concat({ nom: "", text: "" });
+    if (k === "refs") { const ids = await MED.tria({ proj: doc.proyecto, multi: !!b.dataset.multi }); if (!ids.length) return; if (b.dataset.multi) o[c] = (o[c] || []).concat(ids.filter(x => !(o[c] || []).includes(x))); else o[c] = ids[0] }
     tmp(doc, "_pal", null);
-    if (b.dataset.ctx[0] === "s") { refresca(); el.querySelector("#dkpf").innerHTML = panSlide() } else { save(); assistent() }
+    if (b.dataset.ctx[0] === "s") { marcaMa(); refresca(); el.querySelector("#dkpf").innerHTML = panSlide() } else { save(); assistent() }
   }
   el.addEventListener("click", onIk);
+  // botons de la pàgina d'apartats
+  el.addEventListener("click", async e => {
+    const a = e.target.closest("[data-ak]"); if (!a || !doc || a.tagName === "INPUT") return;
+    if (a.dataset.ak === "ves") { e.preventDefault(); const c = document.getElementById("cat-" + a.dataset.v); c && c.scrollIntoView({ behavior: "smooth", block: "start" }) }
+    if (a.dataset.ak === "pl") { const ve = doc.plantilla === "director", nu = a.dataset.v === "director"; doc.plantilla = a.dataset.v; if (ve !== nu) { const pj = doc.dades.projecte = doc.dades.projecte || {}; delete pj.titol; delete pj.format; if (nu) { pj.titol = "pablo anarte"; pj.format = "director de cine" } if (!doc.titolMa) doc.titulo = nu ? "pablo anarte" : "" } await preomple(doc); save(); assistent() }
+    if (a.dataset.ak === "gen") { if (!confirm("Es refaran les diapositives amb aquests apartats i es perdran els retocs fets a mà. Continuar?")) return; doc.ma = false; sel = 0; viu(true); el.querySelector("#dkma").innerHTML = ""; H.toast("Dossier refet: " + doc.slides.length + " diapositives") }
+  });
   document.getElementById("hsh").addEventListener("click", async e => {
     if (el.hidden || !doc) return; onIk(e);
     const a = e.target.closest("[data-ak]");
     if (a && a.dataset.ak === "ves") { e.preventDefault(); const c = document.getElementById("cat-" + a.dataset.v); c && c.scrollIntoView({ behavior: "smooth", block: "start" }) }
     if (a && a.dataset.ak === "pl") { const ve = doc.plantilla === "director", nu = a.dataset.v === "director"; doc.plantilla = a.dataset.v; if (ve !== nu) { const pj = doc.dades.projecte = doc.dades.projecte || {}; delete pj.titol; delete pj.format; if (nu) { pj.titol = "pablo anarte"; pj.format = "director de cine" } if (!doc.titolMa) doc.titulo = nu ? "pablo anarte" : "" } await preomple(doc); save(); assistent() }
-    if (a && a.dataset.ak === "gen") { const pt = (doc.dades.projecte || {}).titol; if (pt && !doc.titolMa) doc.titulo = pt; doc.slides = genera(doc); tmp(doc, "_pal", null); sel = 0; doc.mod = Date.now(); await H.put(doc, 1); H.cerrar(); pintar(); H.toast("Dossier construït: " + doc.slides.length + " diapositives") }
+
     const r = e.target.closest("[data-rk]"); if (r && +r.dataset.rk) { sel = +r.dataset.rk - 1; H.cerrar(); pintar() }
     const x = e.target.closest("[data-xk]");
     if (x) { if (x.dataset.xk === "go") { const v = k => document.querySelector(`#hshc [data-xk="${k}"].on`).dataset.v; const [f, q, aa] = [v("f"), v("q"), v("a")]; H.cerrar(); exporta(f, q, aa).catch(() => H.toast("No s'ha pogut exportar")) } else x.parentNode.querySelectorAll("[data-xk]").forEach(y => y.classList.toggle("on", y === x)) }
@@ -365,10 +400,10 @@
   let dr = null;
   el.addEventListener("dragstart", e => { const t = e.target.closest("[data-dr]"); if (t) { dr = +t.dataset.dr; e.dataTransfer.setData("text/plain", "x") } });
   el.addEventListener("dragover", e => { if (dr != null && e.target.closest("[data-dr]")) e.preventDefault() });
-  el.addEventListener("drop", e => { const t = e.target.closest("[data-dr]"); if (dr == null || !t) return; e.preventDefault(); const to = +t.dataset.dr, [s] = doc.slides.splice(dr, 1); doc.slides.splice(to, 0, s); sel = to; dr = null; refresca(1) });
+  el.addEventListener("drop", e => { const t = e.target.closest("[data-dr]"); if (dr == null || !t) return; e.preventDefault(); marcaMa(); const to = +t.dataset.dr, [s] = doc.slides.splice(dr, 1); doc.slides.splice(to, 0, s); sel = to; dr = null; refresca(1) });
   document.addEventListener("keydown", e => { if (el.hidden || !doc || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || !document.getElementById("hsh").hidden) return; if (e.key === "ArrowRight" && sel < doc.slides.length - 1) { sel++; pintar() } if (e.key === "ArrowLeft" && sel) { sel--; pintar() } });
 
-  window.addEventListener("hub-sec", e => { if (e.detail === "decks" && (!doc || !H.dePj(doc))) lista() });
+  window.addEventListener("hub-sec", e => { if (e.detail === "decks" && (!doc || !H.dePj(doc))) { mode = "slides"; lista() } });
   window.DECKS = { obre };
   lista();
 })();
