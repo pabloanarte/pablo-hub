@@ -35,7 +35,7 @@
   // ---------- llista ----------
   async function pintar() {
     const v = ++ver;
-    if (connectat === null) { try { connectat = (await api("GET", "config")).connectat } catch (e) { connectat = false } }
+    if (connectat === null) { try { connectat = (await api("GET", "config")).connectat } catch (e) { if (e && e.offline) { el.innerHTML = '<p class="em" style="padding:20px 0">Sense connexió. El correu necessita internet.</p>'; return } connectat = false } }
     if (v !== ver) return;
     if (!connectat) return guia();
     if (obert) return fil(obert);
@@ -134,6 +134,6 @@
   document.getElementById("hsh").addEventListener("click", e => { if (e.target.closest('[data-k^="env-nou"],[data-k^="prog-nou"]')) clic(e) });
   el.addEventListener("keydown", e => { if (e.target.id === "cq" && e.key === "Enter") { q = e.target.value.trim(); pintar() } });
   window.addEventListener("hub-sec", e => { if (e.detail === "correu") pintar() });
-  window.CORREU = { obre: id => { obert = id; hubShow("correu") }, nou, connectat: async () => { if (connectat === null) { try { connectat = (await api("GET", "config")).connectat } catch (e) { connectat = false } } return connectat } };
+  window.CORREU = { obre: id => { obert = id; hubShow("correu") }, nou, connectat: async () => { if (connectat === null) { try { connectat = (await api("GET", "config")).connectat } catch (e) { if (e && e.offline) { el.innerHTML = '<p class="em" style="padding:20px 0">Sense connexió. El correu necessita internet.</p>'; return } connectat = false } } return connectat } };
   if (!el.hidden) pintar();
 })();

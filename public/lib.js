@@ -113,13 +113,14 @@ window.H = (() => {
     const t = e.target;
     if (ed && t.dataset.k === "sarch" && t.files.length) {
       const d = ed.doc, f = t.dataset.f, unic = (ed.campos.find(c => c.f === f) || {}).unic;
+      let pujats = 0;
       for (const file of unic ? [t.files[0]] : t.files) {
         if (unic && !/^image\//.test(file.type)) { toast("Ha de ser una imatge"); continue }
         if (file.size > 25 * 1024 * 1024) { toast(file.name + " passa de 25 MB"); continue }
         toast("Pujant " + file.name + "…");
-        try { const a = await api("POST", "archivo?nombre=" + encodeURIComponent(file.name), file); if (unic) (d[f] || []).forEach(x => api("DELETE", "archivo/" + x.id).catch(() => {})); d[f] = unic ? [a] : (d[f] || []).concat(a) } catch (e) { toast(e && e.error === "sin-archivos" ? "Falta activar el magatzem d'arxius a Cloudflare" : "No s'ha pogut pujar " + file.name) }
+        try { pujats++; const a = await api("POST", "archivo?nombre=" + encodeURIComponent(file.name), file); if (unic) (d[f] || []).forEach(x => api("DELETE", "archivo/" + x.id).catch(() => {})); d[f] = unic ? [a] : (d[f] || []).concat(a) } catch (e) { pujats--; toast(e && e.error === "sin-archivos" ? "Falta activar el magatzem d'arxius a Cloudflare" : e && e.offline ? "Sense connexió: per pujar arxius cal internet" : "No s'ha pogut pujar " + file.name) }
       }
-      put(d, 1); if (ed && ed.doc === d) editar(ed.campos, d, ed.opt); toast("Pujat"); return;
+      put(d, 1); if (ed && ed.doc === d) editar(ed.campos, d, ed.opt); if (pujats) toast("Pujat"); return;
     }
     if (!ed || t.dataset.k !== "pon") return;
     const cs = await contactos(), c = cs.find(x => (x.nombre + (x.persona ? " · " + x.persona : "")) === t.value || x.nombre === t.value); if (!c) return;

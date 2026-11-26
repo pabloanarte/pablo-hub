@@ -187,8 +187,8 @@ function local(){loc=1;let d={};try{d=JSON.parse(localStorage.getItem("pdb")||"{
  store={set:(id,o)=>{d[id]=o;p()},del:id=>{delete d[id];p()}};
  C=Object.keys(d).filter(k=>k!=="cfg").map(k=>Object.assign({},d[k],{id:k}));if(d.cfg)cfg=Object.assign(cfg,d.cfg);render()}
 async function init(){
- const api=(m,p,b)=>fetch("/api/"+p,{method:m,headers:{"content-type":"application/json"},body:b?JSON.stringify(b):undefined}).then(r=>{if(!r.ok)throw 0;return r.json()});
- try{const d=await api("GET","all");C=d.contacts;cfg=Object.assign({tpl:{},mo:[],tipos:[]},d.cfg||{})}catch(e){local();return}
+ const api=(m,p,b)=>fetch("/api/"+p,{method:m,headers:{"content-type":"application/json"},body:b?JSON.stringify(b):undefined}).then(r=>{if(!r.ok)throw r.status;return r.json()});
+ try{const d=await api("GET","all");C=d.contacts;cfg=Object.assign({tpl:{},mo:[],tipos:[]},d.cfg||{})}catch(e){if(e===404){local();return}if(e===401){location.reload();return}/* sense connexió i sense còpia: no es pot desar (mai el mode local, que no puja res); es torna a provar quan torni la xarxa */store={set:()=>{toast("Sense connexió: obre Gent un cop amb internet per poder-hi desar");return Promise.resolve(false)},del:()=>Promise.resolve()};render();addEventListener("online",()=>init(),{once:true});return}
  store={set:(id,o)=>api("PUT","doc/"+encodeURIComponent(id),o).then(()=>{H.refrescaContactes&&H.refrescaContactes();return true}).then(()=>true).catch(()=>{toast("No s'ha pogut desar");return false}),del:id=>api("DELETE","doc/"+encodeURIComponent(id)).then(()=>H.refrescaContactes&&H.refrescaContactes()).catch(()=>{})};
  {const M=H.MIG,mm=v=>M[v]||v;C.forEach(c=>{const a=JSON.stringify([c.estado,c.tipo,c.motivos]);c.estado=mm(c.estado);c.tipo=mm(c.tipo);if(Array.isArray(c.motivos))c.motivos=c.motivos.map(mm);if(JSON.stringify([c.estado,c.tipo,c.motivos])!==a)store.set(c.id,c)});const b=JSON.stringify(cfg);cfg.mo=(cfg.mo||[]).map(mm);(cfg.tipos||[]).forEach(t=>t.n=mm(t.n));if(JSON.stringify(cfg)!==b)store.set("cfg",cfg)}
  render()}

@@ -359,6 +359,7 @@ input:focus,select:focus,textarea:focus{outline-color:var(--ink)}input[type=chec
 .lluna{width:38px;height:38px;flex:none;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .lluna svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
 [data-tema="fosc"] .lluna svg{transform:rotate(-25deg);fill:currentColor}
+.offl{flex:none;display:inline-flex;align-items:center;gap:7px;height:34px;border:1px solid var(--bd);background:var(--card);color:var(--ink2);border-radius:999px;padding:0 14px;font:inherit;font-size:14px;white-space:nowrap;cursor:pointer;max-width:60vw;overflow:hidden;text-overflow:ellipsis}.offl::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--mut)}.offl.on{color:var(--ink)}.offl.on::before{background:#ff9f0a}.offl.sinc::before{background:#0a84ff;animation:offlp 1s ease-in-out infinite alternate}@keyframes offlp{to{opacity:.25}}.offl[hidden]{display:none}#hdate{white-space:nowrap}@media(max-width:1100px){.hdr:has(.offl:not([hidden])) #hdate{display:none}}@media(max-width:700px){.offl{height:36px;padding:0 12px}}@media(max-width:360px){.offl{max-width:calc(100vw - 190px)}}
 /* ---- Sala de muntatge (fosc) ---- */
 [data-tema="fosc"]{color-scheme:dark;--bg:#111110;--card:#1a1a19;--ink:#eeece6;--ink2:#c9c6bf;--on:#eeece6;--onT:#141414;--hov:rgba(255,255,255,.05);--bd:#2c2c2a;--soft:#242422;--mut:#9a978f;--sh:0 0 0 1px #272725}
 [data-tema="fosc"] .side .n.al{background:#c4382b;border-color:#c4382b}
@@ -380,7 +381,7 @@ input:focus,select:focus,textarea:focus{outline-color:var(--ink)}input[type=chec
 html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hdr,html.canvitema .kpi div,html.canvitema .r,html.canvitema .b,html.canvitema .b2,html.canvitema .t{transition:background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
 </style><script>try{if(localStorage.getItem("hub-tema")==="fosc"){document.documentElement.dataset.tema="fosc";document.querySelector('meta[name="theme-color"]').content="#111110"}}catch(e){}</script></head><body>
 <div class="app">
-<header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="lluna" id="lluna" title="Sala de muntatge (mode fosc)" aria-label="Mode fosc"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><button class="mb" id="mb">Menú</button></header>
+<header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><button class="offl" id="offl" hidden></button><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="lluna" id="lluna" title="Sala de muntatge (mode fosc)" aria-label="Mode fosc"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><button class="mb" id="mb">Menú</button></header>
 <main class="main"><div class="w">
 <div class="head"><h1 id="stitle"></h1><p id="sdesc"></p></div><div id="subnav" hidden></div>
 <section id="s-contactos" hidden>
@@ -398,4 +399,5 @@ html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hd
 <script src="importar.js"></script>
 <script src="deck.js"></script><script src="citacio.js"></script><script src="vcard.js"></script><script src="festimport.js"></script>
 <script src="hub.js"></script>
+<script src="offline.js"></script>
 </body></html>

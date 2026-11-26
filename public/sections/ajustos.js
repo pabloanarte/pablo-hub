@@ -74,7 +74,10 @@
       <div id="ajx" style="display:contents"></div>
       <div class="card"><h3>El hub com a app</h3>
         <p class="em">S'obre a pantalla completa, amb icona pròpia, com una app.</p>
-        <ol class="pasos"><li><b>iPhone (Safari):</b> botó de compartir → «Añadir a pantalla de inicio».</li><li><b>Android (Chrome):</b> menú ⋮ → «Instalar aplicación».</li><li><b>Mac (Safari):</b> Archivo → «Añadir al Dock».</li></ol>
+        <ol class="pasos"><li><b>iPhone o iPad (Safari):</b> botó de compartir → «Añadir a pantalla de inicio».</li><li><b>Android (Chrome):</b> menú ⋮ → «Instalar aplicación».</li><li><b>Mac (Safari):</b> Archivo → «Añadir al Dock».</li><li><b>Ordinador (Chrome):</b> icona d'instal·lar a la barra d'adreces.</li></ol>
+        <h4 style="margin:22px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">Sense connexió</h4>
+        <p class="em" style="margin-top:0">Cada cop que obres el hub amb internet, es desa una còpia en aquest aparell. Sense connexió s'obre igual, amb les dades d'aquella última vegada, i el que escriguis (reunions, tasques, idees, projectes, contactes…) es guarda aquí i es puja quan tornes a tenir connexió amb el hub obert. A dalt surt «Sense connexió» i quants canvis queden per pujar.</p>
+        <p class="em">Sense connexió no funcionen el correu, Instagram, pujar arxius ni la web. Si un mateix document s'ha canviat també en un altre aparell, es combinen; si tots dos han canviat el mateix text, es queden els dos i el de l'altre aparell surt marcat. Millor instal·lat com a app: a Safari, si no s'obre en uns dies, el navegador pot esborrar la còpia i els canvis que encara no s'hagin pujat. En tancar la sessió s'esborra tot el que s'ha desat en aquest aparell.</p>
       </div>
       <div class="card"><h3>Pont de Google</h3>
         <p>${cor.connectat ? "Connectat a <b>pablo.anarte.film@gmail.com</b>." : "Encara no està connectat. Ves a la secció Correu."}</p>

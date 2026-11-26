@@ -31,6 +31,7 @@ export async function onRequest({ request, env, params }) {
         return j({ ok: 1 });
       }
       if (m === "DELETE") { await db.prepare("DELETE FROM docs WHERE id=?1").bind(id).run(); return j({ ok: 1 }) }
+      if (m === "GET") { const r = await db.prepare("SELECT data,updated FROM docs WHERE id=?1").bind(id).first(); return r ? j({ data: JSON.parse(r.data), updated: r.updated }) : j({ error: "no" }, 404) } // per sincronitzar els canvis fets sense connexió
     }
     if (p === "web" || p.startsWith("web/")) return web(p, m, request, env, j);
     if (p === "archivo" || p.startsWith("archivo/")) return archivo(p, m, request, env, j);
