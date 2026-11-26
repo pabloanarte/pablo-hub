@@ -26,6 +26,8 @@ Hub personal de Pablo Anarte. Cloudflare Pages (proyecto pablo-hub, carpeta de s
 - `festimport.js` (`window.FIMP`): importa inscripcions de FilmFreeway i Festhome a Festivals, llegint els seus avisos al Gmail (acció `festivals` del pont), l'arxiu exportat de FilmFreeway (CSV o Excel, amb la taxa) o una llista enganxada; sempre amb revisió abans d'importar. Els avisos ja revisats es guarden a `ajust:festmail`.
 - `vcard.js` (`window.VCF`): importa contactes del mòbil (.vcf de l'iPhone, Mac, Google o Android, també vCard 2.1 amb quoted-printable) a Contactes → Dades, amb revisió, tipus i estat triables i sense duplicar (per correu, telèfon o nom; als que ja hi són només s'hi afegeix el que els falti).
 - Drecera d'Instagram (iPhone, app Atajos): `GET /api/drecera/<token>?u=<enllaç del perfil>` (token a `secret:drecera`, es crea/canvia a Configuració via `/api/drecera`). Marca el contacte amb aquest @ com a contactat avui (`msgs` amb `v:"Instagram"`) o el crea (tipus Artista per defecte, o `&t=`). Respon text per a la notificació.
+- Instagram (missatges): API d'Instagram amb inici de sessió unificat (app de Meta «PABLO Hub», id 1504064994909783, config 2328571327936139, Graph `v26.0` a graph.facebook.com). Connexió: Configuració → «Connectar Instagram» → `/api/instagram/inici` → Meta → `/auth/instagram/callback` (registrada a Meta; redirigeix a `/api/instagram/callback`), que canvia el codi pel token (de sistema, no caduca), troba el compte (`me/assigned_instagram_accounts`) i el subscriu (`subscribed_apps?subscribed_fields=messages`). Tot a `secret:instagram` ({token, ig, usuari, vt, subscrit, ultim, revisat, error}). Webhook públic `/api/instagram/webhook` (GET verificació amb `vt`; POST amb signatura `x-hub-signature-256` i `IG_APP_SECRET`). Filtre: només contactes (per `ig` normalitzat o `igsid` ja vinculat; el @ del remitent es busca amb `/{igsid}?fields=username`); la resta no es desa. Rebut → estat «Ha respost» (si era Pendent/Contactat), text afegit a `resp` («data · Instagram: …»), `respIG`; enviat (echo) → `msgs` {v:"Instagram"}. `igmids` (últims 100) evita duplicats. Revisió de reserva `/api/instagram/revisa` (converses recents, només de contactes; `auto:1` com a molt cada 15 min, la crida Contactes en carregar).
+- `functions/auth/instagram/callback.js`: adreça de retorn registrada a Meta; només redirigeix a `/api/instagram/callback`. En desar un contacte (`PUT /api/doc/c_…`), `igConserva` hi manté el que el webhook hagi afegit mentrestant.
 - `citacio.js` (`window.CIT`): full de citació d'una jornada del pla de rodatge (es desa a `dias[i].citacio`), tot editable; PDF i enviament per correu en còpia oculta (HTML) o programat. Previsió del temps amb Open-Meteo.
 - `sections/desglossament.js` (doc `desg:`): desglossament d'un guió en PDF (escenes, set, moment, pàgines en vuitens, personatges) i creació del guió tècnic (`GT.nou`).
 - `sections/desenvolupament.js` (doc `dev:<id projecte>`): versions, lectures i llistes de documents per convocatòria.
@@ -40,10 +42,11 @@ Hub personal de Pablo Anarte. Cloudflare Pages (proyecto pablo-hub, carpeta de s
 ## Variables en Cloudflare (pablo-hub → Settings → Variables and Secrets)
 - `HUB_PASSWORD`: contraseña de entrada.
 - `ARCHIVOS` (enlace KV, en Bindings): almacén de los archivos que se suben a Proyectos y Brainstorm (máx. 25 MB cada uno).
+- `IG_APP_SECRET`: clau secreta de l'app de Meta «PABLO Hub» (Configuració de l'app → Bàsica). Per al webhook i la connexió d'Instagram.
 - `GITHUB_TOKEN`: token de GitHub con permiso Contents (lectura y escritura) solo en `pabloanarte-web`.
 
 ## Probar en local
-`npx wrangler pages dev public --d1 DB=local --kv ARCHIVOS --binding HUB_PASSWORD=prueba GITHUB_TOKEN=x`
+`npx wrangler pages dev public --d1 DB=local --kv ARCHIVOS --binding HUB_PASSWORD=prueba GITHUB_TOKEN=x IG_APP_SECRET=prova`
 
 ## Estructura (nov. 2026)
 - Menú: Avui, Agenda (tasques + reunions), Gent (contactes + equip), Projectes, Correu, Docència, Diners; a sota pabloanarte.com i Configuració. `hub.js` té `GRUPS`, pestanyes de projecte `PTABS` (resum, desenvolupament, dossiers, preproducció, guió i pla, postproducció, festivals, equip, arxius) i `HUB.obreProjecte(id, pt)`. `H.pj()`/`H.dePj(d)` filtren pel projecte obert; `sections/projecte.js` fa Resum, Equip (`p.equip`) i Arxius. Mòbil: barra inferior i botó + (afegir ràpid).

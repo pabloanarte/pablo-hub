@@ -126,7 +126,7 @@
   const aj = async id => (await H.col("ajust")).find(x => x.id === id);
   // Configuració com els ajustos de l'iPhone: una columna, cada apartat plegat amb una línia de resum
   let RES = {}; const OBERTS = new Set();
-  const ORDRE = ["Resum d'avui per correu", "Objectius", "Dreceres de l'iPhone", "Google Calendar (editable)", "Vigilant de convocatòries", "Dades per a les factures", "Còpia de seguretat", "Pont de Google", "El hub com a app", "Calendari al mòbil (només lectura)"];
+  const ORDRE = ["Resum d'avui per correu", "Objectius", "Instagram (missatges)", "Dreceres de l'iPhone", "Google Calendar (editable)", "Vigilant de convocatòries", "Dades per a les factures", "Còpia de seguretat", "Pont de Google", "El hub com a app", "Calendari al mòbil (només lectura)"];
   function plega() {
     const cont = el.querySelector(".cfg"); if (!cont) return;
     const cs = [...el.querySelectorAll(".card")];
@@ -145,7 +145,7 @@
   el.addEventListener("click", e => { const b = e.target.closest(".plh"); if (!b) return; const c = b.closest(".card"), t = b.dataset.pl; c.classList.toggle("obert"); c.classList.contains("obert") ? OBERTS.add(t) : OBERTS.delete(t) });
   async function extra(cor) {
     const box = document.getElementById("ajx"); if (!box) return;
-    let [ob, vg, fc] = await Promise.all([aj("ajust:objectius"), aj("ajust:vigila"), aj("ajust:factura")]);
+    let [ob, vg, fc, ig] = await Promise.all([aj("ajust:objectius"), aj("ajust:vigila"), aj("ajust:factura"), H.api("GET", "instagram/estat").catch(() => ({}))]);
     if (!vg) { vg = { id: "ajust:vigila", llista: VIGILA.map(([nom, url], i) => ({ id: "v" + i, nom, url })) }; H.put(vg, 1) }
     ob = ob || {}; fc = fc || {};
     const ps = (await H.col("proyecto")).filter(p => H.meu(p) || p.id === ob.escriptura).sort((a, b) => (a.titulo || "").localeCompare(b.titulo || ""));
@@ -153,7 +153,21 @@
     const finp = (k, l, t = "text", ph = "") => `<div style="flex:1;min-width:160px"><label>${l}</label><input data-fc="${k}" type="${t}" value="${E(fc[k] ?? "")}" placeholder="${E(ph)}"></div>`;
     const vl = vg.llista || [];
     Object.assign(RES, { "Objectius": `${ob.contactes || 10} contactes i ${ob.pagines || 7} pàgines per setmana`, "Vigilant de convocatòries": `${vl.length} ${vl.length === 1 ? "pàgina" : "pàgines"}${vl.some(x => x.canvi && !x.vist) ? " · " + vl.filter(x => x.canvi && !x.vist).length + " amb canvis" : ""}`, "Dades per a les factures": fc.nom ? `${fc.nom} · IVA ${fc.iva === "" || fc.iva == null ? 0 : fc.iva} % · IRPF ${fc.irpf === "" || fc.irpf == null ? 15 : fc.irpf} %` : "Encara sense dades" });
+    RES["Instagram (missatges)"] = ig.connectat ? (ig.error ? "Connectat, amb un avís" : "Connectat" + (ig.usuari ? " · @" + ig.usuari : "")) : "No connectat";
+    const hora = t => t ? new Date(t).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "mai";
     box.innerHTML = `
+      <div class="card"><h3>Instagram (missatges)</h3>
+        <p class="em" style="margin-top:0">Quan algú que és a <b>Contactes</b> (pel seu @) t'escriu per Instagram, passa sol a «Ha respost» i el missatge s'afegeix a la seva fitxa. El que tu li envies queda als enviaments. Els xats de qualsevol altra persona no es guarden enlloc.</p>
+        ${ig.connectat ? `<p style="margin-bottom:4px">Connectat${ig.usuari ? ` a <b>@${E(ig.usuari)}</b>` : ""}. Avisos en directe: <b>${ig.subscrit ? "activats" : "no activats"}</b>.</p>
+          <p class="em" style="margin-top:0">Últim missatge d'un contacte: ${hora(ig.ultim)} · Última revisió: ${hora(ig.revisat)}${ig.error ? `<br><span style="color:#ff3b30">${E(ig.error)}</span>` : ""}</p>
+          <p class="em">Amb això ja no cal la drecera «Ha respost al hub» per als missatges d'Instagram.</p>
+          <div class="ls"><button class="b2" data-k="igrev">Revisar ara</button>${ig.subscrit ? "" : `<button class="b2" data-k="igsub">Activar els avisos</button>`}<button class="del" data-k="igdes">Desconnectar</button><span id="igs" class="em"></span></div>`
+        : `${ig.clau ? "" : `<p class="em" style="color:#ff3b30">Falta la clau secreta de l'app a Cloudflare (<code>IG_APP_SECRET</code>).</p>`}<div class="ls"><a class="b" href="/api/instagram/inici">Connectar Instagram</a></div>`}
+        <details style="margin-top:12px"><summary class="em" style="cursor:pointer">Dades per al webhook de Meta</summary>
+          <label>Callback URL</label><div class="ls"><input readonly value="${E(ig.webhook || "")}" style="font-size:13px;flex:1"><button class="b2" data-k="igcp" data-v="${E(ig.webhook || "")}">Copiar</button></div>
+          <label>Verify token</label><div class="ls"><input readonly value="${E(ig.vt || "")}" style="font-size:13px;flex:1"><button class="b2" data-k="igcp" data-v="${E(ig.vt || "")}">Copiar</button></div>
+        </details>
+      </div>
       <div class="card"><h3>Resum d'avui per correu</h3>
         <p class="em" style="margin-top:0">Cada dia cap a les <b>8:30</b> t'arriba un correu amb només el que és d'avui: classes (amb el material), reunions, rodatges, tasques, terminis que acaben avui o d'aquí a 2 i 7 dies, seguiments que toquen, factures per reclamar, novetats de convocatòries i avisos de festivals. Si un dia no hi ha res, no s'envia.</p>
         ${cor.connectat ? `<div class="ls"><button class="b2" data-k="diari">Enviar-me'l ara</button><span id="diaris" class="em"></span></div>` : `<p class="em">Va pel pont de Google: primer connecta el correu.</p>`}
@@ -198,6 +212,14 @@
       b.disabled = false; return;
     }
     if (k === "vgafeg") { const n = document.getElementById("vgn").value.trim(), u = document.getElementById("vgu").value.trim(); if (!/^https?:\/\//.test(u)) return H.toast("Posa l'adreça sencera (https://…)"); const v = (await aj("ajust:vigila")) || { id: "ajust:vigila", llista: [] }; v.llista = (v.llista || []).concat({ id: "v" + Date.now().toString(36), nom: n || u.replace(/^https?:\/\/(www\.)?/, "").split("/")[0], url: u }); await H.put(v, 1); return pintar() }
+    if (k === "igcp") return cp(0, b.dataset.v || "");
+    if (k === "igrev" || k === "igsub") {
+      const st = document.getElementById("igs"); st.textContent = "Un moment…"; b.disabled = true;
+      try { const r = await H.api("POST", k === "igrev" ? "instagram/revisa" : "instagram/subscriu", {}); st.textContent = k === "igrev" ? (r.n ? `Fet: ${r.n} ${r.n === 1 ? "contacte actualitzat" : "contactes actualitzats"}.` : "Fet: res de nou.") : "Avisos activats."; setTimeout(pintar, 1200) }
+      catch (er) { st.textContent = "No s'ha pogut: " + ((er && er.error) || "error") }
+      b.disabled = false; return;
+    }
+    if (k === "igdes") { if (!confirm("Desconnectar Instagram del hub? Els missatges ja guardats es queden a cada contacte.")) return; await H.api("POST", "instagram/desconnecta", {}); H.toast("Desconnectat"); return pintar() }
     if (k === "vgtreu") { const v = await aj("ajust:vigila"); if (!v) return; v.llista = v.llista.filter(x => x.id !== b.dataset.id); await H.put(v, 1); return pintar() }
   });
   window.addEventListener("hub-sec", e => { if (e.detail === "ajustos") pintar() });

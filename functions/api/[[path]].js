@@ -25,7 +25,8 @@ export async function onRequest({ request, env, params }) {
     if (p.startsWith("doc/")) {
       const id = decodeURIComponent(p.slice(4)); if (id.toLowerCase().startsWith("secret:")) return j({ error: "no" }, 403);
       if (m === "PUT") {
-        const b = await request.text(); JSON.parse(b);
+        let b = await request.text(); JSON.parse(b);
+        if (id.startsWith("c_")) b = await igConserva(db, id, b); // no perdre missatges d'Instagram arribats amb la fitxa oberta
         await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, b, Date.now()).run();
         return j({ ok: 1 });
       }
@@ -48,6 +49,7 @@ export async function onRequest({ request, env, params }) {
     if (p === "calendari" ) return calCfg(m, request, db, j);
     if (p === "drecera" && (m === "GET" || m === "POST")) return dreceraCfg(m, request, db, j);
     if (p.startsWith("drecera/")) return drecera(decodeURIComponent(p.slice(8)), request, db);
+    if (p.startsWith("instagram/")) return instagram(p.slice(10), m, request, env, db, j);
     return j({ error: "not found" }, 404);
   } catch (e) { return j({ error: String(e.message || e) }, 500) }
 }
@@ -347,7 +349,7 @@ async function drecera(t, request, db) {
   for (const x of results) { try { const o = JSON.parse(x.data); if (norm(o.ig) === usr) { c = { ...o, id: x.id }; break } } catch (e) { } }
   if (c && resp) {
     const ja = c.estado === "Ha respost"; c.estado = "Ha respost"; if (tipus && !c.tipo) c.tipo = tipus;
-    c.resp = avui;
+    if (!c.resp) c.resp = avui; // no esborrar el que hagi arribat per Instagram
     await db.prepare("UPDATE docs SET data=?1,updated=?2 WHERE id=?3").bind(JSON.stringify(c), Date.now(), c.id).run();
     return txt(ja ? `${c.nombre || "@" + usr} ja estava com a «Ha respost»` : `✓ ${c.nombre || "@" + usr}: ha respost`);
   }
@@ -492,4 +494,178 @@ async function ical(t, db) {
   L.push("END:VCALENDAR");
   const plega = l => { const o = []; let x = l; while (new TextEncoder().encode(x).length > 74) { let n = 70; while (new TextEncoder().encode(x.slice(0, n)).length > 74) n--; o.push(x.slice(0, n)); x = " " + x.slice(n) } o.push(x); return o.join("\r\n") };
   return new Response(L.map(plega).join("\r\n") + "\r\n", { headers: { "content-type": "text/calendar; charset=utf-8", "cache-control": "private, max-age=600" } });
+}
+
+// ---------- Instagram (missatges de feina) ----------
+// Connexió amb la API d'Instagram amb inici de sessió unificat (app de Meta «PABLO Hub»). El token es guarda a D1 (secret:instagram) i no surt mai cap al navegador.
+// Filtre: només es desa res si el missatge és d'algú que ja és a Contactes (pel seu @ o per l'igsid ja vinculat). La resta es descarta sense guardar-ne res.
+// Variables a Cloudflare: IG_APP_SECRET (clau secreta de l'app de Meta). Opcionals: IG_APP_ID, IG_CONFIG_ID.
+const IGV = "v26.0", IGG = "https://graph.facebook.com/" + IGV;
+async function igS(db) { const r = await db.prepare("SELECT data FROM docs WHERE id='secret:instagram'").first(); return r ? JSON.parse(r.data) : {} }
+async function igPut(db, s) { await db.prepare("INSERT INTO docs(id,data,updated) VALUES('secret:instagram',?1,?2) ON CONFLICT(id) DO UPDATE SET data=?1,updated=?2").bind(JSON.stringify(s), Date.now()).run() }
+const aleat = n => [...crypto.getRandomValues(new Uint8Array(n))].map(b => b.toString(16).padStart(2, "0")).join("");
+async function igFetch(url, o = {}, tok) { const r = await fetch(url, tok ? { ...o, headers: { ...(o.headers || {}), authorization: "Bearer " + tok } } : o); let d = {}; try { d = await r.json() } catch (e) { } if (!r.ok || d.error) throw new Error((d.error && (d.error.message || d.error.type)) || "HTTP " + r.status); return d }
+
+async function instagram(p, m, request, env, db, j) {
+  const url = new URL(request.url), q = url.searchParams, origen = url.origin;
+  const APP = env.IG_APP_ID || "1504064994909783", CONF = env.IG_CONFIG_ID || "2328571327936139", retorn = origen + "/auth/instagram/callback";
+  const pagina = (t, ok) => new Response(`<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PABLO</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Helvetica,Arial,sans-serif;background:#f5f4f1;color:#1c1c1e;text-align:center;padding:24px;box-sizing:border-box}h1{font-size:24px;line-height:1.3;margin:0 0 12px}p{color:#8e8e93;font-size:15px;margin:0 0 18px}a{display:inline-block;background:#1c1c1e;color:#fff;text-decoration:none;border-radius:12px;padding:11px 18px}</style></head><body><div><h1>${t.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c])}</h1><p>${ok ? "Ja pots tancar aquesta pestanya." : "Torna-ho a provar des de Configuració."}</p><a href="/">Tornar al hub</a></div></body></html>`, { status: ok ? 200 : 400, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+  let s = await igS(db);
+
+  // --- webhook (públic: el middleware el deixa passar; la signatura demostra que ve de Meta) ---
+  if (p === "webhook" && m === "GET") {
+    if (q.get("hub.mode") === "subscribe" && s.vt && q.get("hub.verify_token") === s.vt) return new Response(q.get("hub.challenge") || "", { headers: { "content-type": "text/plain" } });
+    return new Response("no", { status: 403 });
+  }
+  if (p === "webhook" && m === "POST") {
+    const cos = await request.text();
+    if (!env.IG_APP_SECRET) return new Response("sense clau", { status: 503 });
+    const sig = (request.headers.get("x-hub-signature-256") || "").replace(/^sha256=/, "");
+    const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.IG_APP_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const bo = [...new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(cos)))].map(b => b.toString(16).padStart(2, "0")).join("");
+    if (sig.length !== bo.length || !igual(sig, bo)) return new Response("signatura", { status: 403 });
+    // amb la signatura bona es respon sempre «ok», perquè Meta no reintenti sense fi
+    try {
+      const b = JSON.parse(cos), evs = [], ll = v => Array.isArray(v) ? v : [];
+      for (const en of ll(b.entry)) for (const x of ll(en && en.messaging)) {
+        const mm = x && x.message; if (!mm || mm.is_deleted || mm.is_unsupported) continue;
+        const echo = !!mm.is_echo, peer = String((echo ? (x.recipient || {}).id : (x.sender || {}).id) || "");
+        if (!peer || peer === String(s.ig)) continue;
+        evs.push({ peer, mid: mm.mid, text: mm.text || igAdjunt(ll(mm.attachments)[0]), ts: +x.timestamp || Date.now(), echo });
+      }
+      if (evs.length && s.token) { const n = await igProcessa(db, s, evs); if (n) { s = await igS(db); s.ultim = Date.now(); await igPut(db, s) } }
+    } catch (e) { }
+    return new Response("ok");
+  }
+
+  // --- la resta, només amb la contrasenya del hub (ho fa el middleware) ---
+  if (p === "estat" && m === "GET") {
+    if (!s.vt) { s.vt = aleat(16); await igPut(db, s) }
+    return j({ connectat: !!s.token, usuari: s.usuari || "", ig: s.ig || "", subscrit: !!s.subscrit, error: s.error || "", ultim: s.ultim || 0, revisat: s.revisat || 0, webhook: origen + "/api/instagram/webhook", vt: s.vt, clau: !!env.IG_APP_SECRET, retorn });
+  }
+  if (p === "inici" && m === "GET") {
+    if (!env.IG_APP_SECRET) return pagina("Falta la clau secreta de l'app (IG_APP_SECRET) a Cloudflare.", false);
+    s.state = aleat(16); s.stateT = Date.now(); await igPut(db, s);
+    const u = `https://www.facebook.com/${IGV}/dialog/oauth?client_id=${APP}&config_id=${CONF}&redirect_uri=${encodeURIComponent(retorn)}&response_type=code&override_default_response_type=true&state=${s.state}`;
+    return new Response(null, { status: 302, headers: { location: u } });
+  }
+  if (p === "callback" && m === "GET") {
+    if (q.get("error")) return pagina("No s'ha connectat: " + (q.get("error_description") || q.get("error")), false);
+    const st = q.get("state") || "", code = q.get("code") || "";
+    if (!s.state || st !== s.state || Date.now() - (s.stateT || 0) > 30 * 60e3) return pagina("L'enllaç ha caducat. Torna a prémer «Connectar Instagram».", false);
+    if (!code) return pagina("Meta no ha enviat el codi.", false);
+    let tk;
+    const base = `${IGG}/oauth/access_token?client_id=${APP}&client_secret=${encodeURIComponent(env.IG_APP_SECRET || "")}&code=${encodeURIComponent(code)}`;
+    try { tk = await igFetch(base + "&redirect_uri=" + encodeURIComponent(retorn)) } catch (e) { try { tk = await igFetch(base) } catch (e2) { return pagina("Meta no ha donat el token (resposta de Meta: " + e.message + ")", false) } }
+    const token = tk.access_token; if (!token) return pagina("Meta no ha donat el token.", false);
+    let ig = "", usuari = "";
+    try { const a = await igFetch(`${IGG}/me/assigned_instagram_accounts?fields=id,username`, {}, token); const x = (a.data || [])[0] || {}; ig = x.id || ""; usuari = x.username || "" } catch (e) { }
+    if (ig && !usuari) { try { usuari = (await igFetch(`${IGG}/${ig}?fields=username`, {}, token)).username || "" } catch (e) { } }
+    if (!ig) return pagina("Connectat, però no trobo cap compte d'Instagram compartit. Torna-ho a provar i tria @pabloanarte.", false);
+    s = { ...s, token, ig, usuari, connectat: Date.now(), error: "" }; delete s.state; delete s.stateT;
+    try { await igFetch(`${IGG}/${ig}/subscribed_apps?subscribed_fields=messages`, { method: "POST" }, token); s.subscrit = 1 } catch (e) { s.subscrit = 0; s.error = "No s'han pogut activar els avisos (resposta de Meta: " + e.message + ")" }
+    await igPut(db, s);
+    return pagina(`✓ Instagram connectat${usuari ? " (@" + usuari + ")" : ""}`, true);
+  }
+  if (p === "subscriu" && m === "POST") {
+    if (!s.token) return j({ error: "no connectat" }, 400);
+    try { await igFetch(`${IGG}/${s.ig}/subscribed_apps?subscribed_fields=messages`, { method: "POST" }, s.token); s.subscrit = 1; s.error = ""; await igPut(db, s); return j({ ok: 1 }) }
+    catch (e) { s.subscrit = 0; s.error = "No s'han pogut activar els avisos (resposta de Meta: " + e.message + ")"; await igPut(db, s); return j({ error: e.message }, 502) }
+  }
+  if (p === "desconnecta" && m === "POST") { await igPut(db, { vt: s.vt }); return j({ ok: 1 }) }
+  if (p === "revisa" && m === "POST") {
+    if (!s.token) return j({ error: "no connectat" }, 400);
+    const b = await request.json().catch(() => ({}));
+    if (b.auto && Date.now() - (s.revisat || 0) < 15 * 60e3) return j({ ok: 1, n: 0, saltat: 1 });
+    s.revisat = Date.now(); await igPut(db, s);
+    try { const n = await igRevisa(db, s); if (s.error) { s = await igS(db); s.error = ""; await igPut(db, s) } return j({ ok: 1, n }) }
+    catch (e) { s = await igS(db); s.error = "No s'ha pogut revisar (resposta de Meta: " + e.message + ")"; await igPut(db, s); return j({ error: e.message }, 502) }
+  }
+  return j({ error: "not found" }, 404);
+}
+
+// En desar un contacte des del navegador, es conserva el que el webhook hi ha posat mentrestant (igsid, igmids, respostes i enviaments d'Instagram)
+async function igConserva(db, id, b) {
+  try {
+    const r = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(id).first(); if (!r) return b;
+    const a = JSON.parse(r.data), n = JSON.parse(b); if (!a.igmids && !a.igsid) return b;
+    if (a.igsid && !n.igsid) n.igsid = a.igsid;
+    const nm = Array.isArray(n.igmids) ? n.igmids : [], am = Array.isArray(a.igmids) ? a.igmids : [];
+    const nous = am.some(x => !nm.includes(x)); n.igmids = [...new Set(nm.concat(am))].slice(-100);
+    if (!nous) return JSON.stringify(n);
+    const linies = String(a.resp || "").split("\n\n").filter(l => / · Instagram: /.test(l) && !String(n.resp || "").includes(l));
+    if (linies.length) n.resp = (n.resp ? n.resp + "\n\n" : "") + linies.join("\n\n");
+    const ms = Array.isArray(n.msgs) ? n.msgs : [];
+    for (const x of Array.isArray(a.msgs) ? a.msgs : []) if (x && x.v === "Instagram" && x.t && !ms.some(y => y && y.d === x.d && y.v === "Instagram" && y.t === x.t)) ms.push(x);
+    n.msgs = ms.sort((x, y) => String(x.d).localeCompare(String(y.d)));
+    if (a.respIG && a.respIG !== n.respIG) { n.respIG = a.respIG; if (a.estado === "Ha respost" && (!n.estado || n.estado === "Pendent" || n.estado === "Contactat")) n.estado = "Ha respost" }
+    return JSON.stringify(n);
+  } catch (e) { return b }
+}
+
+const igAdjunt = a => "[" + (({ image: "foto", video: "vídeo", audio: "àudio", file: "arxiu", share: "publicació compartida", story_mention: "menció a la història", reel: "reel", ig_reel: "reel", animated_image: "gif" })[a && a.type] || (a ? "adjunt" : "missatge")) + "]";
+// Busca el @ d'un remitent (igsid → username) amb el token
+async function igUsuari(s, igsid) {
+  try { return String((await igFetch(`${IGG}/${igsid}?fields=username`, {}, s.token)).username || "").toLowerCase() } catch (e) { return "" }
+}
+const igNorm = v => String(v || "").toLowerCase().replace(/^.*instagram\.com\//, "").replace(/[/?#].*$/, "").replace(/^@/, "").trim();
+
+// evs: [{peer (igsid de l'altra persona), usuari?, mid, text, ts, echo (l'he enviat jo)}]. Torna quants contactes han canviat.
+async function igProcessa(db, s, evs) {
+  const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'c\\_%' ESCAPE '\\'").all();
+  const cs = []; for (const x of results) { try { cs.push({ ...JSON.parse(x.data), id: x.id }) } catch (e) { } }
+  const perSid = new Map(cs.filter(c => c.igsid).map(c => [String(c.igsid), c])), perUsr = new Map(cs.filter(c => igNorm(c.ig)).map(c => [igNorm(c.ig), c]));
+  if (!perUsr.size && !perSid.size) return 0;
+  const usrs = new Map(), canviats = new Set(); let nous = 0;
+  evs.sort((a, b) => a.ts - b.ts);
+  for (const ev of evs) {
+    let c = perSid.get(ev.peer);
+    if (!c) {
+      let u = ev.usuari ? igNorm(ev.usuari) : usrs.get(ev.peer);
+      if (u === undefined) { u = await igUsuari(s, ev.peer); usrs.set(ev.peer, u) }
+      c = u ? perUsr.get(u) : null;
+      if (!c) continue; // no és a Contactes: no es guarda res
+      c.igsid = ev.peer; perSid.set(ev.peer, c); canviats.add(c);
+    }
+    const mids = Array.isArray(c.igmids) ? c.igmids : [];
+    if (ev.mid && mids.includes(ev.mid)) continue;
+    if (ev.mid) { mids.push(ev.mid); c.igmids = mids.slice(-100) }
+    const d = diaMadrid(new Date(ev.ts)), t = String(ev.text || "").slice(0, 2000);
+    if (ev.echo) {
+      const msgs = Array.isArray(c.msgs) ? c.msgs : [];
+      const dia = msgs.find(x => x && x.d === d && x.v === "Instagram"); // un sol enviament per dia, amb tots els textos
+      if (!dia) msgs.push({ d, v: "Instagram", t }); else if (!dia.t) dia.t = t; else if (!dia.t.split(" / ").includes(t)) dia.t = (dia.t + " / " + t).slice(0, 4000);
+      c.msgs = msgs.sort((a, b) => String(a.d).localeCompare(String(b.d)));
+      if (!c.estado || c.estado === "Pendent") c.estado = "Contactat";
+    } else {
+      const primer = (Array.isArray(c.msgs) ? c.msgs : []).map(x => x && x.d).filter(Boolean).sort()[0];
+      if ((!c.estado || c.estado === "Pendent" || c.estado === "Contactat") && (!primer || d >= primer)) c.estado = "Ha respost";
+      c.resp = (c.resp ? c.resp + "\n\n" : "") + `${d} · Instagram: ${t}`;
+      if (!c.respIG || d > c.respIG) c.respIG = d;
+    }
+    canviats.add(c); nous++;
+  }
+  for (const c of canviats) { const { id, ...o } = c; await db.prepare("UPDATE docs SET data=?1,updated=?2 WHERE id=?3").bind(JSON.stringify({ ...o, id }), Date.now(), id).run() }
+  return nous;
+}
+
+// Revisió de reserva (per si algun avís del webhook no arriba): converses recents (missatges de l'últim mes), però només les de gent que és a Contactes.
+async function igRevisa(db, s) {
+  const { results } = await db.prepare("SELECT data FROM docs WHERE id LIKE 'c\\_%' ESCAPE '\\'").all();
+  const usrs = new Set(), sids = new Set();
+  for (const x of results) { try { const o = JSON.parse(x.data); if (igNorm(o.ig)) usrs.add(igNorm(o.ig)); if (o.igsid) sids.add(String(o.igsid)) } catch (e) { } }
+  if (!usrs.size && !sids.size) return 0;
+  const jo = String(s.usuari || "").toLowerCase();
+  const d = await igFetch(`${IGG}/${s.ig}/conversations?platform=instagram&limit=40&fields=participants,updated_time,messages.limit(15){id,from,to,message,created_time}`, {}, s.token);
+  const evs = [];
+  for (const cv of d.data || []) {
+    const altre = ((cv.participants || {}).data || []).find(x => String(x.id) !== String(s.ig) && String(x.username || "").toLowerCase() !== jo);
+    if (!altre || !(sids.has(String(altre.id)) || usrs.has(igNorm(altre.username)))) continue; // només contactes
+    for (const mm of (cv.messages || {}).data || []) {
+      if (Date.parse(mm.created_time) < Date.now() - 30 * 864e5) continue; // només l'últim mes
+      const echo = String((mm.from || {}).id) === String(s.ig) || String((mm.from || {}).username || "").toLowerCase() === jo;
+      evs.push({ peer: String(altre.id), usuari: altre.username || "", mid: mm.id, text: mm.message || igAdjunt({}), ts: Date.parse(mm.created_time) || Date.now(), echo });
+    }
+  }
+  return evs.length ? igProcessa(db, s, evs) : 0;
 }

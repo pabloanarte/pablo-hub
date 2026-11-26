@@ -119,7 +119,7 @@ window.CONT={
  estat:(id,e)=>{const c=C.find(x=>x.id===id);if(!c)return;c.estado=e;save(c);render()},
  tots:()=>C,
  plantilla:(id,via)=>{const c=C.find(x=>x.id===id);return c?tplFor(c,via||(c.email?"Email":"Instagram")):""},
- registraIG:(id)=>{const c=C.find(x=>x.id===id);if(!c)return;c.msgs=M(c).concat({d:today(),v:"Instagram",t:""});if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);render()},
+ registraIG:(id)=>{const c=C.find(x=>x.id===id);if(!c)return;if(!M(c).some(m=>m.d===today()&&m.v==="Instagram"))c.msgs=M(c).concat({d:today(),v:"Instagram",t:""});if((c.estado||"Pendent")==="Pendent")c.estado="Contactat";save(c);render()},
  color:e=>EC[e||"Pendent"]||"#c7c7cc"
 };
 function cmp(c,via){via=via||({"Productora":"Email","Artista":"Instagram"})[c.tipo]||(c.email?"Email":c.ig?"Instagram":"Telèfon");cv=via;
@@ -208,6 +208,9 @@ async function recarrega(){
  if(!$("#sh").hidden||(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)))return;
  try{const r=await fetch("/api/all");if(!r.ok)return;const d=await r.json();const n=JSON.stringify(d.contacts);if(n===JSON.stringify(C))return;C=d.contacts;cfg=Object.assign({tpl:{},mo:[],tipos:[]},d.cfg||{});H.refrescaContactes&&H.refrescaContactes();render()}catch(e){}
 }
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")recarrega()});
+// Instagram: revisió de reserva de les converses amb contactes (el servidor no la repeteix si fa menys de 15 min)
+function revisaIG(){fetch("/api/instagram/revisa",{method:"POST",headers:{"content-type":"application/json"},body:'{"auto":1}'}).then(r=>r.ok?r.json():null).then(r=>{if(r&&r.n)recarrega()}).catch(()=>{})}
+setTimeout(revisaIG,4000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){recarrega();revisaIG()}});
 window.addEventListener("focus",recarrega);
 setInterval(()=>{if(document.visibilityState==="visible")recarrega()},60000);
