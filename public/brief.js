@@ -85,5 +85,7 @@ window.BRIEF = (() => {
       }
     });
   }
-  return { preguntes, card, ajusta, connecta, text, DEF };
+  // és un videoclip? (el tipus es pot haver reanomenat: «Videoclips», «Vídeo musical»…; sense tipus, pel títol)
+  const es = p => !!p && (/v[ií]deo ?clip|v[ií]deo musical|music video/i.test(p.categoria || "") || (!p.categoria && /v[ií]deo ?clip/i.test(p.titulo || "")));
+  return { es, preguntes, card, ajusta, connecta, text, DEF };
 })();

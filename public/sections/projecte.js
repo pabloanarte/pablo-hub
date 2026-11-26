@@ -19,7 +19,7 @@
   // ---------- Resum ----------
   async function resum(p, v) {
     const [ts, rs, fs, pre, post, pdr, dks, devs, gts, ds, pers] = await Promise.all(["tarea", "reunion", "convocatoria", "pre", "post", "pdr", "deck", "dev", "gt", "desg", "persona"].map(t => H.col(t)));
-    const brief = p.categoria === "Videoclip" && window.BRIEF ? BRIEF.card(p, await BRIEF.preguntes()) : ""; // briefing amb l'artista (brief.js)
+    const brief = window.BRIEF && BRIEF.es(p) ? BRIEF.card(p, await BRIEF.preguntes()) : ""; // briefing amb l'artista (brief.js)
     if (v !== ver) return;
     const de = l => l.filter(x => x.proyecto === p.id), hoy = avui(), lim = H.addDays(hoy, 60);
     const dates = [];
