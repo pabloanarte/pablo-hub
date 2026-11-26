@@ -20,7 +20,8 @@
   async function pintar() {
     if (el.hidden) return; const v = ++ver, pid = H.pj();
     if (!pid || pid === "-") { el.innerHTML = `<p class="em">Obre un projecte per veure'n el recce.</p>`; return }
-    const [d, dr, p] = await Promise.all([doc(), MED.drive(), H.col("proyecto").then(l => l.find(x => x.id === pid))]); if (v !== ver) return;
+    const [d, dr, p, gts] = await Promise.all([doc(), MED.drive(), H.col("proyecto").then(l => l.find(x => x.id === pid)), H.col("gt")]); if (v !== ver) return;
+    const alGTimg = new Set(gts.filter(g => g.proyecto === pid).flatMap(g => g.escenas.flatMap(e => e.planos.map(q => q.img))).filter(Boolean));
     const ls = (d && d.llocs) || [], n = ls.reduce((a, l) => a + (l.items || []).length, 0);
     const carp = dr.connectat && dr.carpetes && dr.carpetes[pid] && dr.carpetes[pid].recce;
     el.innerHTML = `<div class="bar"><span class="em" style="margin:0">${n ? `${ls.length} ${ls.length === 1 ? "localització" : "localitzacions"} · ${n} ${n === 1 ? "arxiu" : "arxius"}` : "Fotos, vídeos i fotos del visor de les localitzacions tècniques."}</span><span style="flex:1"></span><button class="b" data-rk="noulloc">+ Localització</button></div>
@@ -29,7 +30,7 @@
           <label class="b2">+ Fotos i vídeos<input type="file" multiple accept="image/*,video/*" data-rup="${l.id}" hidden></label><label class="b2">+ Visor<input type="file" multiple accept="image/*" data-rup="${l.id}" data-visor="1" hidden></label><button class="x" data-rk="dellloc" data-l="${l.id}" title="Eliminar la localització" aria-label="Eliminar la localització">×</button></div>
           <div class="row mdad"><input data-rf="adreca" data-l="${l.id}" value="${E(l.adreca || "")}" placeholder="Adreça o enllaç de Maps">${l.adreca ? `<a class="ln" target="_blank" rel="noopener" href="${E(/^https?:/.test(l.adreca) ? l.adreca : "https://maps.google.com/?q=" + encodeURIComponent(l.adreca))}">Mapa</a>` : ""}</div>
           <textarea data-rf="notes" data-l="${l.id}" rows="2" placeholder="Notes: llum, horaris, permisos, endolls, so…">${E(l.notes || "")}</textarea>
-          ${(l.items || []).length ? `<div class="mdgr">${l.items.map(x => `<div class="mdit" data-rk="veure" data-id="${x.id}">${MED.mini(x)}${x.nota || x.optica || (x.gt || []).length ? `<small>${E([x.optica, x.nota].filter(Boolean).join(" · "))}${(x.gt || []).length ? ` <b class="mdgt">GT</b>` : ""}</small>` : ""}</div>`).join("")}</div>` : `<p class="em mddrop">Arrossega aquí fotos o vídeos, o fes servir els botons.</p>`}</div>`).join("")
+          ${(l.items || []).length ? `<div class="mdgr">${l.items.map(x => `<div class="mdit" data-rk="veure" data-id="${x.id}">${alGTimg.has(x.img) ? MED.mini(x).replace(/<\/div>$/, `<i class="mdgt2" title="És al guió tècnic">GT</i></div>`) : MED.mini(x)}${x.nota || x.optica ? `<small>${E([x.optica, x.nota].filter(Boolean).join(" · "))}</small>` : ""}</div>`).join("")}</div>` : `<p class="em mddrop">Arrossega aquí fotos o vídeos, o fes servir els botons.</p>`}</div>`).join("")
         : `<div class="card"><p class="em" style="margin:6px 0">Encara no hi ha cap localització. Crea'n una i puja-hi les fotos del recce${dr.connectat ? ", o puja-les al Drive" : ""}.</p></div>`}`;
   }
 
@@ -38,7 +39,8 @@
     const fs = [...files]; let n = 0;
     for (const [i, f] of fs.entries()) {
       H.toast(`Pujant ${i + 1} de ${fs.length}…`);
-      const o = await MED.puja(f, { tipus: "recce", proj: d.proyecto, lloc: (l.nom || "Sense nom") + (visor ? "/Visor" : "") });
+      if (!l.carpeta) l.carpeta = (l.nom || "").trim() || "Localització " + (d.llocs.indexOf(l) + 1); // carpeta del Drive: es queda amb aquest nom encara que la localització canviï de nom
+      const o = await MED.puja(f, { tipus: "recce", proj: d.proyecto, lloc: l.carpeta + (visor ? "/Visor" : "") });
       if (!o) continue;
       if (visor || /artemis|arricam|arri.?cam|viewfinder/i.test(f.name)) o.tipus = o.tipus === "Vídeo" ? "Vídeo" : "Visor";
       l.items = (l.items || []).concat({ id: uid(), ...o }); n++;
@@ -66,7 +68,7 @@
     box.onclick = async e => {
       const b = e.target.closest("[data-rx]"); if (!b || b.tagName === "SELECT") return;
       if (b.dataset.rx === "tipus") { x.tipus = b.dataset.v; await H.put(d, 1); box.querySelectorAll('[data-rx="tipus"]').forEach(y => y.classList.toggle("on", y === b)) }
-      if (b.dataset.rx === "del") { if (!confirm((x.gt || []).length ? "Aquesta foto és al guió tècnic: també se'n traurà. Eliminar-la? (També s'enviarà a la paperera del Drive.)" : "Eliminar aquesta foto? També s'enviarà a la paperera del Drive.")) return; await treuDelGT(x); MED.esborra(x); l.items = l.items.filter(y => y !== x); await H.put(d, 1); box.onclick = null; H.cerrar() }
+      if (b.dataset.rx === "del") { if (!confirm((x.gt || []).length ? "Aquesta foto és al guió tècnic: també se'n traurà. Eliminar-la? (També s'enviarà a la paperera del Drive.)" : "Eliminar aquesta foto? També s'enviarà a la paperera del Drive.")) return; await treuDelGT(x); MED.esborra(x); if (x.drive && x.drive.id) d.esborrats = (d.esborrats || []).concat(x.drive.id).slice(-500); l.items = l.items.filter(y => y !== x); await H.put(d, 1); box.onclick = null; H.cerrar() }
       if (b.dataset.rx === "agt") { box.onclick = null; alGT(d, x) }
     };
     box.oninput = e => { const f = e.target.dataset.rxf; if (f) { x[f] = e.target.value; H.put(d) } };
@@ -109,7 +111,7 @@
     if (k === "sync") { b.disabled = true; b.textContent = "Sincronitzant…"; try { const r = await H.api("POST", "drive/sincronitza", {}); H.toast(r.nous ? r.nous + (r.nous === 1 ? " arxiu nou" : " arxius nous") : "Tot al dia") } catch (er) { H.toast(er && er.error ? "Drive: " + er.error : "No s'ha pogut sincronitzar") } await H.col("recce", true); return pintar() }
     const d = await doc(1);
     if (k === "noulloc") { d.llocs = (d.llocs || []).concat({ id: uid(), nom: "", items: [] }); await H.put(d, 1); await pintar(); const i = el.querySelector(".mdll:last-of-type .mdnom"); i && i.focus(); return }
-    if (k === "dellloc") { const l = lloc(d, b.dataset.l); if ((l.items || []).length && !confirm(`Eliminar «${l.nom || "aquesta localització"}» i les seves ${l.items.length} fotos?`)) return; for (const x of l.items || []) { await treuDelGT(x); MED.esborra(x) } d.llocs = d.llocs.filter(y => y !== l); await H.put(d, 1); return pintar() }
+    if (k === "dellloc") { const l = lloc(d, b.dataset.l); if ((l.items || []).length && !confirm(`Eliminar «${l.nom || "aquesta localització"}» i els seus ${l.items.length} arxius? Els originals aniran a la paperera del Drive.`)) return; d.esborrats = (d.esborrats || []).concat((l.items || []).map(x => x.drive && x.drive.id).filter(Boolean)).slice(-500); for (const x of l.items || []) { await treuDelGT(x); MED.esborra(x) } d.llocs = d.llocs.filter(y => y !== l); await H.put(d, 1); return pintar() }
   });
   el.addEventListener("input", async e => { const f = e.target.dataset.rf; if (!f) return; const d = await doc(1), l = lloc(d, e.target.dataset.l); if (l) { l[f] = e.target.value; H.put(d) } });
   el.addEventListener("change", e => { const t = e.target; if (t.dataset.rup && t.files.length) { const fs = [...t.files]; t.value = ""; puja(t.dataset.rup, fs, !!t.dataset.visor) } if (t.dataset.rf === "adreca") pintar() });
@@ -118,5 +120,5 @@
   el.addEventListener("dragleave", e => { const c = e.target.closest(".mdll"); if (c && !c.contains(e.relatedTarget)) c.classList.remove("drop") });
   el.addEventListener("drop", e => { const c = e.target.closest(".mdll"); if (!c || !e.dataTransfer.files.length) return; e.preventDefault(); c.classList.remove("drop"); puja(c.dataset.lloc, e.dataTransfer.files, false) });
   H.onChange(() => { if (!el.hidden && !el.contains(document.activeElement)) pintar() });
-  window.addEventListener("hub-sec", e => { if (e.detail === "recce") pintar() });
+  window.addEventListener("hub-sec", e => { if (e.detail === "recce") H.col("recce", true).catch(() => { }).then(pintar) });
 })();

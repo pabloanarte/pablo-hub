@@ -27,6 +27,7 @@ export async function onRequest({ request, env, params }) {
       if (m === "PUT") {
         let b = await request.text(); JSON.parse(b);
         if (id.startsWith("c_")) b = await igConserva(db, id, b); // no perdre missatges d'Instagram arribats amb la fitxa oberta
+        if (id.startsWith("recce:")) b = await recceConserva(db, id, b); // no perdre les fotos arribades del Drive amb el recce obert
         await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, b, Date.now()).run();
         return j({ ok: 1 });
       }
@@ -716,19 +717,19 @@ async function drive(accio, m, request, db, j) {
   if (!cfg || !cfg.url) return j({ error: "Drive no connectat" }, 503);
   if (!["puja", "esborra", "sincronitza"].includes(accio)) return j({ error: "no" }, 404);
   const q = await request.json();
-  if (accio === "puja") { const ps = await projectesMeus(db); q.titol = (ps.find(x => x.id === q.proj) || {}).titol || "" }
+  if (accio === "puja") { const ps = await projectesTots(db); q.titol = (ps.find(x => x.id === q.proj) || {}).titol || "" }
   const { clau, ...o } = await pont(cfg, { ...q, accio, hub: new URL(request.url).origin });
   return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200);
 }
-async function projectesMeus(db) {
+async function projectesTots(db) {
   const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'proyecto:%'").all();
-  return results.map(r => ({ ...JSON.parse(r.data), id: r.id })).filter(p => { const r = Array.isArray(p.rol) ? p.rol : p.rol ? [p.rol] : []; return !r.length || r.includes("Direcció") || r.includes("Guió") }).map(p => ({ id: p.id, titol: String(p.titulo || "Sense títol").replace(/[\/\\]/g, "-").trim() || "Sense títol", acabat: p.estado === "Acabat" }));
+  return results.map(r => ({ ...JSON.parse(r.data), id: r.id })).map(p => ({ id: p.id, titol: String(p.titulo || "Sense títol").replace(/[\/\\]/g, "-").trim() || "Sense títol", acabat: p.estado === "Acabat" }));
 }
 async function pontDrive(request, env, db, j) {
   const cfg = await driveCfg(db), clau = request.headers.get("x-clau") || "";
   if (!cfg || !cfg.clau || clau.length !== cfg.clau.length || !igual(clau, cfg.clau)) return j({ error: "clau" }, 401);
   const b = await request.json().catch(() => ({}));
-  if (b.pas === "projectes") return j({ projectes: await projectesMeus(db) });
+  if (b.pas === "projectes") return j({ projectes: await projectesTots(db) });
   if (b.pas === "carpetes") { await driveDesa(db, { ...cfg, carpetes: b.carpetes || {}, biblioteca: b.biblioteca || "", arrel: b.arrel || cfg.arrel || "", ultim: Date.now() }); return j({ ok: 1 }) }
   if (b.pas !== "nou") return j({ error: "pas" }, 400);
   // un arxiu nou al Drive: còpia lleugera (JPEG que envia el pont) al magatzem i fitxa al hub
@@ -742,7 +743,7 @@ async function pontDrive(request, env, db, j) {
   let img = "";
   if (b.b64 && env.ARCHIVOS) {
     const bin = Uint8Array.from(atob(b.b64), c => c.charCodeAt(0));
-    if (bin.byteLength <= 25 * 1024 * 1024) { img = Date.now().toString(36) + Math.random().toString(36).slice(2, 8); const nom = String(b.nom || "drive").replace(/\.\w+$/, "") + ".jpg"; await env.ARCHIVOS.put("f:" + img, bin.buffer, { metadata: { nombre: nom, tipo: b.previewMime || "image/jpeg", size: bin.byteLength } }) }
+    if (bin.byteLength <= 25 * 1024 * 1024) { img = Date.now().toString(36) + Math.random().toString(36).slice(2, 8); const nom = String(b.nom || "drive").replace(/\.\w+$/, "") + ".jpg"; await env.ARCHIVOS.put("f:" + img, bin.buffer, { metadata: { nombre: nom, tipo: /^image\/(jpeg|png|webp|gif)$/.test(b.previewMime || "") ? b.previewMime : "image/jpeg", size: bin.byteLength } }) }
   }
   const it = { nom: String(b.nom || "").slice(0, 120), tipus: tipusM, data: /^\d{4}-\d\d-\d\d$/.test(b.data || "") ? b.data : diaMadrid(), drive: { id: b.id, url: String(b.url || "") }, ...(img ? { img } : {}), ...(+b.dur ? { dur: Math.round(+b.dur) } : {}), deDrive: 1 };
   const rid = () => Math.random().toString(36).slice(2, 9);
@@ -752,8 +753,9 @@ async function pontDrive(request, env, db, j) {
     const d = r ? JSON.parse(r.data) : { proyecto: b.proj, llocs: [] };
     const parts = String(b.lloc || "").split("/").map(x => x.trim()).filter(Boolean), visor = parts.length > 1 && /^(visor|arri.?cam|artemis|viewfinder)$/i.test(parts.at(-1)), nl = (visor ? parts.slice(0, -1) : parts).join(" / ") || "General";
     if (visor && tipusM === "Foto") it.tipus = "Visor";
-    let l = (d.llocs || []).find(x => String(x.nom || "").trim().toLowerCase() === nl.toLowerCase());
-    if (!l) { l = { id: rid(), nom: nl, items: [] }; d.llocs = (d.llocs || []).concat(l) }
+    let l = (d.llocs || []).find(x => String(x.carpeta || "").trim().toLowerCase() === nl.toLowerCase()) || (d.llocs || []).find(x => !x.carpeta && String(x.nom || "").trim().toLowerCase() === nl.toLowerCase());
+    if (!l) { l = { id: rid(), nom: nl, carpeta: nl, items: [] }; d.llocs = (d.llocs || []).concat(l) } else if (!l.carpeta) l.carpeta = nl;
+    if ((d.esborrats || []).includes(b.id)) return j({ ok: 1, ja: 1 });
     l.items = (l.items || []).concat({ id: rid(), ...it });
     await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, JSON.stringify(d), Date.now()).run();
     return j({ ok: 1 });
@@ -762,4 +764,23 @@ async function pontDrive(request, env, db, j) {
   const d = { titulo: it.nom.replace(/\.\w+$/, ""), ...it, tags: b.lloc ? String(b.lloc).split("/").map(x => x.trim()).filter(Boolean) : [], proyectos: /^proyecto:/.test(b.proj || "") ? [b.proj] : [] };
   await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3)").bind(id, JSON.stringify(d), Date.now()).run();
   return j({ ok: 1 });
+}
+
+// En desar un recce des del navegador, hi manté el que el pont del Drive hi hagi afegit mentrestant
+// (arxius amb deDrive que el navegador encara no tenia i que no ha esborrat: llista «esborrats» d'ids del Drive).
+async function recceConserva(db, id, b) {
+  try {
+    const nou = JSON.parse(b), r = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(id).first(); if (!r) return b;
+    const vell = JSON.parse(r.data), esb = new Set(nou.esborrats || []), tenim = new Set();
+    (nou.llocs || []).forEach(l => (l.items || []).forEach(x => x.drive && x.drive.id && tenim.add(x.drive.id)));
+    let canvi = false;
+    (vell.llocs || []).forEach(lv => (lv.items || []).forEach(x => {
+      if (!x.deDrive || !x.drive || tenim.has(x.drive.id) || esb.has(x.drive.id)) return;
+      nou.llocs = nou.llocs || [];
+      let l = nou.llocs.find(y => y.id === lv.id) || nou.llocs.find(y => String(y.carpeta || y.nom || "").toLowerCase() === String(lv.carpeta || lv.nom || "").toLowerCase());
+      if (!l) { l = { id: lv.id, nom: lv.nom, carpeta: lv.carpeta || lv.nom, items: [] }; nou.llocs.push(l) }
+      l.items = (l.items || []).concat(x); tenim.add(x.drive.id); canvi = true;
+    }));
+    return canvi ? JSON.stringify(nou) : b;
+  } catch (e) { return b }
 }

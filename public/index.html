@@ -431,6 +431,17 @@ html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hd
 .agev{display:flex;gap:4px;align-items:baseline;font-size:12px;line-height:1.25;border-left:3px solid var(--c);background:var(--card);border-radius:4px;padding:3px 5px;min-width:0;cursor:pointer}.agev i{font-style:normal;color:var(--mut);font-variant-numeric:tabular-nums;flex:none}.agev span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.agev:hover{box-shadow:0 0 0 1px var(--c)}
 .agm{font-size:11px;padding-left:4px}.agwd{display:none;font-style:normal;font-size:12px;color:var(--mut);margin-right:4px}.agpeu{font-size:12px;color:var(--mut);margin-top:8px}.agpeu a{color:var(--ink)}
 @media(max-width:700px){.agg.setmana{grid-template-columns:1fr}.agg.setmana .agdh{display:none}.agg.setmana .agd{min-height:0;flex-direction:row;flex-wrap:wrap;align-items:center}.agg.setmana .agd>b{flex:none}.agg.setmana .agwd{display:inline}.agg.setmana .agev{flex:1 1 100%}.agg.mes .agev span{display:none}.agg.mes .agev{padding:2px;border-left-width:4px}.agg.mes .agev i{display:none}.agg.mes .agd{min-height:64px}}
+
+/* Ajustos després de la revisió (mòbil, tàctil, alineació) */
+@media(max-width:700px){#s-referencies .bar,#s-recce .bar{flex-wrap:wrap}#s-referencies .bar .hq{flex:1 1 100%;max-width:none!important}#s-referencies .bar select{flex:1 1 100%}#s-referencies .bar>span{display:none}#s-referencies .bar .b,#s-referencies .bar .b2{flex:1 1 auto}}
+@media(max-width:1000px){.dkap{grid-template-columns:minmax(0,1fr)}.dkfm .dkcat{padding:12px 14px}}
+@media(pointer:coarse){.pst .x{opacity:.6}.pall input{width:22px;height:22px}.pst input{width:22px;height:22px}.agh .agn{width:44px;min-height:40px}.mdlh .x{width:40px;height:40px}}
+.pall input{width:18px;height:18px;accent-color:var(--ink)}
+.pcar{display:flex;flex-direction:column}.pcar .g{flex:1;display:flex;flex-direction:column}.pcar .g b{overflow:hidden}.pcar .g b span,.pcar .g b{text-overflow:ellipsis}.pcar .pbar{margin-top:auto;flex:none}.pcar .pcmeta{margin-bottom:7px}
+#s-projecte .dash{grid-auto-flow:row dense}.card h3 .pnota{font-size:16px}
+.agg.mes .agd{min-height:76px}.agd.fora,.agd.fora.passat{opacity:.35}
+.mdth .mdgt2{position:absolute;left:6px;bottom:6px;font-style:normal;font-size:10px;font-weight:700;background:var(--ink);color:var(--onT);border-radius:4px;padding:2px 5px}
+.mdit small .mdgt{display:none}
 </style><script>try{if(localStorage.getItem("hub-tema")==="fosc"){document.documentElement.dataset.tema="fosc";document.querySelector('meta[name="theme-color"]').content="#111110"}}catch(e){}</script></head><body>
 <div class="app">
 <header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><button class="offl" id="offl" hidden></button><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="lluna" id="lluna" title="Sala de muntatge (mode fosc)" aria-label="Mode fosc"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><button class="mb" id="mb">Menú</button></header>

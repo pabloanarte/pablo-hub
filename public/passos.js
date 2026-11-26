@@ -9,6 +9,8 @@ window.PAS = (() => {
   const nota = p => { const v = p.val || {}; const s = VAL.reduce((a, [k]) => a + (+v[k] || 0), 0); return s / 2 }; // 4 × 5 = 20 → /10
   const valorat = p => VAL.some(([k]) => +(p.val || {})[k]);
   const fmtNota = n => String(Math.round(n * 10) / 10).replace(".", ",") + "/10";
+  // «1.200,50», «1.000», «1200.5», «200» → número
+  const num = v => { let t = String(v || "").replace(/[€\s]/g, ""); if (!t) return NaN; if (t.includes(",")) t = t.replace(/\./g, "").replace(",", "."); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, ""); return parseFloat(t) };
   const eur = n => (+n).toLocaleString("ca-ES", { maximumFractionDigits: 2 }) + " €";
   const feeTxt = p => p.feeTipus === "Sense fee" ? "Sense fee" : +p.fee ? eur(p.fee) : "";
 
@@ -34,7 +36,9 @@ window.PAS = (() => {
   ];
   // les fases anteriors a l'estat del projecte surten fetes (un projecte en postproducció ja ha rodat)
   const ORD = ["Desenvolupament", "Preproducció", "Rodatge", "Postproducció", "Distribució"], ORDE = { "Idea": 0, "Desenvolupament": 0, "Finançament": 0, "Preproducció": 1, "Rodatge": 2, "Postproducció": 3, "Distribució": 4, "Acabat": 5 };
-  const plantilla = p => { const ea = ORDE[p.estado] ?? 0; return (!H.meu(p) ? EQUIP : ["Videoclip", "Publicitat"].includes(p.categoria) ? DIR_VC.filter(x => p.categoria === "Videoclip" || x[2] !== "brief") : DIR_CURT).map(([fase, t, auto]) => ({ id: uid(), fase, t, ...(auto ? { auto } : {}), ...(ORD.includes(fase) && ORD.indexOf(fase) < ea ? { ok: true } : {}) })) };
+  // ids fixos (t0, t1…): el que es marca abans de desar la plantilla es troba igual en desar-la
+  const plantilla = p => (!H.meu(p) ? EQUIP : ["Videoclip", "Publicitat"].includes(p.categoria) ? DIR_VC.filter(x => p.categoria === "Videoclip" || x[2] !== "brief") : DIR_CURT).map(([fase, t, auto], i) => ({ id: "t" + i, fase, t, ...(auto ? { auto } : {}) }));
+  const perEstat = (x, p) => ORD.includes(x.fase) && ORD.indexOf(x.fase) < (ORDE[p.estado] ?? 0); // fase ja passada segons l'estat del projecte
   const llista = p => Array.isArray(p.passos) ? p.passos : plantilla(p);
   const fases = l => [...new Set(l.map(x => x.fase))];
 
@@ -65,9 +69,9 @@ window.PAS = (() => {
     facturat: (p, c) => p.feeTipus === "Sense fee" ? false : c.feina.some(x => x.proyecto === p.id && ["Facturat", "Cobrat"].includes(x.estado)),
     cobrat: (p, c) => p.feeTipus === "Sense fee" ? false : c.feina.some(x => x.proyecto === p.id && x.estado === "Cobrat")
   };
-  const fet = (x, p, c) => !!x.ok || !!(x.auto && c && AUTO[x.auto] && (() => { try { return AUTO[x.auto](p, c) } catch (e) { return false } })());
+  const fet = (x, p, c) => !!x.ok || perEstat(x, p) || !!(x.auto && c && AUTO[x.auto] && (() => { try { return AUTO[x.auto](p, c) } catch (e) { return false } })());
   // passos que no toquen (p. ex. factura i cobrament si és «Sense fee»)
-  const compta = (x, p) => !(p.feeTipus === "Sense fee" && ["facturat", "cobrat"].includes(x.auto));
+  const compta = (x, p) => !(p.feeTipus === "Sense fee" && ["facturat", "cobrat"].includes(x.auto)) && !(x.auto === "facturat" && ["Gangster", "Alta"].includes(p.feeTipus));
   function progres(p, c) { const l = llista(p).filter(x => compta(x, p)), n = l.filter(x => fet(x, p, c)).length; return { n, tot: l.length, f: l.length ? n / l.length : 0 } }
   // fase on és ara: la primera que no està acabada
   function faseActual(p, c) { const l = llista(p).filter(x => compta(x, p)); return fases(l).find(f => l.filter(x => x.fase === f).some(x => !fet(x, p, c))) || "Acabat" }
@@ -79,8 +83,8 @@ window.PAS = (() => {
     const cob = feines.filter(x => x.proyecto === p.id);
     return `<div class="card pfx"><h3>Valorar<span class="pnota">${valorat(p) ? fmtNota(n) : "—"}</span></h3>
       <div class="pval">${VAL.map(([k, l]) => `<div class="pvr"><span>${l}</span><div class="pvq">${[1, 2, 3, 4, 5].map(i => `<button class="${i <= (+v[k] || 0) ? "on" : ""}" data-pas="val" data-v="${k}" data-i="${i}" aria-label="${l} ${i} de 5" title="${i} de 5"></button>`).join("")}</div></div>`).join("")}</div>
-      <h3 style="margin-top:18px">Diners</h3>
-      <div class="pfee"><div class="pfin"><input id="pfee" inputmode="decimal" placeholder="Fee" value="${E(p.fee || "")}" ${p.feeTipus === "Sense fee" ? "disabled" : ""}><span>€</span></div>
+      <h3 style="margin-top:18px">Fee</h3>
+      <div class="pfee"><div class="pfin"><input id="pfee" inputmode="decimal" placeholder="Fee" value="${E(p.fee ? String(p.fee).replace(".", ",") : "")}" ${p.feeTipus === "Sense fee" ? "disabled" : ""}><span>€</span></div>
         <select id="pfeet">${["", ...FEE].map(o => `<option value="${o}" ${o === (p.feeTipus || "") ? "selected" : ""}>${o || "Modalitat…"}</option>`).join("")}</select></div>
       ${cob.map(x => `<div class="r" data-pas="feina" data-id="${x.id}"><i class="dot" style="background:${{ "Pressupostat": "#8e8e93", "Confirmat": "#0a84ff", "Fet": "#ff9f0a", "Facturat": "#af52de", "Cobrat": "#30b27a" }[x.estado] || "#c7c7cc"}"></i><div class="g"><b>${E(x.titulo || "Cobrament")}</b><small>${E([x.estado, (+x.total || (+x.tarifa || 0) * (+x.jornades || 0)) ? eur(+x.total || (+x.tarifa || 0) * (+x.jornades || 0)) : "", x.factura && "Factura " + x.factura].filter(Boolean).join(" · "))}</small></div></div>`).join("")}
       ${p.feeTipus === "Sense fee" ? "" : `<button class="b2" data-pas="cobra" style="margin-top:10px">+ Cobrament</button>`}</div>`;
@@ -93,7 +97,7 @@ window.PAS = (() => {
       ${fs.map(f => { const lf = l.filter(x => x.fase === f), cl = lf.filter(x => compta(x, p)), n = cl.filter(x => fet(x, p, c)).length, ob = oberta(f);
         return `<div class="pfs ${ob ? "ob" : ""}"><button class="pfh" data-pas="fase" data-v="${E(f)}" aria-expanded="${ob}"><span class="pchev">›</span><b>${E(f)}</b><span class="pbar"><i style="width:${cl.length ? Math.round(n / cl.length * 100) : 0}%"></i></span><span class="ppn">${n}/${cl.length}</span></button>
         ${ob ? `<div class="pfb">${lf.length > 1 ? `<label class="ck pall"><input type="checkbox" data-pas="tots" data-v="${E(f)}" ${cl.every(x => fet(x, p, c)) ? "checked" : ""}> Completar tots</label>` : ""}
-          ${lf.map(x => { const a = x.auto && !x.ok && fet(x, p, c), no = !compta(x, p); return `<div class="pst ${fet(x, p, c) ? "ok" : ""} ${no ? "no" : ""}"><input type="checkbox" data-pas="ok" data-id="${x.id}" ${fet(x, p, c) ? "checked" : ""} ${a ? "disabled" : ""}><span>${E(x.t)}${a ? ` <small class="pau">fet al hub</small>` : no ? ` <small class="pau">no cal (sense fee)</small>` : ""}</span><button class="x" data-pas="treu" data-id="${x.id}" title="Treure aquest pas" aria-label="Treure">×</button></div>` }).join("")}
+          ${lf.map(x => { const a = !x.ok && (perEstat(x, p) || x.auto && fet(x, p, c)), no = !compta(x, p); return `<div class="pst ${fet(x, p, c) ? "ok" : ""} ${no ? "no" : ""}"><input type="checkbox" data-pas="ok" data-id="${x.id}" ${fet(x, p, c) ? "checked" : ""} ${a ? "disabled" : ""}><span>${E(x.t)}${a ? ` <small class="pau">${perEstat(x, p) && !x.ok ? "fase passada" : "fet al hub"}</small>` : no ? ` <small class="pau">no cal (${E(p.feeTipus === "Sense fee" ? "sense fee" : p.feeTipus)})</small>` : ""}</span><button class="x" data-pas="treu" data-id="${x.id}" title="Treure aquest pas" aria-label="Treure">×</button></div>` }).join("")}
           <div class="row pnou"><input placeholder="Afegir un pas…" data-pas="nou" data-v="${E(f)}"><button class="b2" data-pas="afegeix" data-v="${E(f)}" aria-label="Afegir">+</button></div></div>` : ""}</div>` }).join("")}
       <div class="ls" style="margin-top:10px"><button class="t" data-pas="fasenova">+ Fase</button>${Array.isArray(p.passos) ? `<button class="t" data-pas="reset" style="background:none;color:var(--mut)">Tornar a la plantilla</button>` : ""}</div></div>`;
   }
@@ -114,14 +118,14 @@ window.PAS = (() => {
       if (k === "feina") return H.abrir("feina", b.dataset.id);
       if (k === "cobra") {
         const rol = H.rols(p), r = rol.includes("Ajudant de direcció") && !H.meu(p) ? "Ajudant de direcció" : rol.includes("Script") && !H.meu(p) ? "Script" : "Direcció";
-        const d = { id: H.uid("feina"), titulo: p.titulo || "", rol: r, estado: "Confirmat", proyecto: p.id, ...(+p.fee ? { total: +p.fee } : {}) };
+        const d = { id: H.uid("feina"), titulo: p.titulo || "", rol: r, estado: "Confirmat", proyecto: p.id, ...(+p.fee ? { total: +p.fee } : {}), ...(p.feeTipus === "Gangster" ? { iva: 0, irpf: 0 } : {}), ...(p.feeTipus ? { notas: "Modalitat: " + p.feeTipus } : {}) };
         await H.put(d, 1); H.toast("Cobrament creat a Diners"); repinta(); return H.abrir("feina", d.id);
       }
     });
     el.addEventListener("change", async e => {
       const t = e.target; if (!t.dataset.pas && t.id !== "pfee" && t.id !== "pfeet") return;
       const p = await doc(); if (!p) return;
-      if (t.id === "pfee") { const n = parseFloat(String(t.value).replace(/\./g, "").replace(",", ".")); p.fee = isNaN(n) ? "" : n; await H.put(p, 1); return repinta() }
+      if (t.id === "pfee") { const n = num(t.value); p.fee = isNaN(n) ? "" : n; await H.put(p, 1); return repinta() }
       if (t.id === "pfeet") { p.feeTipus = t.value; await H.put(p, 1); return repinta() }
       if (t.dataset.pas === "ok") { fixa(p); const x = p.passos.find(y => y.id === t.dataset.id); if (x) x.ok = t.checked; await H.put(p, 1); return repinta() }
       if (t.dataset.pas === "tots") { fixa(p); const c = await ctx(); p.passos.filter(x => x.fase === t.dataset.v).forEach(x => { if (t.checked) x.ok = true; else if (!(x.auto && fet({ auto: x.auto }, p, c))) x.ok = false }); await H.put(p, 1); return repinta() }

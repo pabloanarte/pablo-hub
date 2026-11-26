@@ -5,7 +5,7 @@
 window.MED = (() => {
   const E = s => String(s ?? "").replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
   const url = id => "/api/archivo/" + id;
-  const MAXD = 35 * 1024 * 1024; // el que es pot enviar al Drive des del hub (més gran: directament al Drive)
+  const MAXD = 20 * 1024 * 1024; // el que es pot enviar al Drive des del hub (més gran: directament al Drive)
 
   // ---------- Drive ----------
   let EST = null, eT = 0;
@@ -49,7 +49,7 @@ window.MED = (() => {
     } catch (e) { if (e && e.offline) { H.toast("Sense connexió: per pujar fotos cal internet"); return null } }
     // 2) original
     if (d.connectat && file.size <= MAXD) {
-      try { const r = await H.api("POST", "drive/puja", { tipus: desti.tipus, proj: desti.proj || "", lloc: desti.lloc || "", nom: file.name, mime: file.type || "application/octet-stream", b64: await b64(file) }); if (r && r.id) o.drive = { id: r.id, url: r.url } } catch (e) { }
+      try { const r = await H.api("POST", "drive/puja", { tipus: desti.tipus, proj: desti.proj || "", lloc: desti.lloc || "", nom: file.name, mime: file.type || "application/octet-stream", b64: await b64(file) }); if (r && r.id) o.drive = { id: r.id, url: r.url } } catch (e) { H.toast(file.name + ": l'original no ha arribat al Drive" + (e && e.error ? " (" + e.error + ")" : "")) }
     }
     if (esVideo && !o.drive) {
       if (file.size <= 25 * 1024 * 1024) { try { o.video = (await pujaHub(file, file.name)).id } catch (e) { } }
@@ -60,7 +60,12 @@ window.MED = (() => {
     return o;
   }
   // esborra la còpia del hub (l'original del Drive va a la paperera del Drive)
-  function esborra(x) { [x.img, x.video].filter(Boolean).forEach(id => H.api("DELETE", "archivo/" + id).catch(() => { })); if (x.drive && x.drive.id) H.api("POST", "drive/esborra", { id: x.drive.id }).catch(() => { }) }
+  // (la còpia del hub no s'esborra si encara surt en un dossier, guió tècnic, pla de rodatge o storyboard)
+  async function esborra(x) {
+    if (x.drive && x.drive.id) H.api("POST", "drive/esborra", { id: x.drive.id }).catch(() => { });
+    let us = ""; try { us = JSON.stringify(await Promise.all(["deck", "gt", "pdr", "sb"].map(t => H.col(t)))) } catch (e) { return }
+    [x.img, x.video].filter(Boolean).forEach(id => { if (!us.includes('"' + id + '"')) H.api("DELETE", "archivo/" + id).catch(() => { }) });
+  }
 
   // miniatura (amb icona de vídeo)
   const mini = (x, attrs = "") => `<div class="mdth" ${attrs}>${x.img ? `<img src="${url(x.img)}" alt="" loading="lazy">` : `<span>${E(x.nom || "")}</span>`}${x.tipus === "Vídeo" ? `<i class="mdv">▶${x.dur ? " " + Math.floor(x.dur / 60) + ":" + String(x.dur % 60).padStart(2, "0") : ""}</i>` : x.tipus === "Visor" ? `<i class="mdv">visor</i>` : ""}</div>`;

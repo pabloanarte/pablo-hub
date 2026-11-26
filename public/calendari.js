@@ -24,7 +24,7 @@ window.AG = (() => {
     const pn = id => (ps.find(x => x.id === id) || {}).titulo || "", dins = d => d && d >= de && d <= a, out = [];
     t.filter(x => !x.hecha && dins(x.fecha)).forEach(x => out.push({ d: x.fecha, t: x.titulo || "Tasca", k: "tasca", o: ["tarea", x.id] }));
     r.filter(x => dins(x.fecha)).forEach(x => out.push({ d: x.fecha, h: x.hora, t: x.titulo || "Reunió", k: "reunio", lloc: x.lugar, o: ["reunion", x.id] }));
-    pdr.forEach(x => (x.dias || []).forEach((d, i) => dins(d.fecha) && out.push({ d: d.fecha, h: d.citacio && d.citacio.hora || "", t: `Rodatge ${pn(x.proyecto) || x.titulo || ""} · J${i + 1}`, k: "rodatge", o: ["pdr", x.id] })));
+    pdr.forEach(x => (x.dias || []).forEach((d, i) => dins(d.fecha) && out.push({ d: d.fecha, h: (String(d.calls || "").match(/\b\d{1,2}:\d{2}\b/) || [""])[0].padStart(5, "0").replace(/^0+$/, ""), t: `Rodatge ${pn(x.proyecto) || x.titulo || ""} · J${i + 1}`, k: "rodatge", o: ["pdr", x.id] })));
     fe.forEach(x => { if (!x.ini) return; const f = x.fin && x.fin >= x.ini ? x.fin : x.ini; for (let d = x.ini, n = 0; d <= f && n < 60; d = suma(d, 1), n++) if (dins(d)) out.push({ d, t: `${x.rol || "Feina"}: ${x.titulo || ""}`, k: "feina", o: ["feina", x.id] }) });
     cu.forEach(x => (x.setmanes || []).forEach(s => s && dins(s.data) && out.push({ d: s.data, h: s.hora, t: `Classe: ${x.titulo || ""}`, k: "classe", lloc: x.centre, o: ["curs", x.id] })));
     cv.filter(x => (!x.estado || x.estado === "Per presentar") && dins(x.limite)).forEach(x => out.push({ d: x.limite, t: "Límit: " + (x.titulo || ""), k: "limit", o: ["convocatoria", x.id] }));
@@ -85,7 +85,7 @@ window.AG = (() => {
     const { de, a } = rang(), hub = (await delHub(d, d)), g = await deGoogle(de, a), l = hub.concat(g ? g.l.filter(x => x.d === d) : []).sort((x, y) => (x.h || "").localeCompare(y.h || ""));
     H.sheet(`<h2 style="margin-top:0;font-size:22px;color:var(--ink);text-transform:none;letter-spacing:0">${E(H.fecha(d, 1))}</h2>
       ${l.length ? l.map((x, j) => `<div class="r" ${x.o ? `data-ago="${x.o[0]}" data-id="${x.o[1]}"` : ""}><i class="dot" style="background:${E(x.col || COL[x.k] || "#8e8e93")}"></i><div class="g"><b>${E(x.t)}</b><small>${E([x.h ? x.h + (x.hf ? "–" + x.hf : "") : x.tot ? "Tot el dia" : "", x.lloc, x.cal || { tasca: "Tasca", reunio: "Reunió", rodatge: "Rodatge", feina: "Feina", classe: "Classe", limit: "Festival" }[x.k]].filter(Boolean).join(" · "))}</small></div></div>`).join("") : `<p class="em">Res aquest dia.</p>`}
-      <label>Tasca per aquest dia</label><div class="row"><input id="agt" placeholder="Què has de fer?"><button class="b" data-agk="tasca">Afegir</button></div>`, () => { const b = document.getElementById("hshc"); b.onclick = b.onkeydown = null });
+      <label>Tasca per a aquest dia</label><div class="row"><input id="agt" placeholder="Què has de fer?"><button class="b" data-agk="tasca">Afegir</button></div>`, () => { const b = document.getElementById("hshc"); b.onclick = b.onkeydown = null });
     const box = document.getElementById("hshc");
     box.onclick = async e => {
       const r = e.target.closest("[data-ago]"); if (r) { box.onclick = null; H.cerrar(); const [t, id] = [r.dataset.ago, r.dataset.id]; if (t === "tarea") return H.abrirTarea(id); if (t === "pdr") { hubShow("planes", { proj: "" }); return window.P && P.abrir(id) } if (t === "curs") { hubShow("docencia"); return window.DOC && DOC.curs(id) } return H.abrir(t, id) }

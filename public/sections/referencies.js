@@ -30,7 +30,7 @@
     const pid = H.pj() === "-" ? "" : H.pj(), fs = [...files]; let n = 0;
     for (const [i, f] of fs.entries()) {
       H.toast(`Pujant ${i + 1} de ${fs.length}…`);
-      const o = await MED.puja(f, { tipus: "ref", proj: pid || fp && fp !== "cap" && fp || "" }); if (!o) continue;
+      const o = await MED.puja(f, { tipus: "ref", proj: pid || fp && fp !== "cap" && fp || "", lloc: tag }); if (!o) continue;
       const pr = pid || (fp && fp !== "cap" ? fp : "");
       await H.put({ id: H.uid("ref"), titulo: f.name.replace(/\.\w+$/, ""), ...o, tags: tag ? [tag] : [], proyectos: pr ? [pr] : [] }, 1); n++;
     }

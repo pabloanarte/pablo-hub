@@ -28,7 +28,7 @@ function resposta(q) {
     const clau = PropertiesService.getScriptProperties().getProperty("CLAU");
     if (!clau || q.clau !== clau) r = { error: "clau" };
     else if (!Object.prototype.hasOwnProperty.call(ACCIONS, q.accio)) r = { error: "accio" };
-    else { if (q.hub && /^https:\/\//.test(q.hub)) PropertiesService.getScriptProperties().setProperty("HUB", q.hub); r = ACCIONS[q.accio](q) }
+    else { if (q.accio === "prova" && q.hub && /^https:\/\//.test(q.hub)) PropertiesService.getScriptProperties().setProperty("HUB", q.hub); r = ACCIONS[q.accio](q) } // l'adreça del hub només es fixa en connectar-lo
   } catch (e) { r = { error: String(e && e.message || e) } }
   return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -58,7 +58,11 @@ function dinsArrel(f) { const a = arrel().getId(); let ps = f.getParents(), n = 
 function carpetaProjecte(pid, titol) {
   const p = PropertiesService.getScriptProperties(), k = "P_" + pid, id = p.getProperty(k), nom = String(titol || "Sense títol").slice(0, 120);
   if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) { if (titol && f.getName() !== nom) f.setName(nom); return f } } catch (e) { } }
-  const f = sub(sub(arrel(), PROJ), nom); p.setProperty(k, f.getId()); return f;
+  // carpeta pròpia encara que dos projectes es diguin igual: «Títol», «Títol (2)»…
+  const pare = sub(arrel(), PROJ), usades = Object.keys(p.getProperties()).filter(x => x.indexOf("P_") === 0 && x !== k).map(x => p.getProperty(x));
+  let f = null, n = 1;
+  while (!f) { const nm = n === 1 ? nom : nom + " (" + n + ")", it = pare.getFoldersByName(nm); if (!it.hasNext()) f = pare.createFolder(nm); else { const x = it.next(); if (usades.indexOf(x.getId()) < 0) f = x; else n++ } }
+  p.setProperty(k, f.getId()); return f;
 }
 function carpetaDe(tipus, pid, titol, lloc) {
   let f = tipus === "recce" ? sub(carpetaProjecte(pid, titol), RECCE) : pid ? sub(carpetaProjecte(pid, titol), REFS) : sub(arrel(), BIB);

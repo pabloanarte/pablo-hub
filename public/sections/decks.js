@@ -1,4 +1,4 @@
-// Decks: dossiers i presentacions. Editor de diapositives amb estils, assistent per categories, importar PDF,
+// Decks: dossiers i presentacions. Editor de diapositives amb estils, «Omplir per apartats» (vista prèvia en directe), importar PDF,
 // revisió de disseny, exportar (PDF, PNG, JPEG) i enllaç per compartir. Dibuix a deck.js (window.DK).
 (() => {
   const { E } = H, el = document.getElementById("s-decks");
@@ -114,12 +114,12 @@
     if (k === "crea") {
       const pl = document.querySelector('#hshc [data-nk="pl"].on').dataset.v, st = document.querySelector('#hshc [data-nk="st"].on').dataset.v;
       const d = { id: H.uid("deck"), titulo: "", plantilla: pl, estil: st, ratio: document.getElementById("nd-f").value, rw: +document.getElementById("nd-rw").value.replace(",", ".") || 16, rh: +document.getElementById("nd-rh").value.replace(",", ".") || 9, proyecto: document.getElementById("nd-p").value, slides: [], dades: {}, mod: Date.now() };
-      await preomple(d); d.titulo = (d.dades.projecte || {}).titol || PL[pl].nom; d.slides = genera(d); await H.put(d, 1); H.cerrar(); doc = d; sel = 0; assistent();
+      await preomple(d); d.titulo = (d.dades.projecte || {}).titol || PL[pl].nom; d.slides = genera(d); d.viu = true; d.ma = false; await H.put(d, 1); H.cerrar(); doc = d; sel = 0; assistent();
     }
   });
 
   // ---------- editor ----------
-  async function obre(id) { ++ver; doc = (await H.col("deck")).find(x => x.id === id); sel = 0; if (!doc) return; if (doc.dades && Object.keys(doc.dades).length && !doc.ma) assistent(); else { mode = "slides"; pintar() } }
+  async function obre(id) { ++ver; doc = (await H.col("deck")).find(x => x.id === id); sel = 0; if (!doc) return; if (doc.viu && !doc.ma) assistent(); else { mode = "slides"; pintar() } }
   const S = () => doc.slides[sel];
   async function pintar() {
     if (!doc) return; ++ver;
@@ -135,7 +135,7 @@
     prev();
   }
   function prev() {
-    const p = el.querySelector("#dkprev"); if (!p || !doc.slides.length) { if (p) p.innerHTML = `<p class="em">Sense diapositives. Afegeix-ne una o fes servir «Dades per categories».</p>`; return }
+    const p = el.querySelector("#dkprev"); if (!p || !doc.slides.length) { if (p) p.innerHTML = `<p class="em">Sense diapositives. Afegeix-ne una o fes servir «Omplir per apartats».</p>`; return }
     const r = DK.ratio(doc), cw = p.clientWidth || el.clientWidth - 40, hmax = Math.max(300, window.innerHeight - (r < 1 ? 420 : 280)); // vertical: que es vegin també les miniatures
     p.innerHTML = DK.escalada(doc, S(), Math.floor(Math.min(cw, 1300, hmax * r)), { img: imgUrl }); aj(p);
   }
@@ -178,7 +178,8 @@
   // Mentre no es toquin les diapositives a mà (doc.ma), el dossier es refà sol amb cada canvi.
   // Si s'han retocat a mà, la vista prèvia ensenya com quedaria i «Aplicar al dossier» el refà.
   let mode = "slides", tViu = 0;
-  function assistent() { mode = "apartats"; pintaAp() }
+  // els dossiers fets abans d'aquesta pàgina (sense «viu») poden tenir retocs a mà: no es refan sols
+  function assistent() { mode = "apartats"; if (doc && !doc.viu) { if (doc.ma === undefined && (doc.slides || []).length) doc.ma = true; doc.viu = true; save() } pintaAp() }
   async function pintaAp() {
     if (!doc) return; ++ver;
     const pl = PL[doc.plantilla] || PL.film, v = doc.dades = doc.dades || {};
@@ -387,10 +388,6 @@
   });
   document.getElementById("hsh").addEventListener("click", async e => {
     if (el.hidden || !doc) return; onIk(e);
-    const a = e.target.closest("[data-ak]");
-    if (a && a.dataset.ak === "ves") { e.preventDefault(); const c = document.getElementById("cat-" + a.dataset.v); c && c.scrollIntoView({ behavior: "smooth", block: "start" }) }
-    if (a && a.dataset.ak === "pl") { const ve = doc.plantilla === "director", nu = a.dataset.v === "director"; doc.plantilla = a.dataset.v; if (ve !== nu) { const pj = doc.dades.projecte = doc.dades.projecte || {}; delete pj.titol; delete pj.format; if (nu) { pj.titol = "pablo anarte"; pj.format = "director de cine" } if (!doc.titolMa) doc.titulo = nu ? "pablo anarte" : "" } await preomple(doc); save(); assistent() }
-
     const r = e.target.closest("[data-rk]"); if (r && +r.dataset.rk) { sel = +r.dataset.rk - 1; H.cerrar(); pintar() }
     const x = e.target.closest("[data-xk]");
     if (x) { if (x.dataset.xk === "go") { const v = k => document.querySelector(`#hshc [data-xk="${k}"].on`).dataset.v; const [f, q, aa] = [v("f"), v("q"), v("a")]; H.cerrar(); exporta(f, q, aa).catch(() => H.toast("No s'ha pogut exportar")) } else x.parentNode.querySelectorAll("[data-xk]").forEach(y => y.classList.toggle("on", y === x)) }
