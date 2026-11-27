@@ -124,7 +124,7 @@
     if (k === "obre") fil(b.dataset.id);
     if (k === "torna") { obert = null; pintar() }
     if (k === "nou") nou();
-    if (k === "cancela" && confirm("Cancel·lar aquest enviament programat?")) { try { await api("POST", "cancela", { id: b.dataset.id }); window.CONT && CONT.desprograma(b.dataset.id); H.toast("Cancel·lat") } catch (er) { H.toast(errText(er)) } pintar() }
+    if (k === "cancela" && await H.confirma("Cancel·lar aquest enviament programat?")) { try { await api("POST", "cancela", { id: b.dataset.id }); window.CONT && CONT.desprograma(b.dataset.id); H.toast("Cancel·lat") } catch (er) { H.toast(errText(er)) } pintar() }
     if (k === "contacte") window.CONT && CONT.obre(b.dataset.id);
     if (k === "respost") { CONT.estat(b.dataset.id, "Ha respost"); H.toast("Marcat com a «Ha respost»"); b.remove() }
     if (k.startsWith("env-")) envia(k.slice(4));

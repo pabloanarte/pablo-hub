@@ -230,10 +230,10 @@
       if (o && k === "darrere") { ED.objs.unshift(ED.objs.splice(ED.sel, 1)[0]); ED.sel = 0; dibObjs(); desa() }
       if (k === "desfer" && ED.pila.length > 1) { ED.refer.push(ED.pila.pop()); torna(ED.pila.at(-1)) }
       if (k === "refer" && ED.refer.length) { const s = ED.refer.pop(); ED.pila.push(s); torna(s) }
-      if (k === "buida" && confirm("Esborrar tot el dibuix (els elements es queden)?")) { cx.clearRect(0, 0, W, Hh); desa(1) }
+      if (k === "buida" && await H.confirma("Esborrar tot el dibuix (els elements es queden)?")) { cx.clearRect(0, 0, W, Hh); desa(1) }
       if (k === "treufoto") { ED.foto = ""; const im = ov.querySelector(".sbfoto"); im && im.remove(); b.remove(); ED.canviat = true }
       if (k === "treuvideo") { ED.video = ""; ED.vurl = ""; ov.querySelector(".sbmeta").innerHTML = `<input data-e="vurl" placeholder="…o enllaç a un vídeo (Drive, Vimeo)" value="">`; ED.canviat = true }
-      if (k === "tanca") { if (ED.canviat && !confirm("Sortir sense desar els canvis?")) return; ED.nous.forEach(id => H.api("DELETE", "archivo/" + id).catch(() => { })); tanca() }
+      if (k === "tanca") { if (ED.canviat && !await H.confirma("Sortir sense desar els canvis?")) return; ED.nous.forEach(id => H.api("DELETE", "archivo/" + id).catch(() => { })); tanca() }
       if (k === "desa") { b.disabled = true; b.textContent = "Desant…"; try { await desaVinyeta(cv, W, Hh) ; tanca(); pinta() } catch (er) { b.disabled = false; b.textContent = "Desar"; H.toast("No s'ha pogut desar") } }
     });
     function tanca() { rob.disconnect(); ov.remove(); document.body.style.overflow = ""; ED = null }
@@ -365,7 +365,7 @@
     if (k === "afegeix") { doc.vin.push({ id: uid(), dur: 3, esc: doc.vin.length ? info(doc.vin.at(-1)).esc : "" }); save(); pinta(); return }
     if (k === "torna-plans") { doc.ocults = []; sincronitza(); save(); pinta(); return }
     if (k === "esq" || k === "dre") { const j = k === "esq" ? i - 1 : i + 1;[doc.vin[i], doc.vin[j]] = [doc.vin[j], doc.vin[i]]; save(); pinta() }
-    if (k === "treu") { if (!confirm("Esborrar aquesta vinyeta?" + (doc.vin[i].pla ? " (El pla del guió tècnic es queda.)" : ""))) return; const v = doc.vin.splice(i, 1)[0]; if (v.pla) doc.ocults = (doc.ocults || []).concat(v.pla);
+    if (k === "treu") { if (!await H.confirma("Esborrar aquesta vinyeta?" + (doc.vin[i].pla ? " (El pla del guió tècnic es queda.)" : ""))) return; const v = doc.vin.splice(i, 1)[0]; if (v.pla) doc.ocults = (doc.ocults || []).concat(v.pla);
       await save(); await canviaImg(v.img, ""); [v.img, v.dib, v.foto, v.video].filter(Boolean).forEach(id => H.api("DELETE", "archivo/" + id).catch(() => { })); pinta() }
   });
   el.addEventListener("change", async e => {

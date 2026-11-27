@@ -142,9 +142,9 @@
     if (!doc) return;
     if (k === "torna") return lista();
     if (k === "vis") { vista = b.dataset.v; pinta() }
-    if (k === "treu" && confirm("Treure aquesta escena del desglossament?")) { doc.escenes.splice(+b.dataset.i, 1); save(); pinta() }
+    if (k === "treu" && await H.confirma("Treure aquesta escena del desglossament?")) { doc.escenes.splice(+b.dataset.i, 1); save(); pinta() }
     if (k === "afegeix") { doc.escenes.push({ id: R.uid(), num: String(doc.escenes.length + 1), intext: "INT", set: "", moment: "", pag: "1/8", pers: "", atrezzo: "", vestuari: "", notes: "" }); save(); pinta() }
-    if (k === "esborra" && confirm("Eliminar aquest desglossament?")) { await H.del(doc); lista() }
+    if (k === "esborra" && await H.confirma("Eliminar aquest desglossament?")) { await H.del(doc); lista() }
     if (k === "gt") {
       if (!window.GT || !GT.nou) return H.toast("No s'ha pogut obrir Guions tècnics");
       const escenes = doc.escenes.map(x => ({ id: R.uid(), dsg: x.id, pet: firma(x), num: x.num, intext: x.intext, lugar: x.set, momento: x.moment, paginas: x.pag, notas: [x.pers && "Personatges: " + x.pers, x.atrezzo && "Atrezzo: " + x.atrezzo, x.vestuari && "Vestuari: " + x.vestuari, x.notes].filter(Boolean).join("\n"), planos: [] }));

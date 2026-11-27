@@ -5,7 +5,7 @@
 //  - Web (pabloanarte.com): lee y escribe public/contenido.json en GitHub (variable GITHUB_TOKEN).
 const REPO = "pabloanarte/pabloanarte-web", RAMA = "main";
 
-export async function onRequest({ request, env, params }) {
+export async function onRequest({ request, env, params, waitUntil }) {
   const p = (params.path || []).join("/"), m = request.method, db = env.DB;
   const j = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
   try {
@@ -28,6 +28,7 @@ export async function onRequest({ request, env, params }) {
         let b = await request.text(); JSON.parse(b);
         if (id.startsWith("c_")) b = await igConserva(db, id, b); // no perdre missatges d'Instagram arribats amb la fitxa oberta
         if (id.startsWith("recce:")) b = await recceConserva(db, id, b); // no perdre les fotos arribades del Drive amb el recce obert
+        if (id.startsWith("proyecto:")) await reanomenaDrive(db, id, b, waitUntil); // canvi de títol → el pont del Drive canvia el nom de la carpeta ara mateix
         await db.prepare("INSERT INTO docs(id,data,updated) VALUES(?1,?2,?3) ON CONFLICT(id) DO UPDATE SET data=?2,updated=?3").bind(id, b, Date.now()).run();
         return j({ ok: 1 });
       }
@@ -720,6 +721,16 @@ async function drive(accio, m, request, db, j) {
   if (accio === "puja") { const ps = await projectesTots(db); q.titol = (ps.find(x => x.id === q.proj) || {}).titol || "" }
   const { clau, ...o } = await pont(cfg, { ...q, accio, hub: new URL(request.url).origin });
   return j(o, o.error ? (o.error === "clau" ? 409 : 502) : 200);
+}
+// si un projecte canvia de títol, avisar el pont del Drive perquè canviï el nom de la carpeta (no cal esperar els 10 minuts)
+async function reanomenaDrive(db, id, b, waitUntil) {
+  try {
+    const nou = String(JSON.parse(b).titulo || "").trim(), r = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(id).first();
+    if (!r || String(JSON.parse(r.data).titulo || "").trim() === nou) return;
+    const cfg = await driveCfg(db); if (!cfg || !cfg.url || !waitUntil) return;
+    // s'espera 8 s: si mentrestant s'ha seguit escrivint el títol, ho farà el darrer desat (no carpetes amb títols a mig escriure)
+    waitUntil((async () => { await new Promise(r => setTimeout(r, 8000)); const a = await db.prepare("SELECT data FROM docs WHERE id=?1").bind(id).first(); if (a && String(JSON.parse(a.data).titulo || "").trim() === nou) await pont(cfg, { accio: "sincronitza" }) })());
+  } catch (e) { }
 }
 async function projectesTots(db) {
   const { results } = await db.prepare("SELECT id,data FROM docs WHERE id LIKE 'proyecto:%'").all();

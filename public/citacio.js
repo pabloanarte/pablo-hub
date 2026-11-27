@@ -150,8 +150,8 @@ window.CIT = (() => {
     if (k === "torna") { c = null; return torna() }
     if (k === "fila") { c[b.dataset.t].push(Object.fromEntries([["id", uid()]].concat(T[b.dataset.t].map(([f]) => [f, ""])))); save(); pinta() }
     if (k === "treu") { c[b.dataset.t].splice(+b.dataset.i, 1); save(); pinta() }
-    if (k === "refa" && confirm(`Refer «${TIT[b.dataset.t]}» a partir del pla? Es perdran els canvis fets a mà en aquesta taula.`)) { desDelPla([b.dataset.t]); save(); pinta() }
-    if (k === "reset" && confirm("Refer tota la citació a partir del pla? Es perdran tots els canvis fets a mà.")) { await nova(); save(); pinta() }
+    if (k === "refa" && await H.confirma(`Refer «${TIT[b.dataset.t]}» a partir del pla? Es perdran els canvis fets a mà en aquesta taula.`)) { desDelPla([b.dataset.t]); save(); pinta() }
+    if (k === "reset" && await H.confirma("Refer tota la citació a partir del pla? Es perdran tots els canvis fets a mà.")) { await nova(); save(); pinta() }
     if (k === "temps") temps();
     if (k === "pdf") R.pdf(`<div class="pz czp">${full(0)}</div>`, false);
     if (k === "envia") enviar();

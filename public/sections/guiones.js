@@ -116,11 +116,11 @@
     if (k === "volver") return lista();
     if (k === "addp") { doc.escenas[ei].planos.push(nuevoPlano(doc.escenas[ei])); save(); pintar(); const t = el.querySelectorAll(`tr.pr[data-e="${ei}"] textarea`); t.length && t[t.length - (vis().length - 2)]?.focus() }
     if (k === "addesc") { const u = doc.escenas.at(-1); const n = { id: uid(), num: String((+(u && u.num) || doc.escenas.length) + 1), intext: "INT", lugar: "", planos: [] }; n.planos.push(nuevoPlano(n)); doc.escenas.push(n); save(); pintar() }
-    if (k === "delesc" && confirm("Esborrar l'escena i els seus plans?")) { doc.escenas.splice(ei, 1); save(); pintar() }
+    if (k === "delesc" && await H.confirma("Esborrar l'escena i els seus plans?")) { doc.escenas.splice(ei, 1); save(); pintar() }
     if (k === "cesc") { const C = ["#3b4a5a", "#7a1f2b", "#1f4e79", "#2e6b3a", "#6b3fa0", "#b35c00", "#555"], i = C.indexOf(doc.escenas[ei].color || C[0]); doc.escenas[ei].color = C[(i + 1) % C.length]; save(); pintar() }
     if (k === "dup") { const p = doc.escenas[ei].planos[pi]; doc.escenas[ei].planos.splice(pi + 1, 0, { ...p, id: uid(), ok: false }); save(); pintar() }
-    if (k === "del" && confirm("Esborrar aquest pla?")) { doc.escenas[ei].planos.splice(pi, 1); save(); pintar() }
-    if (k === "delgt" && confirm("Eliminar aquest guió tècnic sencer? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Guió eliminat"); return lista() }
+    if (k === "del" && await H.confirma("Esborrar aquest pla?")) { doc.escenas[ei].planos.splice(pi, 1); save(); pintar() }
+    if (k === "delgt" && await H.confirma("Eliminar aquest guió tècnic sencer? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Guió eliminat"); return lista() }
     if (k === "ok") { doc.escenas[ei].planos[pi].ok = b.checked; save(); const y = window.scrollY, x = el.querySelector(".shw")?.scrollLeft, sy = el.querySelector(".shw")?.scrollTop; pintar(); window.scrollTo(0, y); const w = el.querySelector(".shw"); if (w) { w.scrollLeft = x || 0; w.scrollTop = sy || 0 } }
     if (k === "color") { const p = doc.escenas[ei].planos[pi]; p.color = ((p.color || 0) + 1) % FILA.length; save(); b.closest("tr").style.background = FILA[p.color]; b.style.background = FILA[p.color] || "#fff"; b.classList.toggle("on", !!p.color) }
     if (k === "qimg") { const p = doc.escenas[ei].planos[pi]; if (!p.imgSb && !p.imgRecce) H.api("DELETE", "archivo/" + p.img).catch(() => { }); delete p.img; delete p.imgSb; delete p.imgRecce; save(); pintar() }
@@ -148,7 +148,7 @@
   hsh.addEventListener("click", async e => {
     const b = e.target.closest("[data-gk]"); if (!b || !doc || b.dataset.gk === "vis" || b.dataset.gk === "nom") return; const g = b.dataset.gk, ks = totes().map(c => c.k), i = +b.dataset.i;
     if (g === "up" || g === "down") { const j = g === "up" ? i - 1 : i + 1;[ks[i], ks[j]] = [ks[j], ks[i]]; doc.cols = ks; doc.colsAuto = false; save(); panell() }
-    if (g === "del" && confirm("Eliminar aquesta columna i el que hi has escrit?")) { delete doc.custom[b.dataset.c]; doc.cols = ks.filter(k => k !== b.dataset.c); planos().forEach(p => delete p[b.dataset.c]); save(); panell() }
+    if (g === "del" && await H.confirma("Eliminar aquesta columna i el que hi has escrit?")) { delete doc.custom[b.dataset.c]; doc.cols = ks.filter(k => k !== b.dataset.c); planos().forEach(p => delete p[b.dataset.c]); save(); panell() }
     if (g === "add") afegeix();
     if (g === "def") { await H.put({ id: "ajust:gt", cols: ks, ocultas: doc.ocultas || [], custom: doc.custom || {} }, 1); H.toast("Desades com a columnes per defecte") }
     if (g === "ok") H.cerrar();

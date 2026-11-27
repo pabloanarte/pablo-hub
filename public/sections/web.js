@@ -108,9 +108,9 @@
     const t = e.target; if (!abierto || !t.dataset.pup || !t.files[0]) return;
     const ruta = await subir(t.files[0], t.dataset.c || "img"); if (ruta) { W[abierto.k][abierto.i][t.dataset.pup] = ruta; t.closest(".row").querySelector("input[data-p]").value = ruta; marca() }
   });
-  sh.addEventListener("click", e => {
+  sh.addEventListener("click", async e => {
     if (abierto && e.target.closest('[data-k="wfet"]')) return H.cerrar();
-    if (!abierto || !e.target.closest('[data-k="wdel"]') || !confirm("Treure aquest projecte de la web?")) return;
+    if (!abierto || !e.target.closest('[data-k="wdel"]') || !await H.confirma("Treure aquest projecte de la web?")) return;
     W[abierto.k].splice(abierto.i, 1); marca(); H.cerrar();
   });
   window.addEventListener("beforeunload", e => { if (sucio) { e.preventDefault(); e.returnValue = "" } });

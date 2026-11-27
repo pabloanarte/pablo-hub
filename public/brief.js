@@ -57,7 +57,7 @@ window.BRIEF = (() => {
     if (k === "avall" && r.nextElementSibling) return r.nextElementSibling.after(r);
     if (k === "treu") return r.remove();
     if (k === "afegeix") { box.insertAdjacentHTML("beforeend", fila({ id: "q" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), t: "" })); return box.lastElementChild.querySelector("input").focus() }
-    if (k === "def") { if (confirm("Tornar a les preguntes de sempre? Les que hagis afegit desapareixen de la llista (les respostes no s'esborren).")) box.innerHTML = DEF.map(fila).join(""); return }
+    if (k === "def") { if (await H.confirma("Tornar a les preguntes de sempre? Les que hagis afegit desapareixen de la llista (les respostes no s'esborren).")) box.innerHTML = DEF.map(fila).join(""); return }
     if (k !== "desa") return;
     const preg = [...box.querySelectorAll(".bfrow")].map(x => ({ id: x.dataset.id, t: x.querySelector("input").value.trim() })).filter(q => q.t);
     const d = (await doc()) || { id: "ajust:brief" }; d.preg = preg; await H.put(d, 1);

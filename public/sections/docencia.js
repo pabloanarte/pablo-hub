@@ -146,11 +146,11 @@ window.DOC = (() => {
     if (k === "vobre") { const d = (await H.col("visionat")).find(x => x.id === b.dataset.id); return d && editaVis(d) }
     if (k === "vveu") { if (e.target.closest('[data-k="qvis"]')) return; const d = (await H.col("visionat")).find(x => x.id === b.dataset.id); return d && editaVis(d) }
     const c = await doc(); if (!c) return;
-    if (k === "qcurs") { if (!confirm("Eliminar aquest curs amb totes les sessions i els seus PDF?")) return; (c.setmanes || []).forEach(x => (x.arxius || []).forEach(a => H.api("DELETE", "archivo/" + a.id).catch(() => { }))); await H.del(c); curs = null; return pintar() }
+    if (k === "qcurs") { if (!await H.confirma("Eliminar aquest curs amb totes les sessions i els seus PDF?")) return; (c.setmanes || []).forEach(x => (x.arxius || []).forEach(a => H.api("DELETE", "archivo/" + a.id).catch(() => { }))); await H.del(c); curs = null; return pintar() }
     if (k === "nses") { const s = ses(c), u = s[s.length - 1]; c.setmanes = (c.setmanes || []).concat({ id: Date.now().toString(36), data: u && u.data ? H.addDays(u.data, 7) : (c.inici || H.today()), hora: u ? u.hora || "" : "", horafi: u ? u.horafi || "" : "", tema: "", arxius: [], vis: [], notes: "" }); await H.put(c, 1); await pintar(); const l = el.querySelectorAll('input[data-sf="tema"]'); return l.length && l[l.length - 1].focus() }
     const x = sessioDe(c, b); if (!x) return;
-    if (k === "qses") { if (!confirm("Treure aquesta sessió" + ((x.arxius || []).length ? " i els seus PDF" : "") + "?")) return; (x.arxius || []).forEach(a => H.api("DELETE", "archivo/" + a.id).catch(() => { })); c.setmanes = c.setmanes.filter(y => y !== x); H.put(c, 1); return pintar() }
-    if (k === "qpdf") { if (!confirm("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.a).catch(() => { }); x.arxius = (x.arxius || []).filter(a => a.id !== b.dataset.a); H.put(c, 1); return pintar() }
+    if (k === "qses") { if (!await H.confirma("Treure aquesta sessió" + ((x.arxius || []).length ? " i els seus PDF" : "") + "?")) return; (x.arxius || []).forEach(a => H.api("DELETE", "archivo/" + a.id).catch(() => { })); c.setmanes = c.setmanes.filter(y => y !== x); H.put(c, 1); return pintar() }
+    if (k === "qpdf") { if (!await H.confirma("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.a).catch(() => { }); x.arxius = (x.arxius || []).filter(a => a.id !== b.dataset.a); H.put(c, 1); return pintar() }
     if (k === "qvis") { x.vis = (x.vis || []).filter(id => id !== b.dataset.id); H.put(c, 1); return pintar() }
   });
   let tdes = 0;

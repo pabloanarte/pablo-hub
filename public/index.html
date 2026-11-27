@@ -276,9 +276,24 @@ button.x{border:0;background:none;font-size:18px;color:var(--mut);cursor:pointer
 @media(max-width:600px){#s-contactos .r{flex-wrap:wrap}#s-contactos .r>.g{flex:1 1 60%;min-width:0}#s-contactos .r>.ls{flex-basis:100%;padding-left:22px;flex-wrap:wrap}.pdt{grid-template-columns:1fr;gap:0}}
 @media(max-width:900px){main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}}
 @media(max-width:600px){#s-proyectos .bar{flex-wrap:wrap}#s-proyectos .bar .hq{flex:1 1 100%;max-width:none}}
-#s-ajustos .cfg{max-width:760px;margin:0;display:flex;flex-direction:column;gap:10px}#s-ajustos .cfg .card{margin:0;padding:0;overflow:hidden}
-.plh{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:16px 20px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}.plh>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.plh b{font-size:16px}.plh small{color:var(--mut);font-size:13px}.plh i{font-style:normal;font-size:22px;color:var(--mut);transition:transform .15s}
-.card .plb{display:none;padding:0 20px 20px}.card.obert .plb{display:block}.card.obert .plh i{transform:rotate(90deg)}
+#s-ajustos .cfg{display:none}
+.cfgw{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;align-items:start;max-width:1180px}
+.cfgn{position:sticky;top:76px;display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 96px);overflow:auto;padding-bottom:12px}
+.cfgq{margin:0 0 6px!important}
+.cfgg h4{margin:14px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut)}.cfgg:first-child h4{margin-top:6px}
+.cfgi{display:flex;align-items:center;gap:11px;width:100%;border:0;background:none;text-align:left;font:inherit;color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer;min-height:48px}
+.cfgi:hover{background:var(--hov)}.cfgi.on{background:var(--card);box-shadow:var(--sh)}
+.cfgi svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--ink2)}
+.cfgi>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.cfgi b{font-size:14px;font-weight:600}.cfgi small{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cfgi em{display:none;font-style:normal;color:var(--mut);font-size:20px}
+.cfgst{width:8px;height:8px;border-radius:50%;flex:none;background:#c7c7cc}.cfgst.ok{background:#30b27a}.cfgst.av{background:#ff9f0a}.cfgst.off{background:transparent;box-shadow:inset 0 0 0 1.5px var(--mut)}
+.cfgd .card{padding:22px 26px 26px;margin:0}
+.cfgh{margin:0 0 16px;padding-bottom:14px;border-bottom:1px solid var(--bd)}#s-ajustos .cfgh h2{margin:0;font-size:22px;letter-spacing:-.3px;text-transform:none;color:var(--ink);font-weight:700}.cfgh small{display:block;margin-top:4px;color:var(--mut);font-size:13px}.cfgh small:empty{display:none}
+.cfgback{display:none}
+@media(max-width:760px){.cfgw{display:block}.cfgn{position:static;max-height:none}.cfgi{min-height:56px;background:var(--card);border-radius:0;box-shadow:none;border-bottom:1px solid var(--bd)}.cfgi.on{box-shadow:none}.cfgg{border-radius:14px;overflow:hidden;box-shadow:var(--sh)}.cfgg h4{margin:18px 4px 6px;background:none}.cfgg{background:none;box-shadow:none}.cfgg .cfgi:first-of-type{border-radius:14px 14px 0 0}.cfgg .cfgi:last-child{border-radius:0 0 14px 14px;border-bottom:0}.cfgg .cfgi:only-of-type{border-radius:14px}.cfgi em{display:block}
+ .cfgw:not(.det) .cfgd{display:none}.cfgw.det .cfgn{display:none}
+ .cfgback{display:inline-flex;border:0;background:none;color:var(--ink);font:inherit;font-size:16px;padding:6px 0 12px;cursor:pointer}
+ .cfgd .card{padding:18px 16px 20px}}
 #s-inicio .dash{grid-auto-rows:4px;row-gap:0;column-gap:16px;align-items:start}#s-inicio .dash>.card{margin-bottom:16px}
 .mes{display:inline-block;margin-top:8px;font-size:13px;color:var(--mut);cursor:pointer}.mes:hover{color:var(--ink)}
 /* storyboard */
@@ -386,7 +401,7 @@ html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hd
 .pval{display:grid;gap:8px}.pvr{display:flex;align-items:center;gap:12px}.pvr>span{width:110px;flex:none;font-size:14px}.pvq{display:flex;gap:6px}
 .pvq button{width:34px;height:24px;border-radius:6px;border:1px solid var(--bd);background:var(--soft);cursor:pointer;padding:0;transition:background .12s}.pvq button.on{background:var(--ink);border-color:var(--ink)}.pvq button:hover{border-color:var(--ink)}
 @media(pointer:coarse){.pvq button{width:40px;height:32px}}
-.pfee{display:flex;gap:8px;align-items:center}.pfin{position:relative;flex:1}.pfin input{padding-right:30px;margin:0}.pfin span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--mut)}.pfee select{width:auto;flex:0 0 150px;margin:0}
+.pfee{display:flex;gap:8px;align-items:center}.pfin{position:relative;flex:1}.pfin input{padding-right:30px;margin:0}.pfin span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--mut)}.pfee select{width:auto;flex:0 0 150px;margin:0}.pfee.sense select{flex:1 1 auto;width:100%}
 .pfs{border-top:1px solid var(--bd)}.pfs:first-of-type{border-top:0}
 .pfh{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:12px 0;cursor:pointer;font:inherit;color:var(--ink);text-align:left}.pfh b{font-size:15px;min-width:120px}.pfh .pbar{max-width:220px;margin-left:auto}.pfh .ppn{font-size:13px;color:var(--mut);min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
 .pchev{display:inline-block;transition:transform .15s;color:var(--mut);width:10px}.pfs.ob .pchev{transform:rotate(90deg)}
@@ -452,6 +467,56 @@ html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hd
 
 .mdth .mdgt2{position:absolute;left:6px;bottom:6px;font-style:normal;font-size:10px;font-weight:700;background:var(--ink);color:var(--onT);border-radius:4px;padding:2px 5px}
 .mdit small .mdgt{display:none}
+
+/* Desplegable propi (lib.js): la llista que surt en obrir qualsevol <select> */
+.hsel{position:fixed;z-index:70;background:var(--card);color:var(--ink);border-radius:12px;padding:5px;overflow:auto;overscroll-behavior:contain;box-shadow:0 0 0 1px var(--bd),0 12px 32px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.06);font-size:15px;animation:hselin .12s ease-out;transform-origin:top center;-webkit-overflow-scrolling:touch}
+.hsel.amunt{transform-origin:bottom center}.hsel.fora{opacity:0;transition:opacity .12s}
+@keyframes hselin{from{opacity:0;transform:scale(.97) translateY(-3px)}}
+.hselo{display:flex;align-items:center;gap:6px;padding:8px 12px 8px 6px;border-radius:8px;cursor:pointer;white-space:nowrap;line-height:1.25;min-height:36px;box-sizing:border-box;user-select:none;-webkit-user-select:none}
+.hselo i{width:18px;flex:none;text-align:center;font-style:normal;font-size:13px;color:var(--ink)}
+.hselo span{overflow:hidden;text-overflow:ellipsis;color:var(--oc,inherit)}
+.hselo.act{background:var(--hov)}.hselo.on{font-weight:600}.hselo.buit span{color:var(--mut)}.hselo.off{opacity:.4;cursor:default}
+.hselg{padding:8px 12px 4px 30px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--mut)}
+.hselg:not(:first-child){border-top:1px solid var(--bd);margin-top:4px;padding-top:10px}
+select.hselon{outline:2px solid var(--ink);outline-offset:-1px}
+.hsel.fosc{background:#2a2a28;color:#eee;box-shadow:0 0 0 1px #3a3a37,0 12px 32px rgba(0,0,0,.4)}.hsel.fosc .hselo i{color:#eee}.hsel.fosc .hselo.act{background:rgba(255,255,255,.08)}
+@media(hover:none){.hselo{min-height:44px;font-size:16px}}
+/* Diàlegs propis (H.confirma, H.pregunta) */
+.hdlg{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;padding:20px;animation:hdlgf .15s ease-out}
+.hdlg.fora{opacity:0;transition:opacity .15s}
+.hdlgc{background:var(--card);color:var(--ink);border-radius:16px;padding:22px 22px 18px;width:min(400px,100%);box-shadow:0 24px 60px rgba(0,0,0,.25);animation:hdlgin .18s cubic-bezier(.2,.8,.3,1)}
+.hdlgc>b{display:block;font-size:17px;line-height:1.35}
+.hdlgc>p{margin:8px 0 0;color:var(--mut);font-size:14px;line-height:1.45}
+.hdlgc .hdlgi{margin-top:14px}
+.hdlgb{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.hdlgb .b{background:var(--on);color:var(--onT)}.hdlgb .b.hdlgx{background:#ff3b30;color:#fff}
+@keyframes hdlgf{from{opacity:0}}@keyframes hdlgin{from{opacity:0;transform:scale(.96) translateY(6px)}}
+@media(max-width:600px){.hdlg{align-items:flex-end;padding:0}.hdlgc{width:100%;border-radius:18px 18px 0 0;padding:22px 18px calc(18px + env(safe-area-inset-bottom,0px));animation-name:hdlgup}.hdlgb{flex-direction:column-reverse}.hdlgb>*{width:100%;min-height:46px}}
+@keyframes hdlgup{from{transform:translateY(40px);opacity:.5}}
+@media(prefers-reduced-motion:reduce){.hsel,.hdlg,.hdlgc{animation:none}}
+
+/* Cançó del videoclip (canco.js) */
+.cnc .cncr{display:flex;align-items:center;gap:16px}
+.cncp{flex:none;width:52px;height:52px;border-radius:50%;border:0;background:var(--on);color:var(--onT);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s}
+.cncp:hover{transform:scale(1.05)}.cncp:active{transform:scale(.96)}.cncp svg{width:22px;height:22px;fill:currentColor}.cncp svg path[d^="M8"]{transform:translateX(1px)}
+.cncm{flex:1;min-width:0}
+.cnct{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}.cnct b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.cncd{font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cncw{height:44px;display:flex;align-items:center;gap:2px;cursor:pointer;touch-action:none;border-radius:6px;outline-offset:3px}
+.cncw i{flex:1;min-width:1px;border-radius:2px;background:var(--trk);transition:background .12s}.cncw i.on{background:var(--ink)}
+@media(hover:hover){.cncw:hover i:not(.on){background:color-mix(in srgb,var(--trk) 70%,var(--ink))}}
+.cncmes{position:relative;flex:none}.cncmes summary{list-style:none;cursor:pointer;color:var(--mut);font-size:18px;padding:6px 10px;border-radius:8px;letter-spacing:1px}.cncmes summary::-webkit-details-marker{display:none}.cncmes summary:hover{background:var(--hov)}
+.cncmes>div{position:absolute;right:0;top:calc(100% + 4px);z-index:20;background:var(--card);border-radius:12px;padding:5px;display:flex;flex-direction:column;min-width:200px;box-shadow:0 0 0 1px var(--bd),0 12px 32px rgba(0,0,0,.14)}
+.cncmes>div [data-cnc=treu]{border-top:1px solid var(--bd)!important;border-radius:0 0 8px 8px}.cncmes>div .t{text-align:left;border:0;background:none;padding:9px 12px;border-radius:8px;font-size:14px;color:var(--ink);text-decoration:none;cursor:pointer;margin:0}.cncmes>div .t:hover{background:var(--hov)}
+@media(max-width:600px){.cnc .cncr{gap:12px}.cncp{width:46px;height:46px}.cncw{height:38px}.cncw i:nth-child(2n){display:none}}
+
+/* revisió 27 nov.: fosc, mòbil i tàctil */
+[data-tema="fosc"] .hdlg{background:rgba(0,0,0,.6)}[data-tema="fosc"] .hdlgc{background:var(--soft);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.5)}
+[data-tema="fosc"] .pvq button:not(.on){border-color:var(--trk)}
+body:has(.hdlg) .fab,body.menu .fab{display:none}
+.cfgq::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}.cfgq:focus{outline:1px solid var(--ink2)}
+.pvq{flex:1;min-width:0}.pvq button{flex:1 1 0;min-width:0;max-width:40px}
+@media(max-width:760px){.cfgback{min-height:44px;align-items:center}#s-ajustos{padding-bottom:90px}body:has(#s-ajustos:not([hidden]) .cfgw.det) .head{display:none}.cncmes summary{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}.cncmes>div .t{min-height:44px;display:flex;align-items:center}}
 </style><script>try{var t=localStorage.getItem("hub-tema-ma");if(t==="fosc"||(t!=="clar"&&matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.dataset.tema="fosc";document.querySelector('meta[name="theme-color"]').content="#111110"}}catch(e){}</script></head><body>
 <div class="app">
 <header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><button class="offl" id="offl" hidden></button><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="lluna" id="lluna" title="Sala de muntatge (mode fosc)" aria-label="Mode fosc"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><button class="mb" id="mb">Menú</button></header>
@@ -473,6 +538,7 @@ html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hd
 <script src="deck.js"></script><script src="citacio.js"></script><script src="vcard.js"></script><script src="festimport.js"></script>
 <script src="brief.js"></script>
 <script src="passos.js"></script>
+<script src="canco.js"></script>
 <script src="media.js"></script>
 <script src="calendari.js"></script>
 <script src="hub.js"></script>

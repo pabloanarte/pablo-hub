@@ -307,13 +307,13 @@
     if (k === "volver") { mode = "slides"; return lista() }
     if (k === "mode") { mode = "slides"; return pintar() }
     if (k === "vsel") { sel = i; mode = "slides"; return pintar() }
-    if (k === "del" && confirm("Eliminar aquest dossier? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Dossier eliminat"); return lista() }
+    if (k === "del" && await H.confirma("Eliminar aquest dossier? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Dossier eliminat"); return lista() }
     if (k === "sel") { sel = i; pintar() }
     if (k === "prev" && sel) { sel--; pintar() }
     if (k === "next" && sel < doc.slides.length - 1) { sel++; pintar() }
     if (k === "pan") { pan = b.dataset.v; el.querySelector("#dkpf").innerHTML = pan === "slide" ? panSlide() : panDis(); aj(el.querySelector("#dkpf")); el.querySelectorAll('[data-k="pan"]').forEach(x => x.classList.toggle("on", x === b)) }
     if (k === "add") { marcaMa(); doc.slides.splice(sel + 1, 0, { id: uid(), tipus: "text", titol: "", text: "" }); sel = Math.min(sel + 1, doc.slides.length - 1); pan = "slide"; refresca(1) }
-    if (k === "sdel" && confirm("Esborrar aquesta diapositiva?")) { marcaMa(); doc.slides.splice(sel, 1); sel = Math.max(0, sel - 1); refresca(1) }
+    if (k === "sdel" && await H.confirma("Esborrar aquesta diapositiva?")) { marcaMa(); doc.slides.splice(sel, 1); sel = Math.max(0, sel - 1); refresca(1) }
     if (k === "sdup") { marcaMa(); doc.slides.splice(sel + 1, 0, { ...JSON.parse(JSON.stringify(S())), id: uid(), amaga: false }); sel++; refresca(1) }
     if (k === "samaga") { marcaMa(); S().amaga = !S().amaga; refresca(1) }
     if (k === "estil") { doc.estil = b.dataset.v; doc.tema = {}; refresca(1) }
@@ -384,7 +384,7 @@
     const a = e.target.closest("[data-ak]"); if (!a || !doc || a.tagName === "INPUT") return;
     if (a.dataset.ak === "ves") { e.preventDefault(); const c = document.getElementById("cat-" + a.dataset.v); c && c.scrollIntoView({ behavior: "smooth", block: "start" }) }
     if (a.dataset.ak === "pl") { const ve = doc.plantilla === "director", nu = a.dataset.v === "director"; doc.plantilla = a.dataset.v; if (ve !== nu) { const pj = doc.dades.projecte = doc.dades.projecte || {}; delete pj.titol; delete pj.format; if (nu) { pj.titol = "pablo anarte"; pj.format = "director de cine" } if (!doc.titolMa) doc.titulo = nu ? "pablo anarte" : "" } await preomple(doc); save(); assistent() }
-    if (a.dataset.ak === "gen") { if (!confirm("Es refaran les diapositives amb aquests apartats i es perdran els retocs fets a mà. Continuar?")) return; doc.ma = false; sel = 0; viu(true); el.querySelector("#dkma").innerHTML = ""; H.toast("Dossier refet: " + doc.slides.length + " diapositives") }
+    if (a.dataset.ak === "gen") { if (!await H.confirma("Es refaran les diapositives amb aquests apartats i es perdran els retocs fets a mà. Continuar?")) return; doc.ma = false; sel = 0; viu(true); el.querySelector("#dkma").innerHTML = ""; H.toast("Dossier refet: " + doc.slides.length + " diapositives") }
   });
   document.getElementById("hsh").addEventListener("click", async e => {
     if (el.hidden || !doc) return; onIk(e);

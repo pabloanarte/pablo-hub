@@ -24,10 +24,10 @@ const I = {
 // Seccions internes (cada una pinta la seva <section>). El menú no les mostra totes: les agrupa a GRUPS.
 const SECTIONS = [
  {id:"inicio",label:"Avui",desc:"El que toca avui",src:"sections/inicio.js"},
- {id:"tareas",label:"Agenda",desc:"Tasques, calendari i reunions",src:"sections/tareas.js"},
- {id:"reuniones",label:"Agenda",desc:"Tasques, calendari i reunions",src:"sections/reuniones.js"},
- {id:"contactos",label:"Gent",desc:"Contactes, equip i repartiment",src:"sections/contactos.js"},
- {id:"persones",label:"Gent",desc:"Contactes, equip i repartiment",src:"sections/persones.js"},
+ {id:"tareas",label:"Tasques",desc:"Totes les tasques, fetes i per fer",src:"sections/tareas.js"},
+ {id:"reuniones",label:"Gent",desc:"Contactes, equip, repartiment i reunions",src:"sections/reuniones.js"},
+ {id:"contactos",label:"Gent",desc:"Contactes, equip, repartiment i reunions",src:"sections/contactos.js"},
+ {id:"persones",label:"Gent",desc:"Contactes, equip, repartiment i reunions",src:"sections/persones.js"},
  {id:"correu",label:"Correu",desc:"pablo.anarte.film@gmail.com",src:"sections/correu.js"},
  {id:"proyectos",label:"Projectes",desc:"Llargs, curts, videoclips i publicitat",src:"sections/proyectos.js"},
  {id:"projecte",label:"Projecte",desc:"",src:"sections/projecte.js"},
@@ -48,13 +48,12 @@ const SECTIONS = [
  {id:"pressupost",label:"Pressupost",desc:"Partides, despesa real i finançament del projecte",src:"sections/pressupost.js"},
  {id:"brainstorm",label:"Idees",desc:"Idees soltes",src:"sections/brainstorm.js"},
  {id:"web",label:"pabloanarte.com",desc:"La meva web",src:"sections/web.js"},
- {id:"ajustos",label:"Configuració",desc:"Còpia, calendari, dreceres, resum diari, objectius i factures",src:"sections/ajustos.js"}
+ {id:"ajustos",label:"Configuració",desc:"Connexions, avisos, factures, iPhone i còpies",src:"sections/ajustos.js"}
 ];
-// Menú: 7 apartats (+ web i configuració a baix). Les pestanyes de cada apartat són seccions internes.
+// Menú: 6 apartats (Agenda ja no hi és: el calendari és a Avui; Reunions és a Gent i Tasques s'obre des d'Avui) (+ web i configuració a baix). Les pestanyes de cada apartat són seccions internes.
 const GRUPS = [
- {id:"avui",label:"Avui",ic:"inicio",tabs:[["inicio","Avui"]]},
- {id:"agenda",label:"Agenda",ic:"tareas",tabs:[["tareas","Tasques i calendari"],["reuniones","Reunions"]]},
- {id:"gent",label:"Gent",ic:"contactos",tabs:[["contactos","Contactes"],["persones","Equip i repartiment"]]},
+ {id:"avui",label:"Avui",ic:"inicio",tabs:[["inicio","Avui"]],amag:["tareas"]},
+ {id:"gent",label:"Gent",ic:"contactos",tabs:[["contactos","Contactes"],["persones","Equip i repartiment"],["reuniones","Reunions"]]},
  {id:"projectes",label:"Projectes",ic:"proyectos",tabs:[["proyectos","Projectes"],["festivales","Festivals"],["decks","Dossiers"],["referencies","Referències"],["brainstorm","Idees"]]},
  {id:"correu",label:"Correu",ic:"correu",tabs:[["correu","Correu"]]},
  {id:"docencia",label:"Docència",ic:"docencia",tabs:[["docencia","Docència"]]},
@@ -73,7 +72,8 @@ nav.innerHTML = GRUPS.map(g => g.sep ? "<hr>" : `<button data-g="${g.id}"><svg v
 // Estat: secció visible, projecte obert (P) i pestanya del projecte (PT)
 let ACT = "inicio", P = "", PT = "resum", PNOM = "";
 window.HUBP = () => P;
-const grupDe = id => { if (P && id !== "inicio" && !GRUPS.some(g => g.id !== "projectes" && g.tabs && g.tabs.some(t => t[0] === id))) return "projectes"; const g = GRUPS.find(g => g.tabs && g.tabs.some(t => t[0] === id)); return g ? g.id : "projectes" };
+const teTab = (g, id) => g.tabs && (g.tabs.some(t => t[0] === id) || (g.amag || []).includes(id));
+const grupDe = id => { if (P && id !== "inicio" && !GRUPS.some(g => g.id !== "projectes" && teTab(g, id))) return "projectes"; const g = GRUPS.find(g => teTab(g, id)); return g ? g.id : "projectes" };
 async function pintaSub() {
  const g = grupDe(ACT), E = H.E;
  if (g === "projectes" && P) {
@@ -128,7 +128,7 @@ document.body.addEventListener("click", e => { if (document.body.classList.conta
 // Barra inferior (mòbil) i botó + per apuntar ràpid
 {
  const bb = document.createElement("nav"); bb.className = "bbar";
- bb.innerHTML = [["avui", "inicio", "Avui"], ["agenda", "tareas", "Agenda"], ["projectes", "proyectos", "Projectes"], ["gent", "contactos", "Gent"]].map(([g, ic, l]) => `<button data-g="${g}"><svg viewBox="0 0 24 24"><path d="${I[ic]}"/></svg><span>${l}</span></button>`).join("") + `<button data-g="mes"><svg viewBox="0 0 24 24"><path d="M5 12h.01 M12 12h.01 M19 12h.01"/></svg><span>Més</span></button>`;
+ bb.innerHTML = [["avui", "inicio", "Avui"], ["projectes", "proyectos", "Projectes"], ["gent", "contactos", "Gent"], ["correu", "correu", "Correu"]].map(([g, ic, l]) => `<button data-g="${g}"><svg viewBox="0 0 24 24"><path d="${I[ic]}"/></svg><span>${l}</span></button>`).join("") + `<button data-g="mes"><svg viewBox="0 0 24 24"><path d="M5 12h.01 M12 12h.01 M19 12h.01"/></svg><span>Més</span></button>`;
  document.body.appendChild(bb);
  bb.onclick = e => { const b = e.target.closest("[data-g]"); if (!b) return; if (b.dataset.g === "mes") return document.body.classList.toggle("menu"); const g = GRUPS.find(x => x.id === b.dataset.g); P = ""; show(g.tabs[0][0]) };
  const fab = document.createElement("button"); fab.className = "fab"; fab.title = "Apuntar ràpid"; fab.textContent = "+"; document.body.appendChild(fab);
@@ -156,7 +156,7 @@ async function contar() {
   const [t, r, f, p, i, c, fe] = await Promise.all(["tarea", "reunion", "convocatoria", "proyecto", "idea"].map(x => H.col(x)).concat(H.contactos(), H.col("feina")));
   const set = (id, n, al) => { const e = document.getElementById("n-" + id); if (!e) return; e.hidden = !n; e.textContent = n; e.classList.toggle("al", !!al) };
   const urg = t.filter(x => !x.hecha && x.fecha && x.fecha <= hoy).length;
-  set("agenda", urg || t.filter(x => !x.hecha && x.fecha === hoy).length + r.filter(x => x.fecha === hoy).length, urg);
+  set("avui", urg || t.filter(x => !x.hecha && x.fecha === hoy).length + r.filter(x => x.fecha === hoy).length, urg);
   const fu = f.filter(x => (!x.estado || x.estado === "Per presentar") && x.limite && x.limite >= hoy && x.limite <= sem).length;
   set("projectes", fu, fu);
   const cob = fe.filter(x => x.estado === "Facturat" && x.facturat && H.addDays(x.facturat, 30) <= hoy).length;

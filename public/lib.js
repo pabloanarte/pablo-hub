@@ -106,6 +106,7 @@ window.H = (() => {
       default: return lb + `<input type="${c.tipo || "text"}" data-f="${c.f}" value="${E(v)}" placeholder="${E(c.ph || "")}">`;
     }
   }
+  const confirma = (m, o) => H.confirma(m, o); // (H.confirma es defineix al final d'aquest arxiu)
   const box = () => document.getElementById("hshc");
   ov.addEventListener("input", e => {
     const t = e.target, f = t.dataset.f; if (!ed || !f || t.dataset.k) return;
@@ -146,10 +147,10 @@ window.H = (() => {
     if (k === "pill" && (ed.campos.find(c => c.f === b.dataset.f) || {}).multi) { const l = Array.isArray(d[b.dataset.f]) ? d[b.dataset.f] : d[b.dataset.f] ? [d[b.dataset.f]] : []; d[b.dataset.f] = l.includes(b.dataset.v) ? l.filter(x => x !== b.dataset.v) : l.concat(b.dataset.v); put(d); return editar(ed.campos, d, ed.opt) }
     if (k === "pill") { d[b.dataset.f] = d[b.dataset.f] === b.dataset.v ? "" : b.dataset.v; put(d); editar(ed.campos, d, ed.opt) }
     if (k === "pcanvi") return b.nextElementSibling.click();
-    if (k === "qarch" && confirm("Treure aquest arxiu?")) { api("DELETE", "archivo/" + b.dataset.v).catch(() => {}); d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x.id !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
+    if (k === "qarch" && await confirma("Treure aquest arxiu?")) { api("DELETE", "archivo/" + b.dataset.v).catch(() => {}); d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x.id !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
     if (k === "quita") { d[b.dataset.f] = (d[b.dataset.f] || []).filter(x => x !== b.dataset.v); put(d); editar(ed.campos, d, ed.opt) }
     if (k === "acc") { await ed.opt.acciones[+b.dataset.i].fn(d); }
-    if (k === "borrar" && confirm("Eliminar?")) { ed.campos.filter(c => c.tipo === "archivos").forEach(c => (d[c.f] || []).forEach(x => api("DELETE", "archivo/" + x.id).catch(() => {}))); await del(d); cerrar(); toast("Eliminat") }
+    if (k === "borrar" && await confirma("Eliminar «" + ((d.titulo || d.nombre || "").trim() || "aquest element") + "»? No es pot desfer.")) { ed.campos.filter(c => c.tipo === "archivos").forEach(c => (d[c.f] || []).forEach(x => api("DELETE", "archivo/" + x.id).catch(() => {}))); await del(d); cerrar(); toast("Eliminat") }
   });
 
   // ---------- sección tipo lista (proyectos, reuniones, festivales, brainstorm…) ----------
@@ -290,4 +291,139 @@ window.H = (() => {
   const rangRol = r => { const d = regla(r); return d ? d[0] : 99 };
   const deptDe = r => { const d = regla(r); return d ? d[1] : "Altres" };
   H.rangRol = rangRol; H.deptDe = deptDe;
+})();
+
+// ---------- Diàlegs propis (en lloc dels de l'Apple: confirm i prompt) ----------
+// H.confirma("Eliminar aquest dossier? No es pot desfer.") → Promise<true|false>
+// H.pregunta("Nom de la fase nova", "valor inicial") → Promise<text|null>
+// La primera frase (fins a «?» o «.») fa de títol i la resta de detall. El botó porta el verb de la pregunta.
+(() => {
+  const E = H.E;
+  const VERB = { eliminar: "Eliminar", esborrar: "Esborrar", treure: "Treure", desconnectar: "Desconnectar", restaurar: "Restaurar", refer: "Refer", substituir: "Substituir", sortir: "Sortir", "cancel·lar": "Sí, cancel·lar", tornar: "Tornar-hi", actualitzar: "Actualitzar" };
+  const PERILL = /^(eliminar|esborrar|treure|desconnectar|sortir sense)/i;
+  const parteix = m => { m = String(m || "").trim(); const fr = m.match(/[^?.]+[?.]+|[^?.]+$/g) || [m]; let i = fr.findIndex(x => /\?\s*$/.test(x)); if (i < 0) i = 0; const t = fr[i].trim(), d = fr.filter((_, k) => k !== i).join("").trim(); return [t, d] }; // la pregunta fa de títol
+  let obert = null;
+  function dialeg(msg, o) {
+    if (obert) obert.tanca(o.camp != null ? null : false);
+    return new Promise(ok => {
+      const [tit, det] = parteix(msg), v = (tit.match(/^[\p{L}·]+/u) || [""])[0].toLowerCase();
+      const perill = o.perill ?? PERILL.test(tit), okL = o.ok || (o.camp != null ? "D'acord" : VERB[v] || (/\bvols\b|continuar\?$/i.test(msg) ? "Sí" : "Continuar"));
+      const el = document.createElement("div"); el.className = "hdlg"; el.setAttribute("role", "presentation");
+      el.innerHTML = `<div class="hdlgc" role="${o.camp != null ? "dialog" : "alertdialog"}" aria-modal="true" aria-labelledby="hdlgt"><b id="hdlgt">${E(tit).replace(/\n/g, "<br>")}</b>${det ? `<p>${E(det).replace(/\n/g, "<br>")}</p>` : ""}
+        ${o.camp != null ? `<input class="hdlgi" value="${E(o.camp)}" placeholder="${E(o.ph || "")}" autocomplete="off">` : ""}
+        <div class="hdlgb">${o.sol ? "" : `<button class="b2" data-d="no">${E(o.no || (okL === "Sí, cancel·lar" ? "No" : "Cancel·lar"))}</button>`}<button class="b ${perill ? "hdlgx" : ""}" data-d="si">${E(okL)}</button></div></div>`;
+      const abans = document.activeElement;
+      const tanca = r => { if (!obert || obert.el !== el) return; obert = null; document.removeEventListener("keydown", tecla, true); el.classList.add("fora"); setTimeout(() => el.remove(), 160); try { abans && abans.focus && abans.focus({ preventScroll: true }) } catch (e) { } ok(r) };
+      const resultat = si => o.camp != null ? (si ? el.querySelector(".hdlgi").value : null) : !!si;
+      const tecla = e => {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); tanca(resultat(false)) }
+        else if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); e.stopPropagation(); tanca(resultat(document.activeElement && document.activeElement.dataset.d === "no" ? false : true)) }
+        else if (e.key === "Tab") { const f = [...el.querySelectorAll("input,button")], i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus() }
+      };
+      el.addEventListener("click", e => { e.stopPropagation(); const b = e.target.closest("[data-d]"); if (b) tanca(resultat(b.dataset.d === "si")); else if (e.target === el) tanca(resultat(false)) });
+      ["input", "change", "pointerdown", "mousedown"].forEach(t => el.addEventListener(t, e => e.stopPropagation()));
+      document.body.appendChild(el); obert = { el, tanca };
+      document.addEventListener("keydown", tecla, true);
+      requestAnimationFrame(() => { const i = el.querySelector(".hdlgi"); if (i) { i.focus(); i.select() } else el.querySelector('[data-d="si"]').focus() });
+    });
+  }
+  H.confirma = (msg, o) => dialeg(msg, o || {});
+  H.pregunta = (msg, def, o) => dialeg(msg, Object.assign({ camp: def == null ? "" : def }, o || {}));
+  H.avisa = (msg, o) => dialeg(msg, Object.assign({ sol: 1, ok: "D'acord", perill: false }, o || {}));
+})();
+
+// ---------- Desplegable propi ----------
+// Tots els <select> del hub (també els que es pinten després) mantenen el seu aspecte, però en obrir-los surt
+// una llista pròpia en lloc de la de l'Apple. El <select> continua sent el que guarda el valor: en triar, rep
+// «input» i «change» com sempre, i el codi de cada secció no canvia. Un <select data-natiu> fa servir el natiu.
+(() => {
+  const E = H.E;
+  let pop = null, sel = null, act = -1, cerca = "", tCerca = 0, tObre = 0;
+  const util = s => s && s.tagName === "SELECT" && !s.multiple && !(s.size > 1) && !s.hasAttribute("data-natiu") && !s.disabled;
+  const opcions = () => [...sel.options];
+  function tanca(torna) {
+    if (!pop) return; const p = pop, s = sel; pop = null; sel = null; act = -1;
+    p.classList.add("fora"); setTimeout(() => p.remove(), 120);
+    s && s.classList.remove("hselon"); removeEventListener("resize", fora); document.removeEventListener("scroll", foraScroll, true);
+    if (torna && s) try { s.focus({ preventScroll: true }) } catch (e) { }
+  }
+  const fora = () => tanca(false);
+  const foraScroll = e => { if (!pop || pop.contains(e.target) || Date.now() - tObre < 250) return; const t = e.target; if (t === document || t === document.documentElement || t === document.body || t.contains && sel && t.contains(sel)) tanca(false) }; // només si es mou el que té el desplegable
+  function pinta() {
+    const ops = opcions(); let h = "", grup = null;
+    ops.forEach((o, i) => {
+      const g = o.parentElement && o.parentElement.tagName === "OPTGROUP" ? o.parentElement : null;
+      if (g !== grup) { grup = g; if (g) h += `<div class="hselg">${E(g.label)}</div>` }
+      if (o.hidden) return;
+      const buit = o.value === "" && i === 0 && /…$|^—$|^-+$/.test(o.text.trim());
+      h += `<div class="hselo${o.selected && !buit ? " on" : ""}${o.disabled || g && g.disabled ? " off" : ""}${buit ? " buit" : ""}" role="option" data-i="${i}" aria-selected="${o.selected}"${o.style.color ? ` style="--oc:${E(o.style.color)}"` : ""}><i>${o.selected && !buit ? "✓" : ""}</i><span>${E(o.text) || "&nbsp;"}</span></div>`;
+    });
+    pop.innerHTML = h || `<div class="hselg">Sense opcions</div>`;
+  }
+  function posa() {
+    const r = sel.getBoundingClientRect(), vw = innerWidth, vh = innerHeight, w = Math.max(r.width, 180);
+    pop.style.minWidth = w + "px"; pop.style.maxWidth = Math.max(w, Math.min(420, vw - 16)) + "px";
+    const ph = Math.min(pop.scrollHeight, 340), sota = vh - r.bottom - 8, sobre = r.top - 8;
+    const amunt = sota < Math.min(ph, 220) && sobre > sota;
+    pop.style.maxHeight = Math.max(120, Math.min(340, amunt ? sobre : sota)) + "px";
+    pop.style.top = (amunt ? Math.max(8, r.top - Math.min(ph, sobre) - 4) : r.bottom + 4) + "px";
+    pop.style.left = Math.max(8, Math.min(r.left, vw - pop.offsetWidth - 8)) + "px";
+    pop.classList.toggle("amunt", amunt);
+  }
+  function marca(i, vista) {
+    act = i; pop.querySelectorAll(".hselo").forEach(x => x.classList.toggle("act", +x.dataset.i === i));
+    const x = pop.querySelector(`.hselo[data-i="${i}"]`); if (x && vista) { const t = x.offsetTop, b = t + x.offsetHeight; if (t < pop.scrollTop) pop.scrollTop = t - 5; else if (b > pop.scrollTop + pop.clientHeight) pop.scrollTop = b - pop.clientHeight + 5 } // sense scrollIntoView, que mouria la pàgina
+  }
+  function obre(s) {
+    if (pop && sel === s) return tanca(true); tanca(false);
+    sel = s; tObre = Date.now(); pop = document.createElement("div"); pop.className = "hsel"; pop.setAttribute("role", "listbox");
+    if (s.closest(".ehd")) pop.classList.add("fosc");
+    pinta(); document.body.appendChild(pop); posa(); s.classList.add("hselon");
+    marca(s.selectedIndex, true);
+    addEventListener("resize", fora); document.addEventListener("scroll", foraScroll, true);
+    const vigila = () => { if (!pop || sel !== s) return; if (!s.isConnected || s.disabled || !s.getClientRects().length) return tanca(false); requestAnimationFrame(vigila) }; requestAnimationFrame(vigila); // si el <select> desapareix (la pàgina es torna a pintar), fora
+  }
+  addEventListener("hub-sec", () => tanca(false));
+  function tria(i) {
+    const s = sel, o = s && s.options[i]; if (!o || o.disabled) return;
+    const canvi = s.selectedIndex !== i; tanca(true);
+    if (canvi) { s.selectedIndex = i; s.dispatchEvent(new Event("input", { bubbles: true })); s.dispatchEvent(new Event("change", { bubbles: true })) }
+  }
+  const valids = () => opcions().map((o, i) => [o, i]).filter(([o]) => !o.disabled && !o.hidden).map(x => x[1]);
+  // obrir: ratolí (mousedown) i dit (touchend, sense haver arrossegat)
+  document.addEventListener("mousedown", e => { const s = e.target.closest && e.target.closest("select"); if (!util(s) || e.button !== 0) return; e.preventDefault(); try { s.focus({ preventScroll: true }) } catch (er) { } obre(s) }, true);
+  let tx = 0, ty = 0;
+  document.addEventListener("touchstart", e => { const t = e.touches[0]; tx = t.clientX; ty = t.clientY }, { capture: true, passive: true });
+  document.addEventListener("touchend", e => { const s = e.target.closest && e.target.closest("select"); if (!util(s)) return; const t = e.changedTouches[0]; if (Math.abs(t.clientX - tx) > 10 || Math.abs(t.clientY - ty) > 10) return; e.preventDefault(); obre(s) }, { capture: true, passive: false });
+  document.addEventListener("click", e => { if (pop && !pop.contains(e.target) && !(e.target.closest && e.target.closest("select") === sel)) tanca(false) }, true);
+  // tocar fora només tanca la llista (com la nativa): el clic que ve després no arriba al que hi ha a sota
+  let menja = 0;
+  document.addEventListener("pointerdown", e => { if (pop && !pop.contains(e.target) && !(e.target.closest && e.target.closest("select") === sel)) { tanca(false); if (!(e.target.closest && e.target.closest("select"))) menja = Date.now() } }, true);
+  document.addEventListener("click", e => { if (menja && Date.now() - menja < 800) { menja = 0; e.preventDefault(); e.stopPropagation() } else menja = 0 }, true);
+  // triar a la llista
+  const quin = e => e.target.closest && e.target.closest(".hsel .hselo");
+  document.addEventListener("mousedown", e => { if (quin(e)) e.preventDefault() }, true); // que el <select> no perdi el focus
+  document.addEventListener("click", e => { const o = quin(e); if (!o || !pop) return; e.stopPropagation(); tria(+o.dataset.i) }, true);
+  document.addEventListener("mousemove", e => { const o = quin(e); if (o && +o.dataset.i !== act && !o.classList.contains("off")) marca(+o.dataset.i) });
+  // teclat: obrir amb Espai, Retorn, Alt+↓ o ↓ (al Mac les fletxes obren la llista); dins, fletxes, Retorn, Esc i lletres
+  document.addEventListener("keydown", e => {
+    const s = e.target; if (!util(s)) return;
+    if (!pop || sel !== s) {
+      if ([" ", "Enter", "ArrowDown", "ArrowUp"].includes(e.key) && !e.metaKey && !e.ctrlKey) { e.preventDefault(); obre(s) }
+      return;
+    }
+    const v = valids(), p = v.indexOf(act);
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); return tanca(true) }
+    if (e.key === "Tab") return tanca(false);
+    if (e.key === "ArrowDown") { e.preventDefault(); return marca(v[Math.min(v.length - 1, p + 1)] ?? v[0], true) }
+    if (e.key === "ArrowUp") { e.preventDefault(); return marca(v[Math.max(0, p - 1)] ?? v[0], true) }
+    if (e.key === "Home" || e.key === "PageUp") { e.preventDefault(); return marca(v[0], true) }
+    if (e.key === "End" || e.key === "PageDown") { e.preventDefault(); return marca(v[v.length - 1], true) }
+    if (e.key === "Enter" || e.key === " " && !cerca) { e.preventDefault(); return act >= 0 ? tria(act) : tanca(true) }
+    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault(); clearTimeout(tCerca); cerca += e.key.toLowerCase(); tCerca = setTimeout(() => cerca = "", 700);
+      const n = t => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(), q = n(cerca);
+      const ops = opcions(), r = v.find(i => i > act && n(ops[i].text).startsWith(q)) ?? v.find(i => n(ops[i].text).startsWith(q)); if (r != null) marca(r, true);
+    }
+  }, true);
 })();

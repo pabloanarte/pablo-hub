@@ -16,7 +16,7 @@
         ${cor.connectat ? `<p class="em">El pont de Google desa una còpia a la carpeta «Còpies PABLO hub» del teu Drive cada dilluns a les 7 i guarda les 12 últimes.</p><div class="ls"><button class="b2" data-k="drive">Fer-ne una ara al Drive</button><span id="drv" class="em"></span></div>` : `<p class="em">Quan connectis el correu (secció Correu), també es farà una còpia setmanal al teu Drive.</p>`}
       </div>
       <div class="card"><h3>Dreceres de l'iPhone</h3>
-        <p class="em" style="margin-top:0">Tres dreceres per a l'app <b>Atajos</b>. Totes fan servir el mateix enllaç secret, amb un final diferent:</p>
+        <p class="em" style="margin-top:0">Quatre dreceres per a l'app <b>Atajos</b>. Totes fan servir el mateix enllaç secret, amb un final diferent:</p>
         <div class="m"><b>Contactat al hub</b> (Instagram): acaba en <code>?u=</code> <button class="b2" data-k="drcpu" style="margin-left:6px">Copiar</button></div>
         <div class="m"><b>Ha respost al hub</b> (Instagram): acaba en <code>?r=1&amp;u=</code> <button class="b2" data-k="drcpr" style="margin-left:6px">Copiar</button></div>
         <div class="m"><b>Apunta al hub</b> (Siri): acaba en <code>?x=</code> <button class="b2" data-k="drcpx" style="margin-left:6px">Copiar</button></div>
@@ -92,18 +92,18 @@
         <p>${cor.connectat ? "Connectat a <b>pablo.anarte.film@gmail.com</b>." : "Encara no està connectat. Ves a la secció Correu."}</p>
         ${cor.connectat ? `<p class="em">Si et dic que he canviat el codi del pont: copia'l de nou, enganxa'l a script.google.com substituint-ho tot, desa, executa <b>configurar</b> (accepta els permisos nous) i a «Implementar → Gestionar implementaciones» edita la implementació i tria «Nueva versión». L'URL no canvia.</p><div class="ls"><button class="b2" data-k="codi">Copiar el codi del pont</button><button class="del" style="margin:0" data-k="desconnecta">Desconnectar</button></div>` : ""}
       </div></div>`;
-    extra(cor);
+    plega(); extra(cor);
   }
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
     if (k === "forca") { if (window.OFF && OFF.actualitza) return OFF.actualitza(true); return location.reload() }
     if (k === "baixa") setTimeout(() => { H.col("ajust", true).then(pintar) }, 1500);
     if (k === "drcp") { try { await navigator.clipboard.writeText(document.getElementById("dru").value); H.toast("Copiat") } catch (er) { document.getElementById("dru").select() } }
-    if (k === "drnou" && confirm("L'enllaç actual deixarà de funcionar i l'hauràs de canviar a la drecera. Continuar?")) { await H.api("POST", "drecera", {}); pintar(); H.toast("Enllaç nou creat") }
+    if (k === "drnou" && await H.confirma("L'enllaç actual deixarà de funcionar i l'hauràs de canviar a la drecera. Continuar?")) { await H.api("POST", "drecera", {}); pintar(); H.toast("Enllaç nou creat") }
     if (k === "calcp") { try { await navigator.clipboard.writeText(document.getElementById("calu").value); H.toast("Copiat") } catch (er) { document.getElementById("calu").select() } }
-    if (k === "calnou" && confirm("L'enllaç actual deixarà de funcionar i l'hauràs de tornar a afegir al mòbil. Continuar?")) { await H.api("POST", "calendari", {}); pintar(); H.toast("Enllaç nou creat") }
+    if (k === "calnou" && await H.confirma("L'enllaç actual deixarà de funcionar i l'hauràs de tornar a afegir al mòbil. Continuar?")) { await H.api("POST", "calendari", {}); pintar(); H.toast("Enllaç nou creat") }
     if (k === "codi") { const t = await (await fetch("/pont-gmail.gs")).text(); try { await navigator.clipboard.writeText(t); H.toast("Codi copiat") } catch (er) { H.toast("No s'ha pogut copiar") } }
-    if (k === "desconnecta" && confirm("Desconnectar el correu del hub? Podràs tornar-lo a connectar quan vulguis.")) { await H.api("DELETE", "correu/config"); H.toast("Desconnectat"); location.reload() }
+    if (k === "desconnecta" && await H.confirma("Desconnectar el correu del hub? Podràs tornar-lo a connectar quan vulguis.")) { await H.api("DELETE", "correu/config"); H.toast("Desconnectat"); location.reload() }
     if (k === "gcal") {
       const s = document.getElementById("gcs"); s.textContent = "Sincronitzant…"; b.disabled = true;
       try { const r = await H.api("POST", "correu/calendari", {}); s.textContent = r.ocupat ? "Ja s'està sincronitzant; torna-ho a provar d'aquí a un minut." : `Fet: ${r.aGoogle || 0} canvis cap a Google i ${r.alHub || 0} cap al hub.`; H.col("ajust", true); if (r.alHub) H.col("tarea", true) }
@@ -121,7 +121,7 @@
     const t = e.target; if (t.dataset.k !== "restaura" || !t.files[0]) return;
     let c; try { c = JSON.parse(await t.files[0].text()) } catch (er) { t.value = ""; return H.toast("Aquest arxiu no es pot llegir") }
     if (c.hub !== "pablo-hub" || !Array.isArray(c.docs)) { t.value = ""; return H.toast("Aquest arxiu no és una còpia del hub") }
-    if (!confirm(`Restaurar la còpia del ${new Date(c.data).toLocaleString("ca-ES")} (${c.docs.length} elements)?\n\nEs recuperen els elements de la còpia i se substitueixen les versions actuals d'aquests mateixos elements. El que s'hagi creat després de la còpia no s'esborra.`)) { t.value = ""; return }
+    if (!await H.confirma(`Restaurar la còpia del ${new Date(c.data).toLocaleString("ca-ES")} (${c.docs.length} elements)?\n\nEs recuperen els elements de la còpia i se substitueixen les versions actuals d'aquests mateixos elements. El que s'hagi creat després de la còpia no s'esborra.`)) { t.value = ""; return }
     try { const r = await H.api("POST", "copia", c); H.toast(`Restaurats ${r.n} elements` + (r.descartats ? ` (${r.descartats} descartats perquè estaven malmesos)` : "")); setTimeout(() => location.reload(), 900) } catch (er) { H.toast((er && er.error) || "No s'ha pogut restaurar") }
     t.value = "";
   });
@@ -157,28 +157,58 @@
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-dk]"); if (!b) return; const k = b.dataset.dk;
     if (k === "con") { const m = document.getElementById("dvm"); m.textContent = "Provant…"; try { await H.api("POST", "drive/config", { url: document.getElementById("dvu").value.trim(), clau: document.getElementById("dvk").value.trim() }); H.toast("Drive connectat"); pintar() } catch (er) { m.textContent = (er && er.error) || "No s'ha pogut connectar" } }
-    if (k === "desc" && confirm("Desconnectar el Drive? Les fotos que ja hi ha al hub no es toquen.")) { await H.api("DELETE", "drive/config"); pintar() }
+    if (k === "desc" && await H.confirma("Desconnectar el Drive? Les fotos que ja hi ha al hub no es toquen.")) { await H.api("DELETE", "drive/config"); pintar() }
     if (k === "sync") { b.disabled = true; b.textContent = "Sincronitzant…"; try { const r = await H.api("POST", "drive/sincronitza", {}); H.toast(r.nous ? r.nous + (r.nous === 1 ? " arxiu nou" : " arxius nous") : "Tot al dia") } catch (er) { H.toast("Drive: " + ((er && er.error) || "no respon")) } b.disabled = false; b.textContent = "Sincronitzar ara" }
   });
-  // Configuració com els ajustos de l'iPhone: una columna, cada apartat plegat amb una línia de resum
-  let RES = {}; const OBERTS = new Set();
-  const ORDRE = ["Resum d'avui per correu", "Objectius", "Instagram (missatges)", "Dreceres de l'iPhone", "Google Calendar (editable)", "Drive (Recce i Referències)", "Vigilant de convocatòries", "Dades per a les factures", "Còpia de seguretat", "Pont de Google", "El hub com a app", "Calendari al mòbil (només lectura)"];
+  // Configuració com els Ajustos del Mac: a l'esquerra la llista per grups (amb cercador i l'estat de cada cosa),
+  // a la dreta l'apartat triat. En mòbil, primer la llista i, en tocar-ne un, l'apartat amb «‹ Configuració».
+  // Cada targeta (.card amb <h3>) és un apartat; el títol del <h3> és la clau (RES = resum de sota el nom).
+  let RES = {}, SEL = "", DET = false, Q = "";
+  try { SEL = localStorage.getItem("cfg-sel") || "" } catch (e) { }
+  const GR = [
+    ["Connexions", ["Pont de Google", "Google Calendar (editable)", "Drive (Recce i Referències)", "Instagram (missatges)"]],
+    ["Cada dia i cada setmana", ["Resum d'avui per correu", "Objectius", "Vigilant de convocatòries"]],
+    ["Diners", ["Dades per a les factures"]],
+    ["iPhone i Mac", ["Dreceres de l'iPhone", "El hub com a app", "Calendari al mòbil (només lectura)"]],
+    ["Les teves dades", ["Còpia de seguretat"]]
+  ];
+  const NOM = { "Pont de Google": "Correu (pont de Google)", "Google Calendar (editable)": "Google Calendar", "Drive (Recce i Referències)": "Drive de fotos i vídeos", "Instagram (missatges)": "Instagram", "Resum d'avui per correu": "Resum diari per correu", "Calendari al mòbil (només lectura)": "Calendari al mòbil (antic)" };
+  const ICF = { "Pont de Google": "M3 6h18v12H3z M3 7l9 6 9-6", "Google Calendar (editable)": "M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5", "Drive (Recce i Referències)": "M3 7h7l2 2h9v10H3z", "Instagram (missatges)": "M4 4h16v16H4z M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z M16.5 7h.01", "Resum d'avui per correu": "M12 7v5l3 2 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "Objectius": "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z M12 11h.01", "Vigilant de convocatòries": "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "Dades per a les factures": "M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6", "Dreceres de l'iPhone": "M7 2h10v20H7z M11 18h2", "El hub com a app": "M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z", "Calendari al mòbil (només lectura)": "M4 6h16v14H4z M4 10h16", "Còpia de seguretat": "M12 3v12 M7 10l5 5 5-5 M4 17v3h16v-3" };
+  const estat = t => { const r = RES[t] || ""; if (/No connectat|Cal connectar/.test(r)) return "off"; if (/avís|amb canvis|Encara no|Última: mai|Última: fa \d{2,} dies/.test(r)) return "av"; return /^Connectat|^Sincronitzat|^Última: (avui|ahir|fa [1-9] dies)|^Cada dia|^Instagram, /.test(r) ? "ok" : "" };
+  const norm = x => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   function plega() {
     const cont = el.querySelector(".cfg"); if (!cont) return;
-    const cs = [...el.querySelectorAll(".card")];
-    cs.forEach(c => {
-      if (c.dataset.pl) return; c.dataset.pl = 1;
-      const h = c.querySelector(":scope > h3"); if (!h) return;
+    let w = el.querySelector(".cfgw");
+    if (!w) { w = document.createElement("div"); w.className = "cfgw"; w.innerHTML = `<nav class="cfgn" aria-label="Apartats de Configuració"><input class="cfgq" type="search" placeholder="Cercar a Configuració…" aria-label="Cercar a Configuració" value="${E(Q)}"><div class="cfgl"></div></nav><div class="cfgd"><button class="cfgback" data-cfgb>‹ Configuració</button></div>`; cont.before(w) }
+    const det = w.querySelector(".cfgd");
+    [...cont.querySelectorAll(".card")].forEach(c => {
+      if (c.dataset.t) return; const h = c.querySelector(":scope > h3"); if (!h) return;
       const t = h.textContent.trim(); c.dataset.t = t;
-      const b = document.createElement("div"); b.className = "plb";
-      while (h.nextSibling) b.appendChild(h.nextSibling);
-      c.appendChild(b);
-      h.outerHTML = `<button class="plh" data-pl="${E(t)}"><span><b>${E(t)}</b><small>${E(RES[t] || "")}</small></span><i>›</i></button>`;
-      if (OBERTS.has(t)) c.classList.add("obert");
+      h.outerHTML = `<div class="cfgh"><h2>${E(NOM[t] || t)}</h2><small data-res>${E(RES[t] || "")}</small></div>`;
+      det.appendChild(c);
     });
-    cs.sort((x, y) => (ORDRE.indexOf(x.dataset.t) + 1 || 99) - (ORDRE.indexOf(y.dataset.t) + 1 || 99)).forEach(c => cont.appendChild(c));
+    cont.hidden = true;
+    const cards = [...det.querySelectorAll(".card[data-t]")], hi = t => cards.some(c => c.dataset.t === t);
+    cards.forEach(c => { const r = c.querySelector("[data-res]"); if (r) r.textContent = RES[c.dataset.t] || "" });
+    const tots = GR.flatMap(g => g[1]).filter(hi).concat(cards.map(c => c.dataset.t).filter(t => !GR.some(g => g[1].includes(t))));
+    if (!hi(SEL)) SEL = tots[0] || "";
+    llista(w, cards, tots);
+    cards.forEach(c => c.hidden = c.dataset.t !== SEL);
+    w.classList.toggle("det", DET);
   }
-  el.addEventListener("click", e => { const b = e.target.closest(".plh"); if (!b) return; const c = b.closest(".card"), t = b.dataset.pl; c.classList.toggle("obert"); c.classList.contains("obert") ? OBERTS.add(t) : OBERTS.delete(t) });
+  function llista(w, cards, tots) {
+    const q = norm(Q), coincideix = t => !q || norm((NOM[t] || t) + " " + t + " " + (RES[t] || "") + " " + ((cards.find(c => c.dataset.t === t) || {}).textContent || "")).includes(q);
+    const item = t => `<button class="cfgi ${t === SEL ? "on" : ""}" data-cfg="${E(t)}" ${t === SEL ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICF[t] || "M4 4h16v16H4z"}"/></svg><span><b>${E(NOM[t] || t)}</b>${RES[t] ? `<small>${E(RES[t])}</small>` : ""}</span>${estat(t) ? `<i class="cfgst ${estat(t)}" title="${estat(t) === "ok" ? "Funciona" : estat(t) === "off" ? "No connectat" : "Mira-ho"}"></i>` : ""}<em>›</em></button>`;
+    const grups = GR.map(([g, ts]) => [g, ts.filter(t => tots.includes(t) && coincideix(t))]).concat([["Altres", tots.filter(t => !GR.some(g => g[1].includes(t)) && coincideix(t))]]).filter(g => g[1].length);
+    w.querySelector(".cfgl").innerHTML = grups.length ? grups.map(([g, ts]) => `<div class="cfgg"><h4>${E(g)}</h4>${ts.map(item).join("")}</div>`).join("") : `<p class="em" style="padding:8px 12px">No hi ha res amb «${E(Q)}».</p>`;
+  }
+  const tria = t => { SEL = t; DET = true; try { localStorage.setItem("cfg-sel", t) } catch (e) { } plega(); const d = el.querySelector(".cfgd"); if (d && matchMedia("(max-width:760px)").matches) window.scrollTo(0, 0) };
+  el.addEventListener("click", e => {
+    const b = e.target.closest("[data-cfg]"); if (b) return tria(b.dataset.cfg);
+    if (e.target.closest("[data-cfgb]")) { DET = false; plega(); window.scrollTo(0, 0) }
+  });
+  el.addEventListener("input", e => { if (!e.target.classList.contains("cfgq")) return; Q = e.target.value; const w = el.querySelector(".cfgw"); if (w) { const cards = [...w.querySelectorAll(".cfgd .card[data-t]")]; llista(w, cards, cards.map(c => c.dataset.t).sort((a, b) => GR.flatMap(g => g[1]).indexOf(a) - GR.flatMap(g => g[1]).indexOf(b))) } });
+  el.addEventListener("keydown", e => { if (!e.target.classList.contains("cfgq")) return; if (e.key === "Enter") { const f = el.querySelector(".cfgl [data-cfg]"); if (f) tria(f.dataset.cfg) } if (e.key === "Escape" && Q) { e.target.value = Q = ""; e.target.dispatchEvent(new Event("input", { bubbles: true })) } });
   async function extra(cor) {
     const box = document.getElementById("ajx"); if (!box) return;
     let [ob, vg, fc, ig] = await Promise.all([aj("ajust:objectius"), aj("ajust:vigila"), aj("ajust:factura"), H.api("GET", "instagram/estat").catch(() => ({}))]);
@@ -238,7 +268,7 @@
   el.addEventListener("change", async e => { const t = e.target; if (t.tagName === "SELECT" && t.dataset.o !== undefined) { const o = (await aj("ajust:objectius")) || { id: "ajust:objectius" }; o[t.dataset.o] = t.value; H.put(o, 1) } });
   el.addEventListener("click", async e => {
     const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k;
-    const cp = async (fi, txt) => { try { await navigator.clipboard.writeText(txt); H.toast("Copiat") } catch (er) { prompt("Copia l'enllaç:", txt) } };
+    const cp = async (fi, txt) => { try { await navigator.clipboard.writeText(txt); H.toast("Copiat") } catch (er) { await H.pregunta("Copia l'enllaç:", txt) } };
     if (k === "drcpr") { const u = (document.getElementById("dru") || {}).value || ""; return cp(0, u.replace(/\?u=$/, "?r=1&u=")) }
     if (k === "drcpx" || k === "drcpv" || k === "drcpu") { const u = (document.getElementById("dru") || {}).value || ""; return cp(0, k === "drcpu" ? u : u.replace(/\?u=$/, k === "drcpx" ? "?x=" : "?v=")) }
     if (k === "diari" || k === "vigila") {
@@ -255,9 +285,9 @@
       catch (er) { st.textContent = "No s'ha pogut: " + ((er && er.error) || "error") }
       b.disabled = false; return;
     }
-    if (k === "igdes") { if (!confirm("Desconnectar Instagram del hub? Els missatges ja guardats es queden a cada contacte.")) return; await H.api("POST", "instagram/desconnecta", {}); H.toast("Desconnectat"); return pintar() }
+    if (k === "igdes") { if (!await H.confirma("Desconnectar Instagram del hub? Els missatges ja guardats es queden a cada contacte.")) return; await H.api("POST", "instagram/desconnecta", {}); H.toast("Desconnectat"); return pintar() }
     if (k === "vgtreu") { const v = await aj("ajust:vigila"); if (!v) return; v.llista = v.llista.filter(x => x.id !== b.dataset.id); await H.put(v, 1); return pintar() }
   });
-  window.addEventListener("hub-sec", e => { if (e.detail === "ajustos") pintar() });
+  window.addEventListener("hub-sec", e => { if (e.detail === "ajustos") { DET = false; pintar() } }); // en tornar-hi, primer la llista (mòbil)
   if (!el.hidden) pintar();
 })();

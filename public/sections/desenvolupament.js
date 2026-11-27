@@ -56,15 +56,15 @@
     if (k === "torna") return lista();
     if (k === "proj") return H.abrir("proyecto", p.id);
     if (k === "nova") { d[b.dataset.l].push(b.dataset.l === "versions" ? { tipus: "Guió", data: H.today(), versio: "", canvis: "" } : { data: H.today(), qui: "", versio: "", notes: "", accio: "" }); save(); pinta() }
-    if (k === "treu" && confirm("Treure aquesta fila?")) { const v = d[b.dataset.l][i]; if (v && v.arxiu) H.api("DELETE", "archivo/" + v.arxiu.id).catch(() => {}); d[b.dataset.l].splice(i, 1); save(); pinta() }
-    if (k === "qarx" && confirm("Treure l'arxiu d'aquesta versió?")) { H.api("DELETE", "archivo/" + d.versions[i].arxiu.id).catch(() => {}); delete d.versions[i].arxiu; delete d.versions[i].pag; save(); pinta() }
+    if (k === "treu" && await H.confirma("Treure aquesta fila?")) { const v = d[b.dataset.l][i]; if (v && v.arxiu) H.api("DELETE", "archivo/" + v.arxiu.id).catch(() => {}); d[b.dataset.l].splice(i, 1); save(); pinta() }
+    if (k === "qarx" && await H.confirma("Treure l'arxiu d'aquesta versió?")) { H.api("DELETE", "archivo/" + d.versions[i].arxiu.id).catch(() => {}); delete d.versions[i].arxiu; delete d.versions[i].pag; save(); pinta() }
     if (k === "ncv") {
       const v = document.getElementById("dv-pl").value;
       if (v.startsWith("conv:")) { const c = (await H.col("convocatoria")).find(x => x.id === v.slice(5)); d.convs.push({ nom: c.titulo || "", limit: c.limite || "", docs: PLANT["Laboratori o residència (genèric)"].map(n => ({ nom: n, fet: false })) }) }
       else d.convs.push({ nom: v === "Llista en blanc" ? "" : v, limit: "", docs: PLANT[v].map(n => ({ nom: n, fet: false })) });
       save(); pinta();
     }
-    if (k === "qcv" && confirm("Treure aquesta convocatòria i la seva llista?")) { d.convs.splice(i, 1); save(); pinta() }
+    if (k === "qcv" && await H.confirma("Treure aquesta convocatòria i la seva llista?")) { d.convs.splice(i, 1); save(); pinta() }
     if (k === "ndoc") { d.convs[+b.dataset.c].docs.push({ nom: "", fet: false }); save(); await pinta(); const l = el.querySelectorAll(`[data-dc="${b.dataset.c}"]`); l.length && l[l.length - 1].focus() }
     if (k === "qdoc") { d.convs[+b.dataset.c].docs.splice(i, 1); save(); pinta() }
     if (k === "fet") { d.convs[+b.dataset.c].docs[i].fet = b.checked; save(); pinta() }

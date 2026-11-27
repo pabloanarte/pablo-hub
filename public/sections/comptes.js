@@ -206,14 +206,14 @@
       H.cerrar(); mes = Object.keys(per).sort().at(-1); vista = "mes"; H.toast(sel.length + " moviments importats"); return pinta();
     }
     if (c === "desamov") return desaMov(b);
-    if (c === "delmov" && confirm("Esborrar aquest moviment?")) { const d = await doc("fin:" + b.dataset.m, { movs: [] }); d.movs = (d.movs || []).filter(x => x.id !== b.dataset.v); await H.put(d, 1); H.cerrar(); return pinta() }
+    if (c === "delmov" && await H.confirma("Esborrar aquest moviment?")) { const d = await doc("fin:" + b.dataset.m, { movs: [] }); d.movs = (d.movs || []).filter(x => x.id !== b.dataset.v); await H.put(d, 1); H.cerrar(); return pinta() }
     if (c === "desasub") {
       const g = id => document.getElementById(id), id = b.dataset.v || uid(), ant = (subs.l || []).find(x => x.id === id) || {}, s = { id, nom: g("cs-nom").value.trim(), import: num(g("cs-imp").value), per: g("cs-per").value, data: g("cs-dat").value, cat: g("cs-cat").value, actiu: g("cs-act").checked };
       if (!s.actiu) s.fi = ant.actiu === false && ant.fi ? ant.fi : mesDe(H.today().slice(0, 7), -1);
       if (!s.nom || !s.import) return H.toast("Posa el nom i l'import");
       subs.l = (subs.l || []).filter(x => x.id !== id).concat(s); await H.put(subs, 1); H.cerrar(); return pinta();
     }
-    if (c === "delsub" && confirm("Esborrar aquesta despesa fixa? Si només l'has cancel·lada o s'ha acabat, millor desmarca «Activa».")) { subs.l = (subs.l || []).filter(x => x.id !== b.dataset.v); await H.put(subs, 1); H.cerrar(); return pinta() }
+    if (c === "delsub" && await H.confirma("Esborrar aquesta despesa fixa? Si només l'has cancel·lada o s'ha acabat, millor desmarca «Activa».")) { subs.l = (subs.l || []).filter(x => x.id !== b.dataset.v); await H.put(subs, 1); H.cerrar(); return pinta() }
     if (c === "desalim") { const l = {}; document.querySelectorAll("[data-lim]").forEach(i => { const n = num(i.value); if (n) l[i.dataset.lim] = n }); cfg.limits = l; await H.put(cfg, 1); H.cerrar(); return pinta() }
     if (c === "anasubs") { H.cerrar(); vista = "subs"; return pinta() }
     if (c === "anafeines") { H.cerrar(); return hubShow("feines") }

@@ -54,12 +54,12 @@
     box.onclick = async e => {
       const b = e.target.closest("[data-fx]"); if (!b) return;
       if (b.dataset.fx === "proj") { const l = r.proyectos || [], v = b.dataset.v; r.proyectos = l.includes(v) ? l.filter(x => x !== v) : l.concat(v); b.classList.toggle("on"); await H.put(r, 1) }
-      if (b.dataset.fx === "del") { const pid = H.pj(); if ((r.proyectos || []).length > 1 && pid && pid !== "-") { if (!confirm("Aquesta referència també és d'altres projectes. Treure-la només d'aquest? (Cancel·la per no fer res)")) return; r.proyectos = r.proyectos.filter(x => x !== pid); await H.put(r, 1); return H.cerrar() } if (!confirm("Eliminar aquesta referència? També s'enviarà a la paperera del Drive.")) return; MED.esborra(r); await H.del(r); H.cerrar(); H.toast("Eliminada") }
+      if (b.dataset.fx === "del") { const pid = H.pj(); if ((r.proyectos || []).length > 1 && pid && pid !== "-") { if (!await H.confirma("Aquesta referència també és d'altres projectes. Treure-la només d'aquest?", { ok: "Treure-la d'aquest" })) return; r.proyectos = r.proyectos.filter(x => x !== pid); await H.put(r, 1); return H.cerrar() } if (!await H.confirma("Eliminar aquesta referència? També s'enviarà a la paperera del Drive.")) return; MED.esborra(r); await H.del(r); H.cerrar(); H.toast("Eliminada") }
     };
   }
 
   async function desDEnllac() {
-    const u = (prompt("Enllaç de la imatge (que acabi en .jpg, .png… o «Copiar l'adreça de la imatge»)") || "").trim(); if (!u) return;
+    const u = (await H.pregunta("Enllaç de la imatge (que acabi en .jpg, .png… o «Copiar l'adreça de la imatge»)") || "").trim(); if (!u) return;
     if (!/^https:\/\//i.test(u)) return H.toast("Ha de ser un enllaç https://");
     H.toast("Baixant la imatge…");
     try {

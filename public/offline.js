@@ -59,7 +59,7 @@ window.OFF = (() => {
     const b = e.target.closest && e.target.closest(".out"); if (!b) return;
     e.preventDefault(); e.stopImmediatePropagation();
     if (!navigator.onLine) return H.toast("Per tancar la sessió cal connexió");
-    if (n && !confirm(n + (n > 1 ? " canvis encara no s'han pujat" : " canvi encara no s'ha pujat") + ". Si tanques la sessió es perdran. Vols tancar-la igualment?")) return;
+    if (n && !await H.confirma(n + (n > 1 ? " canvis encara no s'han pujat" : " canvi encara no s'ha pujat") + ". Si tanques la sessió es perdran. Vols tancar-la igualment?", { ok: "Tancar la sessió", perill: true })) return;
     // el service worker esborra la cua i les còpies (i s'espera, com a molt 3 s)
     await new Promise(ok => { const c = new MessageChannel(); c.port1.onmessage = ok; setTimeout(ok, 3000); if (sw.controller) sw.controller.postMessage({ t: "surt" }, [c.port2]); else ok() });
     location.href = "/salir";
@@ -89,12 +89,12 @@ window.OFF = (() => {
     if (!base) { base = new Map(e.map(x => x.split("="))); return }
     const canvi = e.some(x => { const [u, v] = x.split("="); return base.has(u) ? base.get(u) !== v : false });
     if (!canvi) return;
-    const ocupat = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    const ocupat = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || !!document.querySelector(".hdlg,.hsel");
     if (alTornar && !ocupat && !document.querySelector("#hsh:not([hidden])")) return actualitza();
     nova = true; pinta();
   }
   async function actualitza(forcar) {
-    if (n && !confirm("Hi ha canvis sense pujar; es conserven igualment. Actualitzar ara?")) return;
+    if (n && !await H.confirma("Actualitzar ara? Hi ha canvis sense pujar; es conserven igualment.")) return;
     try {
       if (forcar && sw.controller) await new Promise(ok => { const c = new MessageChannel(); c.port1.onmessage = ok; setTimeout(ok, 3000); sw.controller.postMessage({ t: "actualitza" }, [c.port2]) });
       const r = await sw.getRegistration(); r && await r.update();

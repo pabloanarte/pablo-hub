@@ -82,12 +82,12 @@
     if (k === "crea" || k === "creabuit") { d = { id: "pres:" + p.id.split(":")[1], proyecto: p.id, titulo: "Pressupost · " + (p.titulo || ""), partides: k === "crea" ? plantilla(p.categoria) : [], fin: [], impr: 10, capsBuits: k === "crea" ? [] : ["Equip tècnic"] }; await H.put(d, 1); return pinta() }
     if (!d) return;
     if (k === "add") { const x = { id: uid(), cap: b.dataset.cap, concepte: "" }; const ul = d.partides.map(y => y.cap).lastIndexOf(b.dataset.cap); d.partides.splice(ul + 1, 0, x); save(); pinta(); setTimeout(() => el.querySelector(`tr[data-id="${x.id}"] input`)?.focus(), 30) }
-    if (k === "del") { const x = fila(b); if ((x.concepte || x.preu || x.real) && !confirm("Esborrar aquesta partida?")) return; d.partides = d.partides.filter(y => y !== x); if (!d.partides.some(y => y.cap === x.cap)) d.capsBuits = [...new Set((d.capsBuits || []).concat(x.cap))]; save(); pinta() }
+    if (k === "del") { const x = fila(b); if ((x.concepte || x.preu || x.real) && !await H.confirma("Esborrar aquesta partida?")) return; d.partides = d.partides.filter(y => y !== x); if (!d.partides.some(y => y.cap === x.cap)) d.capsBuits = [...new Set((d.capsBuits || []).concat(x.cap))]; save(); pinta() }
     if (k === "pagat") { fila(b).pagat = b.checked; save(); sumes() }
-    if (k === "addcap") { const n = prompt("Nom del capítol nou (o un dels habituals: " + CAP.join(", ") + ")"); if (!n || !n.trim()) return; d.capsBuits = [...new Set((d.capsBuits || []).concat(n.trim()))]; save(); pinta() }
+    if (k === "addcap") { const n = await H.pregunta("Nom del capítol nou (o un dels habituals: " + CAP.join(", ") + ")"); if (!n || !n.trim()) return; d.capsBuits = [...new Set((d.capsBuits || []).concat(n.trim()))]; save(); pinta() }
     if (k === "addf") { d.fin = (d.fin || []).concat({ id: uid(), tipus: "Aportació pròpia", estat: "Previst" }); save(); pinta(); setTimeout(() => el.querySelectorAll("tr[data-fid] input")[(d.fin.length - 1) * 3]?.focus(), 30) }
-    if (k === "delf" && confirm("Esborrar aquesta font de finançament?")) { const f = font(b); d.fin = d.fin.filter(y => y !== f); save(); pinta() }
-    if (k === "delpres" && confirm("Eliminar tot el pressupost d'aquest projecte? No es pot desfer.")) { await H.del(d); d = null; pinta() }
+    if (k === "delf" && await H.confirma("Esborrar aquesta font de finançament?")) { const f = font(b); d.fin = d.fin.filter(y => y !== f); save(); pinta() }
+    if (k === "delpres" && await H.confirma("Eliminar tot el pressupost d'aquest projecte? No es pot desfer.")) { await H.del(d); d = null; pinta() }
     if (k === "usades") { try { localStorage.setItem("pres-usades", b.checked ? "1" : "0") } catch (e) { } }
     if (k === "pdf") exportaPDF();
     if (k === "xls") exportaExcel();

@@ -68,7 +68,7 @@
     box.onclick = async e => {
       const b = e.target.closest("[data-rx]"); if (!b || b.tagName === "SELECT") return;
       if (b.dataset.rx === "tipus") { x.tipus = b.dataset.v; await H.put(d, 1); box.querySelectorAll('[data-rx="tipus"]').forEach(y => y.classList.toggle("on", y === b)) }
-      if (b.dataset.rx === "del") { if (!confirm((x.gt || []).length ? "Aquesta foto és al guió tècnic: també se'n traurà. Eliminar-la? (També s'enviarà a la paperera del Drive.)" : "Eliminar aquesta foto? També s'enviarà a la paperera del Drive.")) return; await treuDelGT(x); MED.esborra(x); if (x.drive && x.drive.id) d.esborrats = (d.esborrats || []).concat(x.drive.id).slice(-500); l.items = l.items.filter(y => y !== x); await H.put(d, 1); box.onclick = null; H.cerrar() }
+      if (b.dataset.rx === "del") { if (!await H.confirma((x.gt || []).length ? "Aquesta foto és al guió tècnic: també se'n traurà. Eliminar-la? (També s'enviarà a la paperera del Drive.)" : "Eliminar aquesta foto? També s'enviarà a la paperera del Drive.")) return; await treuDelGT(x); MED.esborra(x); if (x.drive && x.drive.id) d.esborrats = (d.esborrats || []).concat(x.drive.id).slice(-500); l.items = l.items.filter(y => y !== x); await H.put(d, 1); box.onclick = null; H.cerrar() }
       if (b.dataset.rx === "agt") { box.onclick = null; alGT(d, x) }
     };
     box.oninput = e => { const f = e.target.dataset.rxf; if (f) { x[f] = e.target.value; H.put(d) } };
@@ -95,7 +95,7 @@
     box.onclick = async e => {
       const r = e.target.closest('[data-gx="pla"]'); if (!r) return;
       const g = gts[gi], p = g.escenas.flatMap(e => e.planos).find(y => y.id === r.dataset.id); if (!p || !x.img) return;
-      if (p.img && !p.imgRecce && !p.imgSb && !confirm("Aquest pla ja té una imatge. Substituir-la?")) return;
+      if (p.img && !p.imgRecce && !p.imgSb && !await H.confirma("Aquest pla ja té una imatge. Substituir-la?")) return;
       p.img = x.img; p.imgRecce = 1; delete p.imgSb; g.ocultas = (g.ocultas || []).filter(c => c !== "img"); await H.put(g, 1);
       x.gt = (x.gt || []).filter(y => y.pla !== p.id).concat({ gt: g.id, pla: p.id }); await H.put(d, 1);
       box.onclick = box.onchange = null; H.cerrar(); H.toast("Posada al pla " + (p.num || ""));
@@ -111,7 +111,7 @@
     if (k === "sync") { b.disabled = true; b.textContent = "Sincronitzant…"; try { const r = await H.api("POST", "drive/sincronitza", {}); H.toast(r.nous ? r.nous + (r.nous === 1 ? " arxiu nou" : " arxius nous") : "Tot al dia") } catch (er) { H.toast(er && er.error ? "Drive: " + er.error : "No s'ha pogut sincronitzar") } await H.col("recce", true); return pintar() }
     const d = await doc(1);
     if (k === "noulloc") { d.llocs = (d.llocs || []).concat({ id: uid(), nom: "", items: [] }); await H.put(d, 1); await pintar(); const i = el.querySelector(".mdll:last-of-type .mdnom"); i && i.focus(); return }
-    if (k === "dellloc") { const l = lloc(d, b.dataset.l); if ((l.items || []).length && !confirm(`Eliminar «${l.nom || "aquesta localització"}» i els seus ${l.items.length} arxius? Els originals aniran a la paperera del Drive.`)) return; d.esborrats = (d.esborrats || []).concat((l.items || []).map(x => x.drive && x.drive.id).filter(Boolean)).slice(-500); for (const x of l.items || []) { await treuDelGT(x); MED.esborra(x) } d.llocs = d.llocs.filter(y => y !== l); await H.put(d, 1); return pintar() }
+    if (k === "dellloc") { const l = lloc(d, b.dataset.l); if ((l.items || []).length && !await H.confirma(`Eliminar «${l.nom || "aquesta localització"}» i els seus ${l.items.length} arxius? Els originals aniran a la paperera del Drive.`)) return; d.esborrats = (d.esborrats || []).concat((l.items || []).map(x => x.drive && x.drive.id).filter(Boolean)).slice(-500); for (const x of l.items || []) { await treuDelGT(x); MED.esborra(x) } d.llocs = d.llocs.filter(y => y !== l); await H.put(d, 1); return pintar() }
   });
   el.addEventListener("input", async e => { const f = e.target.dataset.rf; if (!f) return; const d = await doc(1), l = lloc(d, e.target.dataset.l); if (l) { l[f] = e.target.value; H.put(d) } });
   el.addEventListener("change", e => { const t = e.target; if (t.dataset.rup && t.files.length) { const fs = [...t.files]; t.value = ""; puja(t.dataset.rup, fs, !!t.dataset.visor) } if (t.dataset.rf === "adreca") pintar() });

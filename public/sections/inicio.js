@@ -27,7 +27,7 @@
 
     el.innerHTML = `<div id="agbox">${(document.getElementById("agbox") || {}).innerHTML || ""}</div><div class="kpi">${kpi.map(([l, n, go, col]) => `<div data-go="${go}"><b style="${col && n ? "color:" + col : ""}">${n}</b><small>${l}</small></div>`).join("")}</div><div class="dash">` +
       card("Per avui", "tareas", (urg.length ? urg.slice(0, 5).map(tf).join("") + mes(urg.length - 5, "tareas") : vacio("Res urgent avui.")) + (prox.length ? `<h2>Aquesta setmana</h2>` + prox.slice(0, 3).map(tf).join("") + mes(prox.length - 3, "tareas") : "") + `<input id="inew" placeholder="Nova tasca per avui… (Retorn)" style="margin-top:10px">`) +
-      card("Agenda", "reuniones", reu.length ? reu.slice(0, 5).map(x => `<div class="r" data-k="reunion" data-id="${x.id}"><i class="dot" style="background:#0a84ff"></i><div class="g"><b>${E(x.titulo || "Reunió")}</b><small>${E([fecha(x.fecha), x.hora, x.lugar, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div></div>`).join("") : vacio("Cap reunió les properes dues setmanes.")) +
+      card("Reunions", "reuniones", reu.length ? reu.slice(0, 5).map(x => `<div class="r" data-k="reunion" data-id="${x.id}"><i class="dot" style="background:#0a84ff"></i><div class="g"><b>${E(x.titulo || "Reunió")}</b><small>${E([fecha(x.fecha), x.hora, x.lugar, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div></div>`).join("") : vacio("Cap reunió les properes dues setmanes.")) +
       card("Dates límit", "festivales", lim.length ? lim.slice(0, 5).map(x => { const n = Math.round((new Date(x.limite) - new Date(hoy)) / 864e5); return `<div class="r" data-k="convocatoria" data-id="${x.id}"><i class="dot" style="background:${n <= 7 ? "#ff3b30" : "#ff9f0a"}"></i><div class="g"><b>${E(x.titulo || "")}</b><small>${E([x.tipo, pn(x.proyecto)].filter(Boolean).join(" · "))}</small></div><small style="white-space:nowrap;${n <= 7 ? "color:#ff3b30" : ""}">${n === 0 ? "avui" : n === 1 ? "demà" : "en " + n + " dies"}</small></div>` }).join("") : vacio("No hi ha convocatòries obertes amb data.")) +
       card("Contactes", "contactos", setmana(c) +
         (seg.length ? `<h2>Toca fer seguiment</h2>` + seg.slice(0, 5).map(x => `<div class="r"><i class="dot" style="background:#0a84ff"></i><div class="g" data-ct="${x.id}"><b>${E(x.nombre)}</b><small>Últim missatge fa ${dias(M(x).at(-1).d)} dies per ${E(M(x).at(-1).v || "missatge")}</small></div><button class="b2" data-seg="${x.id}">${x.email ? "Escriure" : "Copiar el missatge"}</button></div>`).join("") + mes(seg.length - 5, "contactos") : "")) +
@@ -49,7 +49,7 @@
     return `<div style="margin:-2px 0 12px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>${n} de ${obj} contactes nous aquesta setmana</b><span class="em" style="white-space:nowrap;margin:0">${n >= obj ? "Fet ✓" : `en falten ${obj - n}`}</span></div><div class="pbar"><i style="width:${pc}%"></i></div></div>`;
   }
   // Avui en columnes que s'omplen soles (sense forats) i ordenat per urgència
-  const ORDRE = ["Per avui", "Agenda", "Classes", "Recordatoris de terminis", "Dates límit", "Novetats de festivals", "Contactes", "Per reclamar", "Renovacions", "Correu", "Convocatòries amb novetats", "Escriptura", "Projectes en marxa", "Últimes idees", "Còpia de seguretat"];
+  const ORDRE = ["Per avui", "Reunions", "Classes", "Recordatoris de terminis", "Dates límit", "Novetats de festivals", "Contactes", "Per reclamar", "Renovacions", "Correu", "Convocatòries amb novetats", "Escriptura", "Projectes en marxa", "Últimes idees", "Còpia de seguretat"];
   const lloc = c => { const t = (c.querySelector("h3") || {}).textContent || ""; const i = ORDRE.findIndex(o => t.startsWith(o)); return i < 0 ? 50 : i };
   let ro = null, mo = null, ocupat = false;
   function mur() {
@@ -130,10 +130,10 @@
     const c = (await H.contactos()).find(x => x.id === id); if (!c || !window.CONT) return;
     const em = String(c.email || "").split(/[,;\s]+/).filter(Boolean)[0];
     if (em && window.CORREU) { const t = CONT.plantilla(id, "Email"), m = t.match(/^(?:Asunto|Assumpte|Subject)\s*:\s*(.+)\n+/i); return CORREU.nou(em, m ? m[1].trim() : "Seguiment", m ? t.slice(m[0].length) : t) }
-    const t = CONT.plantilla(id, "Instagram"); try { await navigator.clipboard.writeText(t); H.toast("Missatge copiat") } catch (er) { prompt("Copia el missatge:", t) }
+    const t = CONT.plantilla(id, "Instagram"); try { await navigator.clipboard.writeText(t); H.toast("Missatge copiat") } catch (er) { await H.pregunta("Copia el missatge:", t) }
     const ig = String(c.ig || "").replace(/^.*instagram\.com\//, "").replace(/^@/, "").replace(/[/?#].*$/, "");
     if (ig) window.open("https://instagram.com/" + ig, "_blank");
-    if (confirm("Quan l'hagis enviat, el marco com a seguiment fet avui?")) CONT.registraIG(id);
+    if (await H.confirma("Quan l'hagis enviat, el marco com a seguiment fet avui?", { ok: "Sí, marca'l" })) CONT.registraIG(id);
   }
   // Avís si fa més de 10 dies que no hi ha còpia de seguretat
   async function copiaAvis() {

@@ -136,10 +136,10 @@
     if (k === "volver") return lista();
     if (k === "dia") { dia = i; pintar() }
     if (k === "adddia") { const u = doc.dias.at(-1); doc.dias.push({ id: uid(), fecha: u.fecha ? H.addDays(u.fecha, 1) : "", ready: u.ready, calls: u.calls, lugar: u.lugar, filas: [{ id: uid(), tipo: "set", texto: "" }, { id: uid(), tipo: "wrap", texto: "WRAP" }] }); dia = doc.dias.length - 1; save(); pintar() }
-    if (k === "deldia" && confirm("Esborrar tota aquesta jornada?")) { doc.dias.splice(dia, 1); dia = Math.max(0, dia - 1); save(); pintar() }
+    if (k === "deldia" && await H.confirma("Esborrar tota aquesta jornada?")) { doc.dias.splice(dia, 1); dia = Math.max(0, dia - 1); save(); pintar() }
     if (k === "add") { const t = b.dataset.t, f = { id: uid(), tipo: t, texto: t === "set" ? "" : t === "proceso" ? "" : BANDAS[t], dur: t === "plano" ? 30 : t === "proceso" ? 30 : t === "comida" ? 60 : undefined }; const w = D().filas.findIndex(x => x.tipo === "wrap"); t === "wrap" || w < 0 ? D().filas.push(f) : D().filas.splice(w, 0, f); save(); refresca() }
-    if (k === "del" && confirm("Esborrar aquesta fila?")) { D().filas.splice(i, 1); save(); refresca() }
-    if (k === "delpdr" && confirm("Eliminar aquest pla de rodatge sencer? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Pla eliminat"); return lista() }
+    if (k === "del" && await H.confirma("Esborrar aquesta fila?")) { D().filas.splice(i, 1); save(); refresca() }
+    if (k === "delpdr" && await H.confirma("Eliminar aquest pla de rodatge sencer? No es pot desfer.")) { await H.del(doc); doc = null; H.toast("Pla eliminat"); return lista() }
     if (k === "rod") {
       const f = D().filas[i]; f.rodado = b.checked; save(); refresca();
       if (doc.gt && f.ref) { const g = (await H.col("gt")).find(x => x.id === doc.gt), p = g && g.escenas.flatMap(e => e.planos).find(x => x.id === f.ref); if (p) { p.ok = b.checked; H.put(g, 1) } }
@@ -150,7 +150,7 @@
     if (k === "pdf") exportarPDF();
     if (k === "cit") return CIT.obre(doc, dia, () => pintar());
     if (k === "xls") exportarExcel();
-    if (k === "regen") { const g = (await H.col("gt")).find(x => x.id === doc.gt); if (!g) return H.toast("No trobo el guió tècnic"); if (confirm("Es refarà tot el pla des del guió tècnic i perdràs els canvis fets a mà. Continuar?")) { generar(g.id); regenerando = doc } }
+    if (k === "regen") { const g = (await H.col("gt")).find(x => x.id === doc.gt); if (!g) return H.toast("No trobo el guió tècnic"); if (await H.confirma("Es refarà tot el pla des del guió tècnic i perdràs els canvis fets a mà. Continuar?")) { generar(g.id); regenerando = doc } }
     if (k === "pend") {
       const g = (await H.col("gt")).find(x => x.id === doc.gt); if (!g) return;
       const ya = new Set(doc.dias.flatMap(d => d.filas.map(f => f.ref))), l = g.escenas.flatMap(e => e.planos.map(p => ({ p, e }))).filter(x => !ya.has(x.p.id));

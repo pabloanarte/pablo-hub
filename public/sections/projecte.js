@@ -44,6 +44,7 @@
           <div class="ls" style="margin-top:14px"><button class="b" data-k="edita">Editar la fitxa</button>${(p.altres || "").trim() ? `<span class="em">També: ${E(p.altres)}</span>` : ""}</div>
         </div></div>
       <div class="dash" style="margin-top:20px">
+        ${window.CAN && CAN.es(p) ? CAN.card(p) : ""}
         ${PAS.cardPassos(p, cx)}
         ${PAS.cardValora(p, feines)}
         ${brief}
@@ -60,6 +61,7 @@
       </div>
       ${p.notas ? `<div class="card" style="margin-top:16px"><h3>Notes</h3><div style="white-space:pre-wrap;line-height:1.5">${E(p.notas)}</div></div>` : ""}`;
     if (brief) BRIEF.ajusta(el);
+    if (window.CAN) CAN.ajusta(el, p);
   }
 
   // ---------- Equip ----------
@@ -185,7 +187,7 @@
     const gs = (dv.versions || []).filter(x => (x.tipus || "Guió") === "Guió"), ant = gs.map(x => parseInt(String(x.versio || "").replace(/\D/g, "")) || 0);
     const num = (f.name.replace(/\.pdf$/i, "").match(/(?:^|[^a-z0-9])v\.?\s?(\d{1,3})(?![0-9])/i) || [])[1];
     const versio = "v" + (num || (ant.length ? Math.max(...ant) + 1 : 1)), ja = gs.find(x => x.versio === versio);
-    if (ja && !confirm(`Ja hi ha una ${versio} del guió. Vols substituir-la per aquest arxiu?`)) return;
+    if (ja && !await H.confirma(`Ja hi ha una ${versio} del guió. Vols substituir-la per aquest arxiu?`)) return;
     H.toast("Pujant el guió…");
     let a; try { a = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f) } catch (er) { return H.toast("No s'ha pogut pujar") }
     const v = ja || { tipus: "Guió", versio, canvis: "" }; if (ja && ja.arxiu) H.api("DELETE", "archivo/" + ja.arxiu.id).catch(() => { });
@@ -238,9 +240,9 @@
     if (k === "eqllegeix") { let u = document.getElementById("eqf").value.trim(); if (!u) return document.getElementById("eqf").focus(); if (!/^https?:\/\//.test(u)) u = "https://" + u; b.disabled = true; b.textContent = "Llegint…"; await llegeixFormulari(p, u); b.disabled = false; b.textContent = "Tornar a llegir"; return }
     if (k === "eqamunt" || k === "eqavall") { const pers = await H.col("persona"), eq = (p.ordreMa ? (p.equip || []) : perDepartaments(p.equip || [], pers)).filter(x => pers.some(y => y.id === x.id)), i = +b.dataset.i, j = k === "eqamunt" ? i - 1 : i + 1;[eq[i], eq[j]] = [eq[j], eq[i]]; p.equip = eq.concat((p.equip || []).filter(x => !eq.includes(x))); p.ordreMa = true; if (!p.credits) { delete p.credits; delete p.credGen } await H.put(p, 1); return pintar() }
     if (k === "eqdept") { p.equip = perDepartaments(p.equip || [], await H.col("persona")); delete p.ordreMa; if (!p.credits) delete p.credGen; await H.put(p, 1); H.toast("Ordenat per departaments"); return pintar() }
-    if (k === "eqregen") { e.preventDefault(); if (p.credits && !confirm("Es perdran els retocs que hagis fet al text. Tornar a generar-lo?")) return; delete p.credits; delete p.credGen; await H.put(p, 1); return pintar() }
+    if (k === "eqregen") { e.preventDefault(); if (p.credits && !await H.confirma("Es perdran els retocs que hagis fet al text. Tornar a generar-lo?")) return; delete p.credits; delete p.credGen; await H.put(p, 1); return pintar() }
     if (k === "treq") { p.equip = (p.equip || []).filter(x => x.id !== b.dataset.id); await H.put(p, 1); return pintar() }
-    if (k === "trar") { if (!confirm("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.id).catch(() => { }); p.archivos = (p.archivos || []).filter(a => a.id !== b.dataset.id); await H.put(p, 1); return pintar() }
+    if (k === "trar") { if (!await H.confirma("Treure aquest arxiu?")) return; H.api("DELETE", "archivo/" + b.dataset.id).catch(() => { }); p.archivos = (p.archivos || []).filter(a => a.id !== b.dataset.id); await H.put(p, 1); return pintar() }
   });
   el.addEventListener("input", async e => {
     if (e.target.id !== "eqtxt") return; const p = await doc(); if (!p) return;
@@ -259,13 +261,14 @@
       await H.put(p, 1); H.toast("Fet"); return pintar();
     }
     if (t.id === "eqarx" && t.files[0]) { const f = t.files[0]; t.value = ""; return llegeixFormulari(p, f) }
-    if (t.dataset.c) { p.cred = Object.assign({}, p.cred, { [t.dataset.c]: t.type === "checkbox" ? t.checked : t.value }); if (!p.credits || confirm("Has retocat el text dels crèdits. Vols tornar-lo a generar amb aquest format? (Es perdran els retocs)")) delete p.credits; await H.put(p, 1); return pintar() }
+    if (t.dataset.c) { p.cred = Object.assign({}, p.cred, { [t.dataset.c]: t.type === "checkbox" ? t.checked : t.value }); if (!p.credits || await H.confirma("Has retocat el text dels crèdits. Vols tornar-lo a generar amb aquest format? (Es perdran els retocs)")) delete p.credits; await H.put(p, 1); return pintar() }
     if (t.dataset.rol) { const x = (p.equip || []).find(y => y.id === t.dataset.rol); if (x) { x.rol = t.value.trim(); await H.put(p, 1); if (!p.credits) pintar() } }
     if (t.id === "prln") { p.enlaces = t.value; await H.put(p, 1); pintar() }
   });
   H.onChange(() => { if (!el.hidden && !el.contains(document.activeElement)) pintar() });
   if (window.BRIEF) BRIEF.connecta(el, doc, () => pintar());
   PAS.connecta(el, doc, () => pintar());
+  if (window.CAN) CAN.connecta(el, doc, () => pintar());
   window.addEventListener("hub-sec", e => { if (e.detail === "projecte") pintar() });
   pintar();
 })();

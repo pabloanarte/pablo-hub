@@ -133,7 +133,7 @@ function ol(c){const t=$("#tx").value;$("#op").href=(cv==="Instagram"?ig(c.ig):c
 async function copy(t){try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}toast("Copiat")}
 function csv(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';return ["nombre","persona","tipo","estado","motivos","email","instagram","telefono","web","direccion","gestionado_por","notas","envios","ultimo_envio"].join(",")+"\n"+C.map(c=>[c.nombre,c.persona,c.tipo,c.estado,(c.motivos||[]).join("; "),c.email,c.ig,c.tel,c.web,(c.dir||"").replace(/\n/g," | "),c.man,c.notas,M(c).length,M(c).length?M(c).at(-1).d:""].map(q).join(",")).join("\n")}
 async function dl(name,data){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=name;document.body.appendChild(a);a.click();a.remove()}
-document.addEventListener("click",e=>{
+document.addEventListener("click",async e=>{
  if(!e.target.closest||!e.target.closest("#s-contactos,#sh"))return; // només dins de Contactes
  if(e.target.closest("a[target]"))return;
  const b=e.target.closest("[data-a]");if(!b)return;if(b.tagName==="A")e.preventDefault();
@@ -148,7 +148,7 @@ document.addEventListener("click",e=>{
  else if(a==="mo"){const s=new Set(c.motivos||[]);s.has(d.m)?s.delete(d.m):s.add(d.m);c.motivos=[...s];b.classList.toggle("on");save(c)}
  else if(a==="fh"){fh=fh===d.t?"":d.t;draw()}
  else if(a==="sub"){c.sub=d.s;save(c);sheet(c.id)}
- else if(a==="um"){const pm=M(c)[+d.i];if(pm&&pm.prog&&String(pm.prog).startsWith("P_")){if(!confirm("És un enviament programat: també es cancel·larà a Gmail. Continuar?"))return;H.api("POST","correu/cancela",{id:pm.prog}).catch(()=>toast("No s'ha pogut cancel·lar a Gmail"))}c.msgs=M(c).filter((_,i)=>i!==+d.i);if(!c.msgs.length&&c.estado==="Contactat")c.estado="Pendent";save(c);sheet(c.id)}
+ else if(a==="um"){const pm=M(c)[+d.i];if(pm&&pm.prog&&String(pm.prog).startsWith("P_")){if(!await H.confirma("És un enviament programat: també es cancel·larà a Gmail. Continuar?"))return;H.api("POST","correu/cancela",{id:pm.prog}).catch(()=>toast("No s'ha pogut cancel·lar a Gmail"))}c.msgs=M(c).filter((_,i)=>i!==+d.i);if(!c.msgs.length&&c.estado==="Contactat")c.estado="Pendent";save(c);sheet(c.id)}
  else if(a==="undo"){undo&&undo();$("#toast").hidden=true}
  else if(a==="cmp")cmp(c)
  else if(a==="via")cmp(c,d.v)
