@@ -19,6 +19,8 @@ export async function onRequest({ request, env, next }) {
 
   const c = (request.headers.get("cookie") || "").match(/(?:^|;\s*)hub=([a-f0-9]+)/);
   if (c && c[1] === token) {
+    // els scripts d'Apps Script (pont-*.gs) es veuen com a text al navegador, per copiar-los (no es descarreguen)
+    if (/^\/pont-[a-z]+\.gs$/.test(url.pathname)) { const r = await next(), out = new Response(r.body, r); out.headers.set("content-type", "text/plain; charset=utf-8"); out.headers.set("content-disposition", "inline"); out.headers.set("cache-control", "no-store"); return out }
     // en obrir el hub es renova la galeta (un cop al dia, galeta «hubr»): així no caduca mentre es faci servir, també sense connexió
     if (request.method === "GET" && (request.headers.get("sec-fetch-mode") === "navigate" || (url.pathname === "/" && (request.headers.get("accept") || "").includes("text/html")))) {
       if (!/(?:^|;\s*)hubr=1/.test(request.headers.get("cookie") || "")) {
