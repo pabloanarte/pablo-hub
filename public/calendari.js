@@ -4,17 +4,24 @@
 // Fonts: Google Calendar (tots els calendaris visibles, també el de l'iPhone) pel pont de Gmail (acció «agenda»,
 // /api/correu/agenda; còpia a localStorage «ag2:» per veure-ho sense connexió) i el hub (tasques, reunions,
 // rodatges, feines, classes i dates límit de festivals).
+// AG.nou(cfg) fa un altre calendari igual (el del Resum de cada projecte, calproj.js): cfg = {clau (localStorage de la vista),
+// fonts(de, a) → esdeveniments, google:false, peu() → html de sota, cap (html al costat dels botons), clic(k, b, e) → cert si l'ha fet, dia(d)}.
+// Tipus de dates dels calendaris de projecte (p.cal) i el seu color: AG.TIPUS.
 window.AG = (() => {
+ const TIPUS = [["Reunió", "#0a84ff"], ["Recce", "#30b27a"], ["Càsting", "#e5397f"], ["Assaig", "#af52de"], ["Proves", "#5e5ce6"], ["Rodatge", "#ff375f"], ["Muntatge", "#ff9f0a"], ["Color", "#00a3a3"], ["So", "#64748b"], ["VFX", "#8d6e63"], ["Entrega", "#6e3cbc"], ["Estrena", "#c99a00"], ["Altres", "#8e8e93"]];
+ const colT = t => (TIPUS.find(x => x[0] === t) || TIPUS[TIPUS.length - 1])[1];
+ const mk = (cfg = {}) => {
   const E = s => String(s ?? "").replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
   let vista = "mes", base = null, ver = 0;
-  try { vista = localStorage.getItem("ag-vista2") || "mes" } catch (e) { }
+  const CL = cfg.clau || "ag-vista2";
+  try { vista = localStorage.getItem(CL) || "mes" } catch (e) { }
   const iso = d => new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
   const dia = s => new Date(s + "T12:00");
   const suma = (s, n) => { const d = dia(s); d.setDate(d.getDate() + n); return iso(d) };
   const dilluns = s => { const d = dia(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return iso(d) };
   const dies = (a, b) => Math.round((dia(b) - dia(a)) / 864e5);
   const COL = { tasca: "#8e8e93", reunio: "#0a84ff", rodatge: "#ff375f", feina: "#ff9f0a", classe: "#30b27a", limit: "#bf5af2" };
-  const NOMK = { tasca: "Tasca", reunio: "Reunió", rodatge: "Rodatge", feina: "Feina", classe: "Classe", limit: "Festival" };
+  const NOMK = { tasca: "Tasca", reunio: "Reunió", rodatge: "Rodatge", feina: "Feina", classe: "Classe", limit: "Festival", proj: "Projecte" };
   const MESOS = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
 
   function rang() {
@@ -33,6 +40,8 @@ window.AG = (() => {
     fe.forEach(x => { if (!x.ini) return; const f = x.fin && x.fin >= x.ini ? x.fin : x.ini; if (f < de || x.ini > a) return; out.push({ d0: x.ini, d1: f, t: `${x.rol || "Feina"}: ${x.titulo || ""}`, k: "feina", tot: 1, o: ["feina", x.id] }) });
     cu.forEach(x => (x.setmanes || []).forEach(s => s && dins(s.data) && u(s.data, { h: s.hora, t: `Classe: ${x.titulo || ""}`, k: "classe", lloc: x.centre, o: ["curs", x.id] })));
     cv.filter(x => (!x.estado || x.estado === "Per presentar") && dins(x.limite)).forEach(x => u(x.limite, { t: "Límit: " + (x.titulo || ""), k: "limit", tot: 1, o: ["convocatoria", x.id] }));
+    // dates del calendari del Resum de cada projecte (p.cal)
+    ps.forEach(p => (p.cal || []).forEach(c => { if (!c || !c.data) return; const f = c.fi && c.fi > c.data ? c.fi : c.data; if (f < de || c.data > a) return; out.push({ d0: c.data, d1: f, h: f > c.data ? "" : c.hora, hf: c.horafi, t: `${c.tipus || "Data"}: ${p.titulo || ""}${c.titol ? " · " + c.titol : ""}`, k: "proj", col: colT(c.tipus), tot: f > c.data || !c.hora ? 1 : 0, lloc: c.lloc, o: ["projcal", p.id] }) }));
     return out;
   }
   const ck = (de, a) => "ag2:" + de + ":" + a;
@@ -66,26 +75,27 @@ window.AG = (() => {
 
   async function pinta(box) {
     if (!box) return; const v = ++ver, r = rang(), { de, a } = r;
-    const [hub, cfg] = await Promise.all([delHub(de, a), H.api("GET", "correu/config").catch(() => ({}))]);
+    const [hub, gc] = await Promise.all([(cfg.fonts || delHub)(de, a), cfg.google === false ? {} : H.api("GET", "correu/config").catch(() => ({}))]);
     let g = deCopia(de, a); if (v !== ver) return;
     const mob = innerWidth < 700;
     const dibuixa = (gl, peu) => {
       // a la vista de mes, només els dies del mes (com a l'iPhone): el que en surt es retalla
       const m0 = iso(new Date(r.any, r.mes, 1, 12)), m1 = iso(new Date(r.any, r.mes + 1, 0, 12));
       const evs = hub.concat(gl ? gl.l : []).filter(e => vista !== "mes" || (e.d1 >= m0 && e.d0 <= m1)).map(e => vista === "mes" && (e.d0 < m0 || e.d1 > m1) ? { ...e, d0: e.d0 < m0 ? m0 : e.d0, d1: e.d1 > m1 ? m1 : e.d1, tall0: e.d0 < m0, tall1: e.d1 > m1 } : e), setm = []; for (let d = de; d <= a; d = suma(d, 7)) setm.push(d);
-      box.innerHTML = `<div class="card agc"><div class="agh"><h3 class="agt">${MESOS[r.mes]}<small>${r.any}</small></h3><span style="flex:1"></span>
+      box.innerHTML = `<div class="card agc"><div class="agh"><h3 class="agt">${MESOS[r.mes]}<small>${r.any}</small></h3><span style="flex:1"></span>${cfg.cap || ""}
           <div class="agseg"><button class="${vista === "setmana" ? "on" : ""}" data-ag="vista" data-v="setmana">Setmana</button><button class="${vista === "mes" ? "on" : ""}" data-ag="vista" data-v="mes">Mes</button></div>
           <div class="agnav"><button data-ag="ant" aria-label="Anterior">‹</button><button data-ag="avui">Avui</button><button data-ag="seg" aria-label="Següent">›</button></div></div>
         <div class="agdh">${["dl", "dt", "dc", "dj", "dv", "ds", "dg"].map((x, i) => `<span class="${i > 4 ? "cap" : ""}">${x}</span>`).join("")}</div>
-        <div class="agcal v-${vista}">${setm.map(dl => setmana(dl, evs, vista === "mes" ? { max: mob ? 3 : 4, min: mob ? 2 : 3, mes: r.mes } : { max: mob ? 6 : 10, min: 5, hores: 1 })).join("")}</div>
+        <div class="agcal v-${vista}">${setm.map(dl => setmana(dl, evs, vista === "mes" ? { max: mob ? 3 : 4, min: cfg.min != null ? cfg.min : mob ? 2 : 3, mes: r.mes } : { max: mob ? 6 : 10, min: 5, hores: 1 })).join("")}</div>
         <div class="agpeu">${peu}</div></div>`;
     };
     const fa = q => Date.now() - q < 9e4 ? "ara" : "fa " + Math.round((Date.now() - q) / 6e4) + " min";
-    const peu = (gl, err) => !cfg.connectat ? `Google Calendar no està connectat: connecta el pont de Google a <a href="#" data-ag="cfg">Configuració</a>.`
+    if (cfg.google === false) { const pp = cfg.peu ? await cfg.peu() : ""; if (v === ver) dibuixa(null, pp); return }
+    const peu = (gl, err) => !gc.connectat ? `Google Calendar no està connectat: connecta el pont de Google a <a href="#" data-ag="cfg">Configuració</a>.`
       : err ? `No he pogut llegir Google Calendar${gl ? ` (es veu la còpia de ${fa(gl.quan)})` : ""}.${err === "accio" ? " Torna a enganxar pont-gmail.gs a Apps Script i fes una implementació nova." : ""}`
       : `Google Calendar · actualitzat ${gl ? fa(gl.quan) : "…"}`;
     dibuixa(g, peu(g));
-    if (!cfg.connectat || (g && Date.now() - g.quan < 5 * 60e3)) return;
+    if (!gc.connectat || (g && Date.now() - g.quan < 5 * 60e3)) return;
     try { g = await deGoogle(de, a); if (v === ver) dibuixa(g, peu(g)) } catch (e) { if (v === ver) dibuixa(g, peu(g, e && e.error || "xarxa")) }
   }
 
@@ -94,12 +104,13 @@ window.AG = (() => {
     root.addEventListener("click", e => {
       const b = e.target.closest("[data-ag]"); if (!b) return; if (b.tagName === "A") e.preventDefault();
       const k = b.dataset.ag, { de } = rang();
+      if (cfg.clic && cfg.clic(k, b, e)) return;
       if (k === "cfg") return hubShow("ajustos");
-      if (k === "vista") { vista = b.dataset.v; try { localStorage.setItem("ag-vista2", vista) } catch (er) { } return repinta() }
+      if (k === "vista") { vista = b.dataset.v; try { localStorage.setItem(CL, vista) } catch (er) { } return repinta() }
       if (k === "avui") { base = null; return repinta() }
       if (k === "ant" || k === "seg") { const s = k === "ant" ? -1 : 1, d = dia(base || H.today()); base = vista === "mes" ? iso(new Date(d.getFullYear(), d.getMonth() + s, 1, 12)) : suma(de, 7 * s); return repinta() }
-      if (k === "dia") return obreDia(b.dataset.d);
-      if (k === "fons") { const r = b.getBoundingClientRect(), c = Math.min(6, Math.max(0, Math.floor((e.clientX - r.left) / (r.width / 7)))); return obreDia(suma(b.dataset.dl, c)) }
+      if (k === "dia") return (cfg.dia || obreDia)(b.dataset.d);
+      if (k === "fons") { const r = b.getBoundingClientRect(), c = Math.min(6, Math.max(0, Math.floor((e.clientX - r.left) / (r.width / 7)))); return (cfg.dia || obreDia)(suma(b.dataset.dl, c)) }
     });
   }
   async function obreDia(d) {
@@ -109,10 +120,13 @@ window.AG = (() => {
       <label>Tasca per a aquest dia</label><div class="row"><input id="agt" placeholder="Què has de fer?"><button class="b" data-agk="tasca">Afegir</button></div>`, () => { const b = document.getElementById("hshc"); b.onclick = b.onkeydown = null });
     const box = document.getElementById("hshc");
     box.onclick = async e => {
-      const r = e.target.closest("[data-ago]"); if (r) { H.cerrar(); const [t, id] = [r.dataset.ago, r.dataset.id]; if (t === "tarea") return H.abrirTarea(id); if (t === "pdr") { hubShow("planes", { proj: "" }); return window.P && P.abrir(id) } if (t === "curs") { hubShow("docencia"); return window.DOC && DOC.curs(id) } return H.abrir(t, id) }
+      const r = e.target.closest("[data-ago]"); if (r) { H.cerrar(); const [t, id] = [r.dataset.ago, r.dataset.id]; if (t === "tarea") return H.abrirTarea(id); if (t === "projcal") return window.HUB && HUB.obreProjecte(id); if (t === "pdr") { hubShow("planes", { proj: "" }); return window.P && window.P.abrir(id) } if (t === "curs") { hubShow("docencia"); return window.DOC && DOC.curs(id) } return H.abrir(t, id) }
       if (e.target.closest('[data-agk="tasca"]')) { const t = document.getElementById("agt").value.trim(); if (!t) return document.getElementById("agt").focus(); await H.nuevaTarea(t, d); H.cerrar(); H.toast("Tasca afegida") }
     };
     box.onkeydown = e => { if (e.target.id === "agt" && e.key === "Enter") box.querySelector('[data-agk="tasca"]').click() };
   }
   return { pinta, connecta };
+ };
+ const ag = mk(); ag.nou = mk; ag.TIPUS = TIPUS; ag.colT = colT;
+ return ag;
 })();

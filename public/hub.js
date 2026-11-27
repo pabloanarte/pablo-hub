@@ -63,7 +63,13 @@ const GRUPS = [
  {id:"ajustos",label:"Configuració",ic:"ajustos",tabs:[["ajustos","Configuració"]]}
 ];
 // Dins d'un projecte: pestanyes amb només el que és d'aquell projecte
-const PTABS = [["resum","Resum"],["briefing","Briefing"],["desenvolupament","Desenvolupament"],["referencies","Referències"],["decks","Dossiers"],["preproduccion","Preproducció"],["recce","Recce"],["guio","Guió i pla"],["postproduccion","Postproducció"],["pressupost","Pressupost"],["festivales","Festivals"],["equip","Equip"],["arxius","Arxius"]];
+// (Preproducció i Postproducció ja no hi són: les dates van al calendari del Resum; els passos tenen pestanya pròpia)
+const PTABS = [["resum","Resum"],["briefing","Briefing"],["passos","Passos"],["desenvolupament","Desenvolupament"],["referencies","Referències"],["decks","Dossiers"],["recce","Recce"],["guio","Guió i pla"],["pressupost","Pressupost"],["festivales","Festivals"],["equip","Equip"],["arxius","Arxius"]];
+// pestanyes que es veuen al projecte p (P = "-" és «Sense projecte»). Videoclips: Briefing, sense Desenvolupament ni Festivals, i «Dossier»
+const ptabsDe = (p, P) => { const vc = !!(window.BRIEF && BRIEF.es(p));
+ return PTABS.filter(t => t[0] !== "briefing" || vc).filter(t => !vc || !["desenvolupament", "festivales"].includes(t[0]))
+  .filter(t => P !== "-" || !["resum", "passos", "equip", "arxius", "desenvolupament", "pressupost", "recce", "referencies"].includes(t[0]))
+  .map(t => vc && t[0] === "decks" ? ["decks", "Dossier"] : t) };
 const GUIO = [["desglossament","Desglossament"],["guiones","Guió tècnic"],["storyboard","Storyboard"],["planes","Pla de rodatge"]];
 const nav = document.getElementById("hubnav"), wrap = document.querySelector(".w"), sub = document.getElementById("subnav");
 SECTIONS.forEach(s => { if (!document.getElementById("s-" + s.id)) { const e = document.createElement("section"); e.id = "s-" + s.id; e.hidden = true; wrap.appendChild(e) } });
@@ -81,12 +87,14 @@ async function pintaSub() {
   PNOM = P === "-" ? "Sense projecte" : (p && p.titulo) || "Sense títol";
   document.getElementById("stitle").textContent = PNOM;
   document.getElementById("sdesc").textContent = p ? [p.categoria, H.rols(p).join(", "), p.estado].filter(Boolean).join(" · ") : "Documents que no són de cap projecte";
-  const vc = !!(window.BRIEF && BRIEF.es(p)); // la pestanya Briefing només als videoclips
-  if (PT === "briefing" && !vc) PT = "resum";
-  sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${PTABS.filter(t => t[0] !== "briefing" || vc).filter(t => P !== "-" || !["resum", "equip", "arxius", "desenvolupament", "pressupost", "recce", "referencies"].includes(t[0])).map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
+  const tabs = ptabsDe(p, P);
+  if (!tabs.some(t => t[0] === PT)) { PT = P === "-" ? tabs[0][0] : "resum"; return show(SEC_PT[PT] || PT, { dins: true }) } // pestanya que aquest projecte ja no té
+  sub.innerHTML = `<div class="ls" style="margin-bottom:12px"><button class="b2" data-go="tanca">← Projectes</button></div><div class="tabs ptabs">${tabs.map(t => `<button class="t ${PT === t[0] ? "on" : ""}" data-pt="${t[0]}">${t[1]}</button>`).join("")}</div>` +
    (PT === "guio" ? `<div class="seg" style="margin:0 0 14px">${GUIO.map(t => `<button class="t ${ACT === t[0] ? "on" : ""}" data-sec="${t[0]}">${t[1]}</button>`).join("")}</div>` : "");
-  { const on = sub.querySelector(".ptabs .on"); if (on) { const t = on.parentElement; t.scrollLeft = on.offsetLeft - (t.clientWidth - on.offsetWidth) / 2 } }
-  sub.hidden = false; return;
+  sub.hidden = false;
+  // si la barra no hi cap (mòbil): es veu la pestanya triada i la fila comença just a l'inici d'una pestanya (cap queda tallada a l'esquerra)
+  { const on = sub.querySelector(".ptabs .on"), t = on && on.parentElement; if (on && t.scrollWidth > t.clientWidth + 1) { const x0 = t.getBoundingClientRect().left - t.scrollLeft, st = [...t.children].map(b => b.getBoundingClientRect().left - x0), dr = on.getBoundingClientRect().right - x0 + 30; t.scrollLeft = st.find(s => s + t.clientWidth >= dr && s <= on.getBoundingClientRect().left - x0) ?? (on.getBoundingClientRect().left - x0) } }
+  return;
  }
  const gr = GRUPS.find(x => x.id === g) || GRUPS[0];
  sub.innerHTML = gr.tabs.length > 1 ? `<div class="seg" style="margin:0 0 16px">${gr.tabs.map(t => `<button class="t ${ACT === t[0] ? "on" : ""}" data-sec="${t[0]}">${t[1]}</button>`).join("")}</div>` : "";
@@ -111,7 +119,7 @@ function show(id, o) {
  window.dispatchEvent(new CustomEvent("hub-sec", { detail: id }));
 }
 // obrir un projecte (des del seu pòster) i canviar de pestanya
-const SEC_PT = { resum: "projecte", briefing: "projecte", equip: "projecte", arxius: "projecte", guio: "desglossament" };
+const SEC_PT = { resum: "projecte", briefing: "projecte", passos: "projecte", equip: "projecte", arxius: "projecte", guio: "desglossament" };
 function obreProjecte(id, pt) { P = id; PT = pt || "resum"; show(SEC_PT[PT] || PT, { proj: id, dins: true }) }
 window.HUB = { obreProjecte, mode: () => PT, show };
 window.hubShow = (id, o) => show(id, o || {});
@@ -184,7 +192,7 @@ document.getElementById("hsh").addEventListener("click", e => {
  H.cerrar(); const t = b.dataset.t, id = b.dataset.id;
  if (b.dataset.k === "gc") { show("contactos"); setTimeout(() => { const nb = document.querySelector('#nav [data-v="contactos"]'); nb && nb.click(); setTimeout(() => { const r = document.querySelector(`#s-contactos [data-a="o"][data-id="${id}"]`); r && r.click() }, 150) }, 50); return }
  if (t === "gt") { show("guiones", { proj: "" }); return window.GT && GT.abrir(id) }
- if (t === "pdr") { show("planes", { proj: "" }); return window.P && P.abrir(id) }
+ if (t === "pdr") { show("planes", { proj: "" }); return window.P && window.P.abrir(id) }
  if (t === "curs" || t === "visionat") { show("docencia"); return window.DOC && (t === "curs" ? DOC.curs(id) : DOC.vis(id)) }
  if (t === "sb") { show("storyboard", { proj: "" }); return window.SB && SB.obre(id) }
  if (t === "desg") { show("desglossament", { proj: "" }); return window.DESG && DESG.obre(id) }

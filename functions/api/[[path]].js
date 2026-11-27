@@ -101,9 +101,29 @@ async function oembed(request, j) {
   let u; try { u = new URL(new URL(request.url).searchParams.get("url") || "") } catch (e) { return j({ error: "url" }, 400) }
   const h = u.hostname.replace(/^(www|m)\./, "");
   const api = /^(youtube\.com|youtu\.be)$/.test(h) ? "https://www.youtube.com/oembed?format=json&url=" : /^(vimeo\.com|player\.vimeo\.com)$/.test(h) ? "https://vimeo.com/api/oembed.json?width=640&url=" : "";
-  if (!api || !/^https?:$/.test(u.protocol)) return j({ error: "plataforma" }, 400);
+  if (!/^https?:$/.test(u.protocol)) return j({ error: "plataforma" }, 400);
+  if (!api) { if (new URL(request.url).searchParams.get("tot")) return paginaMeta(u, j); return j({ error: "plataforma" }, 400) }
   let o; try { const r = await fetch(api + encodeURIComponent(u.href), { headers: { "user-agent": "Mozilla/5.0 (pablo-hub)" } }); if (!r.ok) return j({ error: "no", status: r.status }, 404); o = await r.json() } catch (e) { return j({ error: "xarxa" }, 502) }
   return j({ titol: String(o.title || ""), autor: String(o.author_name || ""), thumb: /^https:\/\//.test(o.thumbnail_url || "") ? o.thumbnail_url : "", durada: +o.duration || 0 });
+}
+// Títol i imatge d'un enllaç qualsevol (referències): Google Drive (miniatura de l'arxiu si és públic) o les etiquetes og: de la pàgina
+async function paginaMeta(u, j) {
+  const h = u.hostname.replace(/^www\./, ""), drv = /^(drive|docs)\.google\.com$/.test(h) && (u.href.match(/\/d\/([\w-]{20,})/) || [])[1] || (h === "drive.google.com" && u.searchParams.get("id")) || "";
+  const net = t => String(t || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim().slice(0, 200);
+  let titol = "", thumb = drv ? `https://drive.google.com/thumbnail?id=${drv}&sz=w1600` : "";
+  try {
+    const r = await fetch(u.href, { redirect: "follow", headers: { "user-agent": "Mozilla/5.0 (compatible; pablo-hub)", "accept-language": "ca,es;q=0.9,en;q=0.8" } });
+    const ct = r.headers.get("content-type") || "";
+    if (r.ok && /^image\//i.test(ct)) return j({ titol: "", thumb: u.href, imatge: 1, plat: drv ? "Drive" : "" });
+    if (r.ok && /html/i.test(ct)) {
+      const t = (await r.text()).slice(0, 400000), meta = k => { const m = t.match(new RegExp(`<meta[^>]+(?:property|name)=["']${k}["'][^>]*>`, "i")); return m ? net((m[0].match(/content=["']([^"']*)["']/i) || [])[1]) : "" };
+      titol = meta("og:title") || meta("twitter:title") || net((t.match(/<title[^>]*>([^<]*)/i) || [])[1]);
+      const im = meta("og:image") || meta("og:image:url") || meta("twitter:image");
+      if (!thumb && im) try { thumb = new URL(im, r.url).href } catch (e) { }
+    }
+  } catch (e) { }
+  if (drv) titol = titol.replace(/\s*[-–]\s*Google (Drive|Docs|Sheets|Slides)$/i, "");
+  return j({ titol, thumb: /^https:\/\//.test(thumb) ? thumb : "", plat: drv ? "Drive" : "" });
 }
 async function archivo(p, m, request, env, j) {
   const kv = env.ARCHIVOS; if (!kv) return j({ error: "sin-archivos" }, 503);
@@ -268,6 +288,7 @@ async function pontCal(request, db, j) {
       else if ((m = u.match(/^(convocatoria:[\w-]+)-(l|e)$/))) { const o = await get(m[1]); if (!o) continue; o[m[2] === "l" ? "limite" : "evento"] = d; await put(m[1], o) }
       else if ((m = u.match(/^(pdr:[\w-]+)-(\d+)$/))) { const o = await get(m[1]); if (!o || !Array.isArray(o.dias) || !o.dias[+m[2]]) continue; o.dias[+m[2]].fecha = d; await put(m[1], o) }
       else if ((m = u.match(/^(curs:[\w-]+)-([\w-]+)$/))) { const o = await get(m[1]); const x = o && Array.isArray(o.setmanes) && o.setmanes.find((y, i) => y && (y.id || String(i)) === m[2]); if (!x) continue; x.data = d; x.hora = hm(c.hora); x.horafi = suma(c.hora, c.durada); if (c.desc !== undefined) x.notes = String(c.desc).slice(0, 5000); await put(m[1], o) }
+      else if ((m = u.match(/^(proyecto:[\w-]+)-c-([\w-]+)$/))) { const o = await get(m[1]); const x = o && Array.isArray(o.cal) && o.cal.find(y => y && y.id === m[2]); if (!x) continue; x.data = d; x.fi = !hm(c.hora) && iso(c.fi) > d ? iso(c.fi) : ""; if (hm(c.hora) || !x.fi) { x.hora = hm(c.hora); x.horafi = suma(c.hora, c.durada) } if (c.lloc !== undefined) x.lloc = String(c.lloc || "").slice(0, 300); if (c.desc !== undefined) x.notes = String(c.desc).slice(0, 5000); await put(m[1], o) }
       else if ((m = u.match(/^(feina:[\w-]+)$/))) { const o = await get(m[1]); if (!o) continue; o.ini = d; o.fin = iso(c.fi) || ""; await put(m[1], o) }
       else continue;
       fets.push(u);
@@ -408,6 +429,7 @@ async function pontDiari(request, db, j) {
   L("pdr").forEach(x => (x.dias || []).forEach((d, i) => { if (d && d.fecha === avui) ag.push([(String(d.calls || "").match(/\d{1,2}:\d{2}/) || [""])[0], `<b>Rodatge: ${esc(x.titulo || pn(x.proyecto) || "Pla de rodatge")}</b> · jornada ${i + 1}${d.calls ? " · " + esc(d.calls) : ""}`]) }));
   L("feina").filter(x => x.ini === avui && x.estado !== "Pressupostat").forEach(x => ag.push(["", `<b>Comença la feina: ${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""}`]));
   L("convocatoria").filter(x => x.evento === avui && ["Seleccionat", "Premiat", "Presentat"].includes(x.estado)).forEach(x => ag.push(["", `<b>Festival: ${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
+  L("proyecto").forEach(p => (Array.isArray(p.cal) ? p.cal : []).forEach(c => { if (c && c.data && (c.data === avui || (c.fi && c.data < avui && c.fi >= avui))) ag.push([c.hora || "", `<b>${esc(c.tipus || "Data")}: ${esc(p.titulo || "")}</b>${c.titol ? " · " + esc(c.titol) : ""}${c.horafi ? ` · fins a les ${esc(c.horafi)}` : ""}${c.lloc ? " · " + esc(c.lloc) : ""}`]) }));
   sec("Agenda", ag.sort((a, b) => (a[0] || "99").localeCompare(b[0] || "99")).map(x => (x[0] ? `<span style="display:inline-block;min-width:52px;color:#666">${esc(x[0])}</span>` : "") + x[1]));
   sec("Tasques per avui", L("tarea").filter(x => !x.hecha && x.fecha === avui).map(x => esc(x.titulo) + (x.proyecto ? ` <span style="color:#666">· ${esc(pn(x.proyecto))}</span>` : "")));
   // terminis: avui, i avisos a 2 i 7 dies
@@ -441,6 +463,7 @@ async function pontDiari(request, db, j) {
     L("feina").filter(x => dins(x.ini) && x.estado !== "Pressupostat").forEach(x => st.push([x.ini, `${dia(x.ini)} · Comença la feina: <b>${esc(x.titulo)}</b>${x.productora ? " · " + esc(x.productora) : ""}`]));
     L("convocatoria").filter(x => ["Seleccionat", "Premiat", "Presentat"].includes(x.estado) && dins(x.evento)).forEach(x => st.push([x.evento, `${dia(x.evento)} · Festival: <b>${esc(x.titulo)}</b>${x.proyecto ? " · " + esc(pn(x.proyecto)) : ""}`]));
     L("tarea").filter(x => !x.hecha && dins(x.fecha)).forEach(x => st.push([x.fecha, `${dia(x.fecha)} · ${esc(x.titulo)}${x.proyecto ? ` <span style="color:#666">· ${esc(pn(x.proyecto))}</span>` : ""}`]));
+    L("proyecto").forEach(p => (Array.isArray(p.cal) ? p.cal : []).forEach(c => { if (c && dins(c.data)) st.push([c.data + (c.hora || ""), `${dia(c.data)}${c.hora ? " " + esc(c.hora) : ""} · ${esc(c.tipus || "Data")}: <b>${esc(p.titulo || "")}</b>${c.titol ? " · " + esc(c.titol) : ""}`]) }));
     sec("Aquesta setmana", st.sort((a, b) => a[0].localeCompare(b[0])).map(x => x[1]));
     const pend = L("c").filter(c => c.estado === "Contactat" && Array.isArray(c.msgs) && c.msgs.length > 0 && c.msgs.length < 3 && c.msgs[c.msgs.length - 1].d <= sumaDies(avui, -7)).length;
     const ret = L("tarea").filter(x => !x.hecha && x.fecha && x.fecha < avui).length;
@@ -498,6 +521,8 @@ async function esdeveniments(db) {
   T("pdr").forEach(x => (Array.isArray(x.dias) ? x.dias : []).forEach((d, i) => add(x.id + "-" + i, d.fecha, `Rodatge ${proj[x.proyecto] || x.titulo || ""} · jornada ${i + 1}`, { desc: d.calls })));
   T("curs").forEach(x => (Array.isArray(x.setmanes) ? x.setmanes : []).forEach((s, i) => s && add(x.id + "-" + (s.id || i), s.data, `Classe: ${x.titulo || ""}${s.tema ? " · " + s.tema : ""}`, { hora: s.hora, durada: /^\d\d:\d\d$/.test(s.hora || "") && /^\d\d:\d\d$/.test(s.horafi || "") && s.horafi > s.hora ? (+s.horafi.slice(0, 2) * 60 + +s.horafi.slice(3, 5)) - (+s.hora.slice(0, 2) * 60 + +s.hora.slice(3, 5)) : 60, lloc: x.centre, desc: s.notes })));
   T("feina").forEach(x => { add(x.id, x.ini, `${x.rol || "Feina"}: ${x.titulo || ""}`, { fi: x.fin, lloc: x.productora }) });
+  // calendari del Resum de cada projecte: p.cal [{id, tipus, titol, data, fi, hora, horafi, lloc, notes}]
+  T("proyecto").forEach(p => (Array.isArray(p.cal) ? p.cal : []).forEach(c => c && c.id && add(p.id + "-c-" + c.id, c.data, `${c.tipus || "Data"}: ${p.titulo || ""}${c.titol ? " · " + c.titol : ""}`, { hora: c.fi > c.data ? "" : c.hora, durada: /^\d\d:\d\d$/.test(c.hora || "") && /^\d\d:\d\d$/.test(c.horafi || "") && c.horafi > c.hora ? (+c.horafi.slice(0, 2) * 60 + +c.horafi.slice(3)) - (+c.hora.slice(0, 2) * 60 + +c.hora.slice(3)) : 60, fi: c.fi, lloc: c.lloc, desc: c.notes })));
   return ev;
 }
 async function ical(t, db) {

@@ -1,5 +1,5 @@
-// Pàgina d'un projecte (Projectes → pòster): pestanyes Resum, Equip i Arxius. La resta de pestanyes són les
-// seccions de sempre (Desenvolupament, Dossiers, Preproducció…) filtrades pel projecte obert (H.pj()).
+// Pàgina d'un projecte (Projectes → pòster): pestanyes Resum (amb el calendari, calproj.js), Briefing, Passos, Equip i Arxius.
+// La resta de pestanyes són les seccions de sempre (Desenvolupament, Dossiers, Recce…) filtrades pel projecte obert (H.pj()).
 (() => {
   const el = document.getElementById("s-projecte"), E = H.E;
   let ver = 0;
@@ -14,22 +14,15 @@
     if (mode === "equip") return equip(p, v);
     if (mode === "arxius") return arxius(p, v);
     if (mode === "briefing" && window.BRIEF && BRIEF.es(p)) return briefing(p, v);
+    if (mode === "passos") return passos(p, v);
     return resum(p, v);
   }
 
   // ---------- Resum ----------
   async function resum(p, v) {
-    const [ts, rs, fs, pre, post, pdr, dks, devs, gts, ds, pers] = await Promise.all(["tarea", "reunion", "convocatoria", "pre", "post", "pdr", "deck", "dev", "gt", "desg", "persona"].map(t => H.col(t)));
-    const [cx, feines] = await Promise.all([PAS.ctx(true), H.col("feina")]); // passos, valoració i fee (passos.js)
+    const [fs, pdr, dks, devs, gts, ds, pers, feines] = await Promise.all(["convocatoria", "pdr", "deck", "dev", "gt", "desg", "persona", "feina"].map(t => H.col(t)));
     if (v !== ver) return;
-    const de = l => l.filter(x => x.proyecto === p.id), hoy = avui(), lim = H.addDays(hoy, 60);
-    const dates = [];
-    de(ts).filter(x => !x.hecha && x.fecha).forEach(x => dates.push([x.fecha, "Tasca", x.titulo]));
-    de(rs).filter(x => x.fecha >= hoy).forEach(x => dates.push([x.fecha, "Reunió", x.titulo + (x.hora ? " · " + x.hora : "")]));
-    de(fs).forEach(x => { if ((!x.estado || x.estado === "Per presentar") && x.limite >= hoy) dates.push([x.limite, "Límit", x.titulo]); if (x.evento >= hoy && ["Seleccionat", "Premiat", "Presentat"].includes(x.estado)) dates.push([x.evento, "Festival", x.titulo]) });
-    de(pre).concat(de(post)).filter(x => x.ini >= hoy).forEach(x => dates.push([x.ini, x.hito ? "Fita" : "Calendari", x.titulo]));
-    de(pdr).forEach(x => (x.dias || []).forEach((d, i) => d.fecha >= hoy && dates.push([d.fecha, "Rodatge", `${x.titulo || "Pla"} · jornada ${i + 1}`])));
-    const prop = dates.filter(d => d[0] <= lim || d[1] === "Tasca").sort((a, b) => a[0].localeCompare(b[0])).slice(0, 8);
+    const de = l => l.filter(x => x.proyecto === p.id), vc = !!(window.BRIEF && BRIEF.es(p));
     const fp = de(fs), sel = fp.filter(x => ["Seleccionat", "Premiat"].includes(x.estado)), prem = sel.filter(x => x.premi || x.estado === "Premiat"), pend = fp.filter(x => x.estado === "Presentat");
     const dev = devs.find(x => x.id === "dev:" + p.id.split(":")[1]) || {}, vers = (dev.versions || []).map((x, i) => [x, i]).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0]);
     const gt = de(gts), plans = de(pdr), jorn = plans.reduce((a, x) => a + (x.dias || []).length, 0);
@@ -45,21 +38,27 @@
         </div></div>
       <div class="dash" style="margin-top:20px">
         ${window.CAN && CAN.es(p) ? CAN.card(p) : ""}
-        ${PAS.cardPassos(p, cx)}
+        <div id="pcal" style="grid-column:1/-1"></div>
         ${PAS.cardValora(p, feines)}
         ${(() => { const gs = (dev.versions || []).map((x, i) => [x, i]).filter(([x]) => (x.tipus || "Guió") === "Guió" && x.arxiu).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0]), u = gs[0], dg = p.desg && ds.find(x => x.id === p.desg);
           return `<div class="card" style="grid-column:1/-1"><h3>Guió</h3>${u ? `<div class="r" style="padding:4px 0"><i class="dot" style="background:#000"></i><a class="g" href="/api/archivo/${E(u.arxiu.id)}" target="_blank" style="color:inherit;text-decoration:none"><b>Guió ${E(u.versio || "")}</b><small>${E([u.data && H.fecha(u.data), u.pag && u.pag + " pàg.", u.arxiu.nombre].filter(Boolean).join(" · "))}</small></a></div>` : `<p class="em" style="margin-top:0">Puja-hi el guió i en sortiran el desglossament, el guió tècnic, el storyboard i el pla.</p>`}
             ${dg ? `<p class="em" style="margin:6px 0 0">Desglossat: ${dg.escenes.length} escenes · <a href="#" data-pt="guio" style="color:#000">Obrir</a></p>` : ""}
-            <div class="ls" style="margin-top:10px;align-items:center"><label class="b" style="cursor:pointer;color:#fff">${u ? "Pujar una versió nova (PDF)" : "Pujar el guió (PDF)"}<input type="file" accept=".pdf,application/pdf" id="prguio" hidden></label>${gs.length > 1 ? `<button class="b2" data-pt="desenvolupament">Totes les versions (${gs.length})</button>` : ""}</div></div>` })()}
-        <div class="card w2"><h3>Properes dates</h3>${prop.length ? prop.map(d => `<div class="m pdt"><b>${E(H.fecha(d[0]))}</b><span><span class="em">${E(d[1])}</span> · ${E(d[2] || "")}</span></div>`).join("") : `<p class="em">Res als propers dos mesos.</p>`}</div>
-        ${targ("festivales", "Festivals", fp.length, fp.length ? `${sel.length} ${sel.length === 1 ? "selecció" : "seleccions"}${prem.length ? ` · ${prem.length} ${prem.length === 1 ? "premi" : "premis"}` : ""}${pend.length ? ` · ${pend.length} sense decidir` : ""}` : "Encara cap inscripció")}
+            <div class="ls" style="margin-top:10px;align-items:center"><label class="b" style="cursor:pointer;color:#fff">${u ? "Pujar una versió nova (PDF)" : "Pujar el guió (PDF)"}<input type="file" accept=".pdf,application/pdf" id="prguio" hidden></label>${gs.length > 1 && !vc ? `<button class="b2" data-pt="desenvolupament">Totes les versions (${gs.length})</button>` : ""}</div></div>` })()}
+        ${vc ? "" : targ("festivales", "Festivals", fp.length, fp.length ? `${sel.length} ${sel.length === 1 ? "selecció" : "seleccions"}${prem.length ? ` · ${prem.length} ${prem.length === 1 ? "premi" : "premis"}` : ""}${pend.length ? ` · ${pend.length} sense decidir` : ""}` : "Encara cap inscripció")}
         ${["Llarg", "Curt"].includes(p.categoria) ? targ("desenvolupament", "Desenvolupament", vers.length, vers[0] ? `última: ${[vers[0].tipus, vers[0].versio].filter(Boolean).join(" ")}${vers[0].data ? " · " + H.fecha(vers[0].data) : ""}` : "Cap versió apuntada") : ""}
-        ${targ("decks", "Dossiers", de(dks).length, de(dks).map(x => x.titulo).filter(Boolean).slice(0, 2).join(", ") || "Cap dossier encara")}
+        ${targ("decks", vc ? "Dossier" : "Dossiers", de(dks).length, de(dks).map(x => x.titulo).filter(Boolean).slice(0, 2).join(", ") || "Cap dossier encara")}
         ${targ("guio", "Guió i pla", gt.length + plans.length, [de(ds).length && de(ds).length + (de(ds).length === 1 ? " desglossament" : " desglossaments"), gt.length && gt.length + (gt.length === 1 ? " guió tècnic" : " guions tècnics"), jorn && jorn + (jorn === 1 ? " jornada" : " jornades")].filter(Boolean).join(" · ") || "Res encara")}
         ${targ("equip", "Equip", eq.length, eq.slice(0, 3).map(x => (pers.find(y => y.id === x.id) || {}).titulo).filter(Boolean).join(", ") || "Ningú encara")}
       </div>
       ${p.notas ? `<div class="card" style="margin-top:16px"><h3>Notes</h3><div style="white-space:pre-wrap;line-height:1.5">${E(p.notas)}</div></div>` : ""}`;
     if (window.CAN) CAN.ajusta(el, p);
+    if (window.CALP) CALP.pinta(el, p);
+  }
+
+  // ---------- Passos (pestanya pròpia; abans eren al Resum) ----------
+  async function passos(p, v) {
+    const cx = await PAS.ctx(true); if (v !== ver) return;
+    el.innerHTML = `<div class="dash">${PAS.cardPassos(p, cx)}</div>`;
   }
 
   // ---------- Briefing (pestanya pròpia, només videoclips; brief.js) ----------
@@ -273,6 +272,7 @@
   H.onChange(() => { if (!el.hidden && !el.contains(document.activeElement)) pintar() });
   if (window.BRIEF) BRIEF.connecta(el, doc, () => pintar());
   PAS.connecta(el, doc, () => pintar());
+  if (window.CALP) CALP.connecta(el);
   if (window.CAN) CAN.connecta(el, doc, () => pintar());
   window.addEventListener("hub-sec", e => { if (e.detail === "projecte") pintar() });
   pintar();

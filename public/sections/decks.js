@@ -82,8 +82,8 @@
     const v = d.dades = d.dades || {}, set = (c, k, x) => { v[c] = v[c] || {}; if (x && !v[c][k]) v[c][k] = x };
     const p = (await H.col("proyecto")).find(x => x.id === d.proyecto);
     if (p) { set("projecte", "titol", p.titulo); set("projecte", "format", [p.categoria, p.anio].filter(Boolean).join(" · ")); set("projecte", "estat", p.estado); set("logline", "text", p.logline); const im = (p.archivos || []).filter(a => /^image\//.test(a.tipo)).map(a => a.id); if (im.length) set("referencies", "imgs", im) }
-    const pre = (await H.col("pre")).filter(x => d.proyecto && x.proyecto === d.proyecto);
-    if (pre.length) set("calendari", "items", pre.sort((a, b) => (a.ini || "").localeCompare(b.ini || "")).map(x => ({ nom: x.titulo, a: x.ini, b: x.fin, text: [x.ini, x.fin].filter(Boolean).join(" – ") })));
+    const cal = p && Array.isArray(p.cal) ? p.cal.filter(x => x && x.data) : []; // calendari del Resum del projecte
+    if (cal.length) set("calendari", "items", cal.slice().sort((a, b) => a.data.localeCompare(b.data)).map(x => ({ nom: x.titol ? `${x.tipus}: ${x.titol}` : x.tipus, a: x.data, b: x.fi || "", text: [x.data, x.fi].filter(Boolean).join(" – ") })));
     try { const w = (await H.api("GET", "web")).data; set("contacte", "text", [w.email, "pabloanarte.com"].filter(Boolean).join("\n")); if (d.plantilla === "director") { set("bio", "text", (w.sobre_mi || []).join("\n\n")); set("filmografia", "items", [...(w.ficcion || []).map(x => ({ nom: x.titulo, text: [x.tipo, x.nota].filter(Boolean).join(" · ") })), ...(w.videoclips || []).map(x => ({ nom: x.titulo, text: "videoclip · " + (x.artista || "") }))]); set("projecte", "titol", "pablo anarte"); set("projecte", "format", "director de cine") } } catch (e) { set("contacte", "text", "pablo.anarte.film@gmail.com\npabloanarte.com") }
   }
 

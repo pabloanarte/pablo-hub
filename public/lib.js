@@ -427,3 +427,11 @@ window.H = (() => {
     }
   }, true);
 })();
+
+// Enllaç de YouTube o Vimeo → {pl, id, embed, thumb?}; null si no ho és (ho fan servir Referències)
+H.video = u => {
+  u = String(u || "").trim(); let m;
+  if ((m = u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/))) return { pl: "YouTube", id: m[1], embed: "https://www.youtube-nocookie.com/embed/" + m[1] + "?rel=0&autoplay=1", thumb: "https://i.ytimg.com/vi/" + m[1] + "/hqdefault.jpg" };
+  if ((m = u.match(/vimeo\.com\/(?:video\/|channels\/[\w-]+\/|groups\/[\w-]+\/videos\/|showcase\/\d+\/video\/)?(\d+)(?:\/([\da-f]+))?(?:.*[?&]h=([\da-f]+))?/i))) { const h = m[2] || m[3]; return { pl: "Vimeo", id: m[1], embed: "https://player.vimeo.com/video/" + m[1] + "?dnt=1&autoplay=1" + (h ? "&h=" + h : "") } }
+  return null;
+};

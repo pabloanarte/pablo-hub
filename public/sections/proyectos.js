@@ -34,7 +34,7 @@
   // Documents que no són de cap projecte (dossiers, guions, plans, calendaris…): s'hi entra com si fos un projecte més
   const el = document.getElementById("s-proyectos"), box = document.createElement("div"); el.querySelector(".hl").after(box);
   async function orfes() {
-    const l = await Promise.all(["deck", "gt", "pdr", "desg", "pre", "post"].map(t => H.col(t))), n = l.reduce((a, x) => a + x.filter(d => !d.proyecto).length, 0);
+    const l = await Promise.all(["deck", "gt", "pdr", "desg"].map(t => H.col(t))), n = l.reduce((a, x) => a + x.filter(d => !d.proyecto).length, 0);
     box.innerHTML = n ? `<p style="margin-top:22px"><button class="b2" data-k="orfes">Documents sense projecte (${n})</button></p>` : "";
   }
   box.addEventListener("click", e => { if (e.target.closest('[data-k="orfes"]') && window.HUB) HUB.obreProjecte("-", "decks") });

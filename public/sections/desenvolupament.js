@@ -33,6 +33,7 @@
     const vs = d.versions.slice().map((v, i) => [v, i]).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]), cs = (await H.col("convocatoria")).filter(c => c.proyecto === p.id && c.tipo === "Lab / residència");
     el.innerHTML = `<div class="bar tb">${H.pj() ? "" : `<button class="b2" data-k="torna">← Desenvolupament</button><b style="font-size:20px">${E(p.titulo || "")}</b>`}<span class="em">${E([p.categoria, p.estado].filter(Boolean).join(" · "))}</span><span style="flex:1"></span><button class="b2" data-k="proj">Fitxa del projecte</button></div>
       ${p.logline ? `<p style="font-size:17px;max-width:900px;margin:4px 0 18px">${E(p.logline)}</p>` : ""}
+      ${["Llarg", "Curt"].includes(p.categoria) ? tractament() : ""}
       <div class="card"><h3>Versions</h3><p class="em" style="margin:0 0 8px">Cada versió del tractament, de l'escaleta o del guió, amb l'arxiu i què ha canviat.</p>
         ${vs.length ? `<div class="cits"><table class="ctab"><thead><tr><th style="width:13%">Data</th><th style="width:15%">Tipus</th><th style="width:8%">Versió</th><th>Què ha canviat</th><th style="width:22%">Arxiu</th><th style="width:34px"></th></tr></thead><tbody>${vs.map(([v, i]) => `<tr><td><input type="date" data-l="versions" data-i="${i}" data-f="data" value="${E(v.data || "")}" style="border:0;background:none"></td><td><select data-l="versions" data-i="${i}" data-f="tipus" style="border:0;background:none">${TIPUS.map(t => `<option ${t === v.tipus ? "selected" : ""}>${t}</option>`).join("")}</select></td><td>${ta("versions", i, "versio", v.versio, "v1")}</td><td>${ta("versions", i, "canvis", v.canvis, "Canvis principals")}</td>
           <td>${v.arxiu ? `<a class="ln" href="/api/archivo/${E(v.arxiu.id)}" target="_blank">${E(v.arxiu.nombre)}</a>${v.pag ? ` <small>${v.pag} pàg.${(() => { const ant = d.versions.filter(y => y !== v && y.pag && (y.tipus || "Guió") === (v.tipus || "Guió") && (y.data || "") < (v.data || "")).sort((a, b) => (b.data || "").localeCompare(a.data || ""))[0]; const dif = ant ? v.pag - ant.pag : 0; return ant && dif ? ` (${dif > 0 ? "+" : ""}${dif})` : "" })()}</small>` : ""} <button class="x" data-k="qarx" data-i="${i}" title="Treure l'arxiu">×</button>` : `<label class="b2" style="cursor:pointer;font-size:13px">Pujar<input type="file" data-k="arx" data-i="${i}" hidden></label>`}</td><td><button class="x" data-k="treu" data-l="versions" data-i="${i}" title="Treure">×</button></td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -47,6 +48,15 @@
         <div class="ls" style="margin-top:12px"><select id="dv-pl" style="width:auto">${Object.keys(PLANT).map(k => `<option>${E(k)}</option>`).join("")}${cs.map(c => `<option value="conv:${c.id}">${E(c.titulo || "")} (de Festivals)</option>`).join("")}</select><button class="b2" data-k="ncv">+ Afegir convocatòria</button></div></div>
       <div class="card"><h3>Notes de desenvolupament</h3><textarea data-dn="notes" rows="6" placeholder="Idees, dubtes, escenes que falten…">${E(d.notes || "")}</textarea></div>`;
     el.querySelectorAll(".ctab textarea").forEach(alca);
+  }
+  // ---------- Tractament (llargs i curts): darrera versió en PDF i el text, que es pot escriure aquí ----------
+  const trs = () => d.versions.map((x, i) => [x, i]).filter(([x]) => x.tipus === "Tractament").sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0]);
+  function tractament() {
+    const l = trs(), u = l.find(x => x.arxiu);
+    return `<div class="card"><h3>Tractament</h3>
+      ${u ? `<div class="r" style="padding:4px 0"><i class="dot" style="background:var(--ink)"></i><a class="g" href="/api/archivo/${E(u.arxiu.id)}" target="_blank" style="color:inherit;text-decoration:none"><b>PDF ${E(u.versio || "")}</b><small>${E([u.data && H.fecha(u.data), u.pag && u.pag + " pàg.", u.arxiu.nombre].filter(Boolean).join(" · "))}</small></a></div>` : ""}
+      <label style="margin-top:${u ? 10 : 0}px">Text del tractament</label><textarea data-dn="tractament" rows="${(d.tractament || "").length > 400 ? 14 : 6}" placeholder="Escriu-lo aquí o puja'n el PDF. Cada PDF queda com una versió nova a la llista de sota.">${E(d.tractament || "")}</textarea>
+      <div class="ls" style="margin-top:10px"><label class="b2" style="cursor:pointer">${u ? "Pujar una versió nova (PDF o Word)" : "Pujar el tractament (PDF o Word)"}<input type="file" accept=".pdf,application/pdf,.doc,.docx,.pages" data-k="trup" hidden></label>${l.length > 1 ? `<small class="em">${l.length} versions</small>` : ""}</div></div>`;
   }
   const alca = t => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px" };
   el.addEventListener("click", async e => {
@@ -74,16 +84,18 @@
     if (t.dataset.l && t.dataset.f) { d[t.dataset.l][+t.dataset.i][t.dataset.f] = t.value; if (t.tagName === "TEXTAREA") alca(t); save() }
     if (t.dataset.cv) { d.convs[+t.dataset.cv][t.dataset.f] = t.value; save() }
     if (t.dataset.dc) { d.convs[+t.dataset.dc].docs[+t.dataset.i].nom = t.value; save() }
-    if (t.dataset.dn) { d.notes = t.value; save() }
+    if (t.dataset.dn) { d[t.dataset.dn] = t.value; save() }
   });
   el.addEventListener("change", async e => {
     const t = e.target; if (!d) return;
     if (t.tagName === "SELECT" && t.dataset.l) { d[t.dataset.l][+t.dataset.i][t.dataset.f] = t.value; save() }
-    if (t.dataset.k === "arx" && t.files[0]) {
-      const f = t.files[0]; if (f.size > 25 * 1024 * 1024) return H.toast("Passa de 25 MB");
+    if ((t.dataset.k === "arx" || t.dataset.k === "trup") && t.files[0]) {
+      const f = t.files[0]; t.value = ""; if (f.size > 25 * 1024 * 1024) return H.toast("Passa de 25 MB");
       H.toast("Pujant " + f.name + "…");
-      const v = d.versions[+t.dataset.i];
-      try { v.arxiu = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f) } catch (er) { return H.toast("No s'ha pogut pujar") }
+      // tractament nou: una versió de tipus Tractament (número del nom de l'arxiu o el següent)
+      if (t.dataset.k === "trup") { const n = (f.name.match(/(?:^|[^a-z])v(?:ersi[oó]n?)?\s*\.?\s*(\d+)/i) || [])[1]; d.versions.push({ tipus: "Tractament", data: H.today(), versio: "v" + (n || trs().length + 1), canvis: "" }) }
+      const v = t.dataset.k === "trup" ? d.versions[d.versions.length - 1] : d.versions[+t.dataset.i];
+      try { v.arxiu = await H.api("POST", "archivo?nombre=" + encodeURIComponent(f.name), f) } catch (er) { if (t.dataset.k === "trup") d.versions.pop(); return H.toast("No s'ha pogut pujar") }
       // si és un PDF, compta les pàgines i, si és el guió, les apunta al progrés d'escriptura (Avui)
       if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
         try { const pdfjs = await import("/vendor/pdf.min.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdf.worker.min.mjs"; v.pag = (await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise).numPages } catch (er) { }
