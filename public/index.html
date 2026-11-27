@@ -452,7 +452,7 @@ html.canvitema body,html.canvitema .card,html.canvitema .side,html.canvitema .hd
 
 .mdth .mdgt2{position:absolute;left:6px;bottom:6px;font-style:normal;font-size:10px;font-weight:700;background:var(--ink);color:var(--onT);border-radius:4px;padding:2px 5px}
 .mdit small .mdgt{display:none}
-</style><script>try{if(localStorage.getItem("hub-tema")==="fosc"){document.documentElement.dataset.tema="fosc";document.querySelector('meta[name="theme-color"]').content="#111110"}}catch(e){}</script></head><body>
+</style><script>try{var t=localStorage.getItem("hub-tema-ma");if(t==="fosc"||(t!=="clar"&&matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.dataset.tema="fosc";document.querySelector('meta[name="theme-color"]').content="#111110"}}catch(e){}</script></head><body>
 <div class="app">
 <header class="hdr"><span class="logo" data-go="inicio">PABLO</span><span id="hdate"></span><span class="sp"></span><button class="offl" id="offl" hidden></button><input class="q" id="gq" placeholder="Cerca a tot arreu… (Retorn)"><button class="lluna" id="lluna" title="Sala de muntatge (mode fosc)" aria-label="Mode fosc"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><button class="mb" id="mb">Menú</button></header>
 <main class="main"><div class="w">

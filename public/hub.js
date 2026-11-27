@@ -195,18 +195,21 @@ let ini = "inicio", iniP = "", iniPT = "resum"; try { ini = localStorage.getItem
 if (iniP) { P = iniP; PT = iniPT; show(ini, { proj: iniP, dins: true, refresca: false }) } else show(ini, { refresca: false });
 (function carga(i) { if (i >= SECTIONS.length) { contar(); H.onChange(contar); return } const e = document.createElement("script"); e.src = SECTIONS[i].src; e.onload = e.onerror = () => carga(i + 1); document.body.appendChild(e) })(0);
 
-// Lluna: mode fosc («Sala de muntatge»). Canvi suau: fos de tota la pantalla (View Transitions) o, si no n'hi ha, transició de colors.
+// Clar o fosc («Sala de muntatge»): segueix el sistema (iPhone, Mac). La lluna el canvia a mà; si el que tries
+// coincideix amb el sistema, torna a seguir-lo. Quan el sistema canvia, mana el sistema. Preferència a mà: localStorage «hub-tema-ma».
+// Canvi suau: fos de tota la pantalla (View Transitions) o, si no n'hi ha, transició de colors.
 (() => {
- const h = document.documentElement, b = document.getElementById("lluna"), meta = document.querySelector('meta[name="theme-color"]');
+ const h = document.documentElement, b = document.getElementById("lluna"), meta = document.querySelector('meta[name="theme-color"]'), mq = matchMedia("(prefers-color-scheme: dark)");
  const posa = fosc => { if (fosc) h.dataset.tema = "fosc"; else delete h.dataset.tema; if (meta) meta.content = fosc ? "#111110" : "#f6f5f2"; b && b.setAttribute("aria-pressed", fosc ? "true" : "false") };
- const desa = fosc => { try { localStorage.setItem("hub-tema", fosc ? "fosc" : "clar") } catch (e) { } };
+ const ma = v => { try { if (v == null) localStorage.removeItem("hub-tema-ma"); else localStorage.setItem("hub-tema-ma", v) } catch (e) { } };
+ const canvia = fosc => { const redueix = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (document.startViewTransition && !redueix && !document.hidden) return document.startViewTransition(() => posa(fosc));
+  if (redueix || document.hidden) return posa(fosc);
+  h.classList.add("canvitema"); posa(fosc); setTimeout(() => h.classList.remove("canvitema"), 500) };
+ try { localStorage.removeItem("hub-tema") } catch (e) { } // l'antiga preferència fixa ja no compta
  posa(h.dataset.tema === "fosc");
+ mq.addEventListener("change", e => { ma(null); canvia(e.matches) });
  if (!b) return;
- b.addEventListener("click", () => {
-  const fosc = h.dataset.tema !== "fosc", redueix = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  desa(fosc);
-  if (document.startViewTransition && !redueix) return document.startViewTransition(() => posa(fosc));
-  if (redueix) return posa(fosc);
-  h.classList.add("canvitema"); posa(fosc); setTimeout(() => h.classList.remove("canvitema"), 500);
- });
+ b.title = "Clar o fosc (segueix el sistema)";
+ b.addEventListener("click", () => { const fosc = h.dataset.tema !== "fosc"; ma(fosc === mq.matches ? null : fosc ? "fosc" : "clar"); canvia(fosc) });
 })();
