@@ -27,7 +27,7 @@
       }
     }, {
       l: "Briefing del videoclip",
-      fn: async d => { const p = d.proyecto && (await H.col("proyecto")).find(x => x.id === d.proyecto); if (!BRIEF.es(p)) return H.toast("Tria primer un projecte de tipus Videoclip"); H.cerrar(); HUB.obreProjecte(p.id, "resum"); let n = 0; const t = setInterval(() => { const b = document.getElementById("brief"); if (b || ++n > 30) { clearInterval(t); b && b.scrollIntoView({ behavior: "smooth", block: "start" }) } }, 100) }
+      fn: async d => { const p = d.proyecto && (await H.col("proyecto")).find(x => x.id === d.proyecto); if (!BRIEF.es(p)) return H.toast("Tria primer un projecte de tipus Videoclip"); H.cerrar(); HUB.obreProjecte(p.id, "briefing") }
     }]
   });
 })();

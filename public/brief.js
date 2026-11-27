@@ -8,6 +8,7 @@ window.BRIEF = (() => {
     ["canco", "De què va la cançó? Què vols que transmeti?"],
     ["refmus", "Referències de la música?"],
     ["refvc", "Videoclips que t'agradin?"],
+    ["guies", "Hi ha altres videoclips o una estètica de l'àlbum que s'hagi de seguir? O tinc llibertat total?"],
     ["idea", "Tens alguna idea o imatge al cap?"],
     ["estetica", "Estètica: colors, roba, llocs que t'agradin?"],
     ["sortir", "Voleu sortir vosaltres? Us fa res sortir?"],
@@ -21,7 +22,17 @@ window.BRIEF = (() => {
     ["decideix", "Qui més decideix (mànager, segell)? Amb qui parlo?"]
   ].map(([id, t]) => ({ id, t }));
   async function doc() { const a = await H.col("ajust"); return a.find(x => x.id === "ajust:brief") }
-  async function preguntes() { const d = await doc(); return d && Array.isArray(d.preg) ? d.preg : DEF }
+  // preguntes noves de DEF que s'afegeixen una sola vegada a les llistes ja editades (si després es treuen, no tornen)
+  const NOVES = ["guies"];
+  async function preguntes() {
+    const d = await doc(); if (!d || !Array.isArray(d.preg)) return DEF;
+    const fetes = d.noves || [], falten = NOVES.filter(id => !fetes.includes(id));
+    if (falten.length) {
+      falten.forEach(id => { if (d.preg.some(q => q.id === id)) return; const i = DEF.findIndex(q => q.id === id), ant = DEF[i - 1], j = ant ? d.preg.findIndex(q => q.id === ant.id) : -1; d.preg.splice(j < 0 ? d.preg.length : j + 1, 0, { ...DEF[i] }) });
+      d.noves = fetes.concat(falten); H.put(d, 1);
+    }
+    return d.preg;
+  }
   const respostes = (p, pr) => pr.filter(q => ((p.brief || {})[q.id] || "").trim()).length;
 
   // Targeta per al Resum del projecte

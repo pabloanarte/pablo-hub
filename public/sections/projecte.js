@@ -13,13 +13,13 @@
     if (!p) { el.innerHTML = `<p class="em">Aquest projecte ja no existeix.</p>`; return }
     if (mode === "equip") return equip(p, v);
     if (mode === "arxius") return arxius(p, v);
+    if (mode === "briefing" && window.BRIEF && BRIEF.es(p)) return briefing(p, v);
     return resum(p, v);
   }
 
   // ---------- Resum ----------
   async function resum(p, v) {
     const [ts, rs, fs, pre, post, pdr, dks, devs, gts, ds, pers] = await Promise.all(["tarea", "reunion", "convocatoria", "pre", "post", "pdr", "deck", "dev", "gt", "desg", "persona"].map(t => H.col(t)));
-    const brief = window.BRIEF && BRIEF.es(p) ? BRIEF.card(p, await BRIEF.preguntes()) : ""; // briefing amb l'artista (brief.js)
     const [cx, feines] = await Promise.all([PAS.ctx(true), H.col("feina")]); // passos, valoració i fee (passos.js)
     if (v !== ver) return;
     const de = l => l.filter(x => x.proyecto === p.id), hoy = avui(), lim = H.addDays(hoy, 60);
@@ -47,7 +47,6 @@
         ${window.CAN && CAN.es(p) ? CAN.card(p) : ""}
         ${PAS.cardPassos(p, cx)}
         ${PAS.cardValora(p, feines)}
-        ${brief}
         ${(() => { const gs = (dev.versions || []).map((x, i) => [x, i]).filter(([x]) => (x.tipus || "Guió") === "Guió" && x.arxiu).sort((a, b) => (b[0].data || "").localeCompare(a[0].data || "") || b[1] - a[1]).map(x => x[0]), u = gs[0], dg = p.desg && ds.find(x => x.id === p.desg);
           return `<div class="card" style="grid-column:1/-1"><h3>Guió</h3>${u ? `<div class="r" style="padding:4px 0"><i class="dot" style="background:#000"></i><a class="g" href="/api/archivo/${E(u.arxiu.id)}" target="_blank" style="color:inherit;text-decoration:none"><b>Guió ${E(u.versio || "")}</b><small>${E([u.data && H.fecha(u.data), u.pag && u.pag + " pàg.", u.arxiu.nombre].filter(Boolean).join(" · "))}</small></a></div>` : `<p class="em" style="margin-top:0">Puja-hi el guió i en sortiran el desglossament, el guió tècnic, el storyboard i el pla.</p>`}
             ${dg ? `<p class="em" style="margin:6px 0 0">Desglossat: ${dg.escenes.length} escenes · <a href="#" data-pt="guio" style="color:#000">Obrir</a></p>` : ""}
@@ -60,8 +59,14 @@
         ${targ("equip", "Equip", eq.length, eq.slice(0, 3).map(x => (pers.find(y => y.id === x.id) || {}).titulo).filter(Boolean).join(", ") || "Ningú encara")}
       </div>
       ${p.notas ? `<div class="card" style="margin-top:16px"><h3>Notes</h3><div style="white-space:pre-wrap;line-height:1.5">${E(p.notas)}</div></div>` : ""}`;
-    if (brief) BRIEF.ajusta(el);
     if (window.CAN) CAN.ajusta(el, p);
+  }
+
+  // ---------- Briefing (pestanya pròpia, només videoclips; brief.js) ----------
+  async function briefing(p, v) {
+    const pr = await BRIEF.preguntes(); if (v !== ver) return;
+    el.innerHTML = `<div class="dash">${BRIEF.card(p, pr)}</div>`;
+    BRIEF.ajusta(el);
   }
 
   // ---------- Equip ----------
