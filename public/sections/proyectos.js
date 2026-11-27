@@ -25,7 +25,7 @@
     orden: (a, b) => EST.indexOf(a.estado) - EST.indexOf(b.estado) || (a.titulo || "").localeCompare(b.titulo || ""),
     cartell: 1,
     obre: d => window.HUB ? HUB.obreProjecte(d.id) : H.abrir("proyecto", d.id),
-    fila: d => { const pr = CX && d.estado !== "Acabat" ? PAS.progres(d, CX) : null, fee = PAS.feeTxt(d), nt = PAS.valorat(d) ? PAS.fmtNota(PAS.nota(d)) : "";
+    fila: d => { const pr = CX ? PAS.progres(d, CX) : null, fee = PAS.feeTxt(d), nt = PAS.valorat(d) ? PAS.fmtNota(PAS.nota(d)) : "";
       return { img: d.poster && d.poster[0] ? "/api/archivo/" + d.poster[0].id : "", t: d.titulo, s: [d.categoria, H.rols(d).join(", "), d.estado, d.anio].filter(Boolean).join(" · "), c: CE[d.estado],
         meta: nt || fee ? `${nt ? `<span>${H.E(nt)}</span>` : ""}${fee ? `<span class="${fee === "Sense fee" ? "" : "eur"}">${H.E(fee)}</span>` : ""}` : "",
         ...(pr && pr.tot ? { bar: pr.f, barT: `${PAS.faseActual(d, CX)} · ${pr.n}/${pr.tot}` } : {}) } },
