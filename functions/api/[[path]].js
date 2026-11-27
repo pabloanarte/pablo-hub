@@ -40,7 +40,7 @@ export async function onRequest({ request, env, params, waitUntil }) {
     if (p === "importar" && m === "GET") return importar(request);
     if (p === "oembed" && m === "GET") return oembed(request, j);
     if (p.startsWith("correu/")) return correu(p.slice(7), m, request, db, j);
-    if (p.startsWith("public/arxiu/")) { const [, , id, sig] = p.split("/"); if (!id || !sig || sig !== await signa(db, id)) return new Response("No", { status: 404 }); return archivo("archivo/" + id, "GET", request, env, j) }
+    if (p.startsWith("public/arxiu/")) { const [, , id, sig] = p.split("/"); if (id && sig && sig === await signa(db, id)) return archivo("archivo/" + id, "GET", request, env, j) } // si no és un enllaç signat, pot ser una imatge d'un dossier compartit (publica)
     if (p === "arxius-publics" && m === "POST") { const b = await request.json().catch(() => ({})), o = {}, base = new URL(request.url).origin; for (const id of (b.ids || []).slice(0, 100)) if (/^[a-z0-9]{6,40}$/.test(id)) o[id] = base + "/api/public/arxiu/" + id + "/" + await signa(db, id); return j(o) }
     if (p === "pont/diari" && m === "POST") return pontDiari(request, db, j);
     if (p === "pont/vigila") return pontVigila(m, request, db, j);
@@ -160,7 +160,7 @@ async function publica(p, request, env, db, j) {
   const d = r && JSON.parse(r.data), c = d && d.compartir;
   if (!c || !c.actiu || c.token !== token) return j({ error: "no" }, 404);
   if (c.pw && c.pw !== pw) { await new Promise(r => setTimeout(r, 1200)); return j({ error: "pw" }, 401) } // frena els intents a l'engròs
-  const vis = (d.slides || []).filter(s => !s.amaga); // les diapositives amagades no surten mai a l'enllaç públic
+  const vis = (d.slides || []).filter(s => !s.amaga).map(({ orig, ...s }) => s); // les diapositives amagades no surten mai a l'enllaç públic
   if (tipus === "deck") { const { dades, compartir, proyecto, plantilla, titolMa, mod, ...o } = d; return j({ ...o, slides: vis, baixar: c.baixar !== false }) }
   if (tipus === "arxiu" && fid && JSON.stringify(vis).includes('"' + fid + '"')) {
     const r = await archivo("archivo/" + fid, "GET", request, env, j), h = new Headers(r.headers);

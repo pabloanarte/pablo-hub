@@ -77,6 +77,8 @@ window.DK = (() => {
 .dk.th-tipografic h2{font-size:calc(120px*var(--fit,1));line-height:.84}.dk.th-tipografic .p::after{content:"";position:absolute;width:40px;height:40px;border-radius:50%;background:var(--ac);right:112px;top:96px}
 .dk.th-analogic .im:not(.ph):not(.ct){border:14px solid #fbf6ec;box-shadow:0 6px 24px rgba(59,47,36,.18)}.dk.th-analogic h2{font-style:normal;letter-spacing:-.01em}
 .dk.th-moodboard .grid{gap:8px}.dk.th-moodboard h2{font-size:calc(30px*var(--fit,1));letter-spacing:.16em;text-transform:uppercase;font-weight:500}.dk.th-moodboard .p{padding-top:64px}.dk.th-moodboard .it .im,.dk.th-moodboard .im:not(.ph){border-radius:0}.dk.th-moodboard p{max-width:1000px}
+.dk .el{position:absolute;box-sizing:border-box;margin:0}.dk .elt{white-space:pre-wrap;overflow-wrap:break-word}.dk .eli{overflow:hidden}.dk .elib{position:absolute;inset:0;background-repeat:no-repeat}
+.dk .elph{display:flex;align-items:center;justify-content:center;border:2px dashed var(--mut);color:var(--mut);opacity:.6;font-size:22px;font-family:Helvetica,Arial,sans-serif}.dk .els svg{display:block;overflow:visible}
 .dk .play{width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center}.dk .play::after{content:"";border-left:40px solid #fff;border-top:24px solid transparent;border-bottom:24px solid transparent;margin-left:10px}
 `;
   function injecta() {
@@ -146,10 +148,107 @@ window.DK = (() => {
       case "video": c = P(`${s.titol ? `<h2>${E(s.titol)}</h2>` : ""}<div style="flex:1;position:relative;min-height:0">${im(s.img, "", "position:absolute;inset:0")}<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div class="play"></div></div></div>${s.url ? `<p class="sm mut" style="margin-top:20px"><a href="${E(/^https?:\/\//.test(s.url) ? s.url : /^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(s.url) ? "https://" + s.url : "#")}" target="_blank" rel="noopener" style="color:inherit">${E(s.url.replace(/^https?:\/\/(www\.)?/, ""))}</a></p>` : ""}`); break;
       case "contacte": c = P(`<div style="margin:auto 0"><h1 style="font-size:calc(96px*var(--ts)*var(--fit,1))">${E(s.titol)}</h1><p style="margin-top:40px;font-size:calc(36px*var(--fit,1));line-height:1.5">${tx(s.text)}</p></div>`); break;
       case "pagina": c = im(s.img, "ct", "position:absolute;inset:0;background-color:transparent"); return wrap(c, 1);
+      case "lliure": return `<div lang="ca" class="dk ll" style="width:${w}px;height:${h}px;${vars};background:${E(s.bg || t.bg)}">${(s.els || []).map(e => elHTML(e, { ...o, url })).join("")}</div>`;
       default: c = P("");
     }
     return wrap(c + (d.estil === "tipografic" && s.tipus !== "pagina" ? "" : "") + n);
     function wrap(inner) { return `<div lang="ca" class="dk th-${d.estil || "minim"}${t.franges ? " franges" : ""}${t.tt === "lowercase" ? " lc" : ""}" style="width:${w}px;height:${h}px;${vars}">${inner}</div>` }
+  }
+
+  // ---------- diapositiva lliure (tipus «lliure»): elements posats a mà, com a Canva ----------
+  // Element: {id, t: text|num|img|forma|svg, x, y, w, h, r (graus), op (0–1), lk (bloquejat)}
+  //  text/num: text, ff (font-family CSS), fs, fw, it, col, al, tt, ls (px), lh (× fs), sh (text-shadow), cols, href
+  //  img: img (id), fit (cover|contain), px, py (% enquadrament), zm (zoom ≥ 1), rad, bd (vora CSS), sh (ombra CSS)
+  //  forma: bg (color o degradat CSS), rad, bd · svg: svg (codi), col
+  const cssc = v => String(v ?? "").replace(/[;"<>{}]/g, "");
+  function elHTML(e, o = {}) {
+    const url = o.url || (id => "/api/archivo/" + id), tx = e.t === "text" || e.t === "num";
+    const b = `left:${+e.x || 0}px;top:${+e.y || 0}px;width:${Math.max(1, +e.w || 1)}px;${tx ? "" : `height:${Math.max(1, +e.h || 1)}px;`}${e.r ? `transform:rotate(${+e.r}deg);` : ""}${e.op != null && e.op < 1 ? `opacity:${+e.op};` : ""}`;
+    const id = `data-e="${E(e.id)}"`;
+    if (tx) {
+      const st = `${b}font-family:${cssc(e.ff) || "inherit"};font-size:${+e.fs || 30}px;font-weight:${cssc(e.fw) || 400};font-style:${e.it ? "italic" : "normal"};color:${cssc(e.col) || "inherit"};text-align:${cssc(e.al) || "left"};text-transform:${cssc(e.tt) || "none"};letter-spacing:${+e.ls || 0}px;${e.nw ? "white-space:pre;" : ""}line-height:${+e.lh || 1.2};${e.sh ? `text-shadow:${cssc(e.sh)};` : ""}${+e.cols > 1 ? `column-count:${+e.cols};column-gap:${Math.round((+e.fs || 30) * 2.5)}px;` : ""}`;
+      const c = e.t === "num" ? E(o.n || "") : E(e.text || "");
+      return `<div class="el elt" ${id} style="${st}">${e.href && o.final ? `<a href="${E(e.href)}" target="_blank" rel="noopener" style="color:inherit">${c}</a>` : c}</div>`;
+    }
+    if (e.t === "img") {
+      const rad = e.rad ? `border-radius:${cssc(e.rad)}${/^\d+(\.\d+)?$/.test(e.rad) ? "px" : ""};` : "", bd = e.bd ? `border:${cssc(e.bd)};` : "", sh = e.sh ? `box-shadow:${cssc(e.sh)};` : "";
+      if (!e.img) return o.final ? `<div class="el" ${id} style="${b}"></div>` : `<div class="el eli elph" ${id} style="${b}${rad}">imatge</div>`;
+      const px = e.px ?? 50, py = e.py ?? 50, zm = Math.max(1, +e.zm || 1);
+      return `<div class="el eli" ${id} style="${b}${rad}${bd}${sh}"><div class="elib" style="background-image:url('${url(e.img)}');background-size:${e.fit === "contain" ? "contain" : "cover"};background-position:${px}% ${py}%;${zm > 1 ? `transform:scale(${zm});transform-origin:${px}% ${py}%;` : ""}"></div></div>`;
+    }
+    if (e.t === "forma") return `<div class="el" ${id} style="${b}background:${cssc(e.bg) || "#000"};${e.rad ? `border-radius:${cssc(e.rad)}${/^\d+(\.\d+)?$/.test(e.rad) ? "px" : ""};` : ""}${e.bd ? `border:${cssc(e.bd)};` : ""}"></div>`;
+    if (e.t === "svg") return `<div class="el els" ${id} style="${b}color:${cssc(e.col) || "inherit"}">${String(e.svg || "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/\son\w+="[^"]*"/gi, "")}</div>`;
+    return "";
+  }
+
+  // Converteix una diapositiva de maqueta en una de lliure: la dibuixa fora de pantalla i en mesura cada text, imatge i forma.
+  async function aLliure(d, s, o = {}) {
+    injecta();
+    const box = document.createElement("div"); box.style.cssText = "position:fixed;left:-30000px;top:0;pointer-events:none"; document.body.appendChild(box);
+    try {
+      box.innerHTML = dibuixa(d, s, { img: o.img, n: o.n || 1 });
+      try { await document.fonts.ready } catch (e) { } await new Promise(r => setTimeout(r, 40)); ajusta(box);
+      const root = box.firstElementChild, R0 = root.getBoundingClientRect(), els = [], t = tema(d), cs = (n, p) => getComputedStyle(n, p);
+      const nid = () => Math.random().toString(36).slice(2, 9), rd = v => Math.round(v * 10) / 10;
+      const rc = r => ({ x: rd(r.left - R0.left), y: rd(r.top - R0.top), w: rd(r.width), h: rd(r.height) });
+      const vis = r => r.w > .5 && r.h > .5 && r.x < R0.width && r.y < R0.height && r.x + r.w > 0 && r.y + r.h > 0;
+      const color = c => c && !/rgba\([^)]*,\s*0\)|transparent/.test(c);
+      const idDe = u => (String(u).match(/archivo\/([^/?#"')]+)/) || [])[1] || "";
+      const txt = n => { let out = ""; n.childNodes.forEach(c => { if (c.nodeType === 3) out += c.nodeValue.replace(/\s+/g, " "); else if (c.nodeName === "BR") out += "\n"; else if (c.nodeType === 1) { const bl = /block|flex|grid|list-item/.test(cs(c).display); if (bl && out && !out.endsWith("\n")) out += "\n"; out += txt(c); if (bl) out += "\n" } }); return out };
+      const neta = s => s.split("\n").map(x => x.replace(/\s+/g, " ").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+      const rad = st => { const v = parseFloat(st.borderTopLeftRadius) || 0; return /%/.test(st.borderTopLeftRadius) ? st.borderTopLeftRadius : v };
+      const vores = (st, r, z) => { // vores d'un sol costat (p. ex. la línia de dalt) → formes primes
+        const tot = ["Top", "Right", "Bottom", "Left"].map(k => [k, parseFloat(st["border" + k + "Width"]) || 0, st["border" + k + "Style"], st["border" + k + "Color"]]);
+        if (tot.every(x => x[1] === tot[0][1] && x[2] === tot[0][2] && x[3] === tot[0][3]) && tot[0][1]) return `${tot[0][1]}px ${tot[0][2]} ${tot[0][3]}`;
+        tot.forEach(([k, wv, sv, cv]) => { if (!wv || sv === "none" || !color(cv)) return; const f = { id: nid(), t: "forma", bg: cv, x: r.x, y: r.y, w: r.w, h: r.h }; if (k === "Top") f.h = wv; if (k === "Bottom") { f.y = r.y + r.h - wv; f.h = wv } if (k === "Left") f.w = wv; if (k === "Right") { f.x = r.x + r.w - wv; f.w = wv } z.push(f) });
+        return "";
+      };
+      const pseudo = (n, which) => { // ::before / ::after posats en absolut (línia de l'estil Editorial, punt del Tipogràfic)
+        const p = cs(n, which); if (!p || p.content === "none" || p.content === "normal" || p.position !== "absolute") return;
+        const R = n.getBoundingClientRect(), w = parseFloat(p.width) || 0, h = parseFloat(p.height) || 0, bt = parseFloat(p.borderTopWidth) || 0;
+        let x = parseFloat(p.left), y = parseFloat(p.top); if (isNaN(x)) x = R.width - (parseFloat(p.right) || 0) - w; if (isNaN(y)) y = R.height - (parseFloat(p.bottom) || 0) - h;
+        const f = { id: nid(), t: "forma", x: rd(R.left - R0.left + x), y: rd(R.top - R0.top + y), w: rd(w), h: rd(h || bt), bg: color(p.backgroundColor) ? p.backgroundColor : p.borderTopColor };
+        if (rad(p)) f.rad = rad(p); if (f.w > .5 && f.h > .5) els.push(f);
+      };
+      const walk = n => {
+        for (const c of n.children) {
+          const st = cs(c); if (st.display === "none" || st.visibility === "hidden" || +st.opacity === 0) continue;
+          const r = rc(c.getBoundingClientRect());
+          if (c.tagName.toLowerCase() === "svg") { if (vis(r)) { const gira = /matrix\(-1/.test(st.transform); els.push({ id: nid(), t: "svg", ...r, col: st.color, svg: c.outerHTML.replace(/\sclass="[^"]*"/, "").replace(/<svg/, `<svg width="100%" height="100%" preserveAspectRatio="none"${gira ? ' style="transform:scaleX(-1)"' : ""}`) }) } continue }
+          if (c.classList.contains("im")) {
+            if (!vis(r)) continue; const u = (st.backgroundImage.match(/url\("?([^")]+)"?\)/) || [])[1];
+            const e = { id: nid(), t: "img", ...r, img: u ? idDe(u) : "", fit: st.backgroundSize === "contain" ? "contain" : "cover" };
+            if (rad(st)) e.rad = rad(st); const bd = vores(st, r, []); if (bd) e.bd = bd; if (st.boxShadow && st.boxShadow !== "none") e.sh = st.boxShadow;
+            if (!u && !c.classList.contains("ph") && color(st.backgroundColor)) { els.push({ id: e.id, t: "forma", ...r, bg: st.backgroundColor }); continue }
+            els.push(e); continue;
+          }
+          // fons de color o degradat → forma (abans que el que porta a dins)
+          const grad = /gradient/.test(st.backgroundImage);
+          if (vis(r) && (color(st.backgroundColor) || grad)) { const f = { id: nid(), t: "forma", ...r, bg: grad ? st.backgroundImage : st.backgroundColor }; if (rad(st)) f.rad = rad(st); els.push(f) }
+          if (vis(r)) { const z = []; const bd = vores(st, r, z); if (bd) els.push({ id: nid(), t: "forma", ...r, bg: "transparent", bd, ...(rad(st) ? { rad: rad(st) } : {}) }); els.push(...z) }
+          pseudo(c, "::before");
+          const directe = [...c.childNodes].some(x => x.nodeType === 3 && x.nodeValue.trim()), cols = +st.columnCount > 1;
+          if (c.classList.contains("num") || directe || cols) {
+            const fs = parseFloat(st.fontSize) || 30, lhp = st.lineHeight === "normal" ? null : parseFloat(st.lineHeight);
+            let text = neta(txt(c)); if (c.tagName === "LI") text = "— " + text;
+            if (!text && !c.classList.contains("num")) continue;
+            const rg = document.createRange(); rg.selectNodeContents(c); const rr = rg.getBoundingClientRect(), r1 = [...rg.getClientRects()][0] || rr;
+            const pad = ["Top", "Right", "Bottom", "Left"].some(k => parseFloat(st["padding" + k])), li = c.tagName === "LI", bloc = li || (/block|flex|grid/.test(st.display) && !pad && !color(st.backgroundColor) && !parseFloat(st.textIndent));
+            const unaLinia = rr.height < (lhp || r1.height) * 1.5;
+            let g; if (bloc) g = { ...r, w: rd(r.w + (unaLinia ? Math.max(6, fs * .4) : 2)) }; else { const lh = lhp || r1.height, x = rc(rr); g = { x: x.x, y: rd(x.y - Math.max(0, (lh - r1.height) / 2)), w: rd(x.w + Math.max(6, fs * .4)), h: x.h } }
+            const e = { id: nid(), t: c.classList.contains("num") ? "num" : "text", ...g, text, ff: st.fontFamily, fs: rd(fs), fw: st.fontWeight, col: st.color, al: st.textAlign === "start" ? "left" : st.textAlign === "end" ? "right" : st.textAlign, tt: st.textTransform, ls: st.letterSpacing === "normal" ? 0 : rd(parseFloat(st.letterSpacing)), lh: lhp ? Math.round(lhp / fs * 100) / 100 : 1.2 };
+            if (unaLinia && !cols) e.nw = 1; if (st.fontStyle === "italic") e.it = 1; if (st.textShadow && st.textShadow !== "none") e.sh = st.textShadow; if (cols) e.cols = +st.columnCount;
+            const a = c.tagName === "A" ? c : c.querySelector("a"); if (a && a.getAttribute("href") && a.getAttribute("href") !== "#") e.href = a.getAttribute("href");
+            if (e.t === "num") e.text = "";
+            if (vis(g) || e.t === "num") els.push(e);
+          } else walk(c);
+          pseudo(c, "::after");
+        }
+      };
+      walk(root);
+      const { orig, ...net } = s;
+      return { id: s.id, tipus: "lliure", bg: t.bg, els, orig: JSON.parse(JSON.stringify(net)), ...(s.amaga ? { amaga: true } : {}) };
+    } finally { box.remove() }
   }
   function lum(hex) { const h = String(hex).replace("#", ""), f = h.length === 3 ? h.split("").map(x => x + x).join("") : h.slice(0, 6), [r, g, b] = [0, 2, 4].map(i => parseInt(f.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * b }
   const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05) };
@@ -171,12 +270,12 @@ window.DK = (() => {
   }
   // Redueix la mida del text (variable --fit) fins que tot hi cap. Es crida després d'inserir les diapositives al DOM.
   function ajusta(root) {
-    (root.classList && root.classList.contains("dk") ? [root] : [...root.querySelectorAll(".dk")]).forEach(dk => {
+    (root.classList && root.classList.contains("dk") ? [root] : [...root.querySelectorAll(".dk")]).filter(dk => !dk.classList.contains("ll")).forEach(dk => {
       const p = dk.querySelector(".p") || dk, blocs = [p, ...p.querySelectorAll("div")], txt = [...dk.querySelectorAll("h1,h2,p,li,b,.it span,.dad span")];
       const sobra = () => { if (blocs.some(x => x.scrollHeight > x.clientHeight + 3 || x.scrollWidth > x.clientWidth + 3)) return true; const r = dk.getBoundingClientRect(), k = r.width / dk.offsetWidth || 1; return txt.some(t => { const q = t.getBoundingClientRect(); return q.height && (q.top < r.top + 24 * k || q.bottom > r.bottom - 24 * k) }) };
       let f = 1; dk.style.setProperty("--fit", f);
       while (sobra() && f > .5) { f = Math.round((f - .06) * 100) / 100; dk.style.setProperty("--fit", f) }
     });
   }
-  return { ajusta, W, FORMATS, FONTS, ESTILS, TIPUS, mida, ratio, tema, dibuixa, escalada, paleta, contrast, lum, injecta, E };
+  return { ajusta, W, FORMATS, FONTS, ESTILS, TIPUS, mida, ratio, tema, dibuixa, escalada, paleta, contrast, lum, injecta, E, elHTML, aLliure };
 })();

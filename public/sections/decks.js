@@ -119,7 +119,7 @@
   });
 
   // ---------- editor ----------
-  async function obre(id) { ++ver; doc = (await H.col("deck")).find(x => x.id === id); sel = 0; if (!doc) return; if (doc.viu && !doc.ma) assistent(); else { mode = "slides"; pintar() } }
+  async function obre(id) { ++ver; doc = (await H.col("deck")).find(x => x.id === id); sel = 0; if (!doc) return; if (doc.viu && !doc.ma && !doc.slides.some(s => s.tipus === "lliure")) assistent(); else { mode = "slides"; pintar() } }
   const S = () => doc.slides[sel];
   async function pintar() {
     if (!doc) return; ++ver;
@@ -137,11 +137,21 @@
   function prev() {
     const p = el.querySelector("#dkprev"); if (!p || !doc.slides.length) { if (p) p.innerHTML = `<p class="em">Sense diapositives. Afegeix-ne una o fes servir «Omplir per apartats».</p>`; return }
     const r = DK.ratio(doc), cw = p.clientWidth || el.clientWidth - 40, hmax = Math.max(300, window.innerHeight - (r < 1 ? 420 : 280)); // vertical: que es vegin també les miniatures
-    p.innerHTML = DK.escalada(doc, S(), Math.floor(Math.min(cw, 1300, hmax * r)), { img: imgUrl }); aj(p);
+    const am = Math.floor(Math.min(cw, 1300, hmax * r)), ll = S().tipus === "lliure";
+    p.innerHTML = DK.escalada(doc, S(), am, { img: imgUrl, n: sel + 1 }); aj(p);
+    if (ll && window.DKL) DKL.monta(p, doc, S(), am / DK.mida(doc)[0], HK);
   }
+  // enllaç amb l'editor lliure (lliure.js)
+  const HK = {
+    get n() { return sel + 1 },
+    canvi: () => { doc.ma = true; refresca() },
+    panel: () => { const f = el.querySelector("#dkpf"); if (!f) return; if (pan !== "slide") { pan = "slide"; el.querySelectorAll('[data-k="pan"]').forEach(x => x.classList.toggle("on", x.dataset.v === "slide")) } f.innerHTML = panSlide() },
+    maqueta: id => { const i = doc.slides.findIndex(x => x.id === id), s = doc.slides[i]; if (!s || !s.orig) return; doc.slides[i] = { ...s.orig, id: s.id, amaga: !!s.amaga }; if (!doc.slides[i].amaga) delete doc.slides[i].amaga; sel = i; refresca(1) }
+  };
+  async function aLliure(i) { const s = doc.slides[i]; if (!s || s.tipus === "lliure") return; doc.slides[i] = await DK.aLliure(doc, s, { img: imgUrl, n: i + 1 }) }
   function refresca(tot) { doc.mod = Date.now(); save(); if (tot) return pintar(); prev(); const t = el.querySelector(`.dkt[data-i="${sel}"]`); if (t) { t.innerHTML = `<span>${sel + 1}</span>` + DK.escalada(doc, S(), Math.round(Math.min(186, 105 * DK.ratio(doc))), { img: imgUrl }); aj(t) } }
-  const totesImgs = () => doc.slides.flatMap(s => [s.img, ...(s.imgs || []), ...(s.items || []).map(x => x.img)]).filter(Boolean);
-  new ResizeObserver(() => { if (doc) prev() }).observe(el);
+  const totesImgs = () => doc.slides.flatMap(s => [s.img, ...(s.imgs || []), ...(s.items || []).map(x => x.img), ...(s.els || []).map(x => x.img)]).filter(Boolean);
+  let amplePrev = ""; const reprev = () => { const w = el.clientWidth + "x" + window.innerHeight; if (doc && w !== amplePrev) { amplePrev = w; prev() } }; new ResizeObserver(reprev).observe(el); window.addEventListener("resize", reprev);
 
   // camps
   function camp(k, l, t, v, ctx) {
@@ -158,10 +168,13 @@
   function panSlide() {
     if (!doc.slides.length) return `<p class="em">Afegeix una diapositiva.</p>`;
     const s = S(), t = DK.TIPUS[s.tipus] || DK.TIPUS.text;
+    const peu = `<div class="sfoot"><button class="del" data-k="sdel">Esborrar</button><span><button class="b2" data-k="samaga">${s.amaga ? "Mostrar" : "Amagar"}</button> <button class="b2" data-k="sdup">Duplicar</button></span></div>`;
+    if (s.tipus === "lliure") { const h = window.DKL ? DKL.panel(doc, s) : ""; return h + (window.DKL && DKL.triat() ? "" : `<label style="margin-top:18px">Diapositiva</label>` + peu.replace('<div class="sfoot">', '<div class="sfoot" style="margin-top:6px">')) }
     const tt = { personatges: "items:personatges", equip: "items:equip", dades: "items:dades", fitxa: "items:dades", calendari: "items:calendari", laurels: "items:laurels" };
-    return `<label>Maqueta</label><select data-k="tipus">${Object.entries(DK.TIPUS).map(([k, x]) => `<option value="${k}" ${k === s.tipus ? "selected" : ""}>${E(x.nom)}</option>`).join("")}</select>` +
+    return `<div class="dkllx"><b>Edició lliure</b><small>Converteix aquesta diapositiva en elements solts: pots moure, canviar de mida, girar o esborrar qualsevol text, imatge o detall, i afegir-ne de nous.</small><div class="row"><button class="b" data-k="lliure">Editar lliurement</button><button class="b2" data-k="lliuretot">Totes les diapositives</button></div></div>
+      <label>Maqueta</label><select data-k="tipus">${Object.entries(DK.TIPUS).map(([k, x]) => `<option value="${k}" ${k === s.tipus ? "selected" : ""}>${E(x.nom)}</option>`).join("")}</select>` +
       t.camps.map(([k, l, ty]) => camp(k, l, ty === "items" ? (k === "espais" ? "items:espais" : tt[s.tipus] || "items:personatges") : ty, s[k], "s")).join("") +
-      `<div class="sfoot"><button class="del" data-k="sdel">Esborrar</button><span><button class="b2" data-k="samaga">${s.amaga ? "Mostrar" : "Amagar"}</button> <button class="b2" data-k="sdup">Duplicar</button></span></div>`;
+      peu;
   }
   function panDis() {
     const t = DK.tema(doc), mob = window.innerWidth < 900;
@@ -171,7 +184,7 @@
       <label>Tipografia</label><select data-k="font">${Object.keys(DK.FONTS).map(f => `<option ${f === t.font ? "selected" : ""}>${f}</option>`).join("")}</select>
       <label>Colors</label><div class="dkcol">${[["bg", "Fons"], ["fg", "Text"], ["mut", "Text secundari"], ["ac", "Accent"]].map(([k, l]) => `<label class="ck"><input type="color" data-k="col" data-v="${k}" value="${t[k]}"> ${l}</label>`).join("")}</div>
       <label>Títols</label><select data-k="tt"><option value="lowercase" ${t.tt === "lowercase" ? "selected" : ""}>en minúscules</option><option value="uppercase" ${t.tt === "uppercase" ? "selected" : ""}>EN MAJÚSCULES</option><option value="none" ${t.tt === "none" ? "selected" : ""}>Tal com els escric</option></select>
-      <button class="b2" data-k="resta" style="margin-top:16px">Tornar als colors de l'estil</button>`;
+      <button class="b2" data-k="resta" style="margin-top:16px">Tornar als colors de l'estil</button>${doc.slides.some(s => s.tipus === "lliure") ? `<small style="display:block;margin-top:10px">Les diapositives d'edició lliure conserven els seus colors i tipografies: es canvien element per element.</small>` : ""}`;
   }
 
   // ---------- omplir per apartats: formulari a l'esquerra i el dossier es va fent a la dreta ----------
@@ -221,14 +234,14 @@
       const sob = [...root.querySelectorAll(".p, .p > div, .it, .dad > div, .cal")].find(x => x.scrollHeight > x.clientHeight + 4 || x.scrollWidth > x.clientWidth + 4);
       if (sob) av.push([n, `El text no hi cap ni reduint-lo: «${(sob.innerText || "").trim().slice(0, 50)}…». Escurça'l o reparteix-lo en dues diapositives.`]);
       else if (fit < .8) av.push([n, `He hagut de reduir el text al ${Math.round(fit * 100)}% perquè hi càpiga. Potser és massa per a una diapositiva.`]);
-      if (root.querySelector(".ph")) av.push([n, "Falta una imatge."]);
+      if (root.querySelector(".ph, .elph")) av.push([n, "Falta una imatge."]);
       const par = (root.innerText || "").trim().split(/\s+/).filter(Boolean).length; if (par > 160) av.push([n, `Massa text (${par} paraules). Millor repartir-lo en dues diapositives.`]);
       if (["portada", "text", "imatgetext", "personatges", "equip", "llista", "dades", "calendari"].includes(s.tipus) && !s.titol) av.push([n, "Sense títol."]);
-      root.querySelectorAll(".im:not(.ph)").forEach(x => { const id = (x.style.backgroundImage.match(/archivo\/([\w]+)/) || [])[1]; if (id) { const r = x.getBoundingClientRect(); mides[id] = Math.max(mides[id] || 0, r.width) } });
+      root.querySelectorAll(".im:not(.ph), .elib").forEach(x => { const id = (x.style.backgroundImage.match(/archivo\/([\w]+)/) || [])[1]; if (id) { const r = x.getBoundingClientRect(); mides[id] = Math.max(mides[id] || 0, r.width) } });
     }
     box.remove();
     // resolució de les imatges (en relació amb la mida a què es mostren; per imprimir cal el doble)
-    for (const [id, ample] of Object.entries(mides)) { try { const im = new Image(); im.src = imgUrl(id); await im.decode(); if (im.naturalWidth < ample * .9) { const n = doc.slides.findIndex(s => [s.img, ...(s.imgs || []), ...(s.items || []).map(x => x.img)].includes(id)) + 1; av.push([n, `Imatge de poca resolució (${im.naturalWidth}px per a un espai de ${Math.round(ample)}px): es veurà pixelada.`]) } } catch (e) { } }
+    for (const [id, ample] of Object.entries(mides)) { try { const im = new Image(); im.src = imgUrl(id); await im.decode(); if (im.naturalWidth < ample * .9) { const n = doc.slides.findIndex(s => [s.img, ...(s.imgs || []), ...(s.items || []).map(x => x.img), ...(s.els || []).map(x => x.img)].includes(id)) + 1; av.push([n, `Imatge de poca resolució (${im.naturalWidth}px per a un espai de ${Math.round(ample)}px): es veurà pixelada.`]) } } catch (e) { } }
     const uniq = av.filter((x, i) => av.findIndex(y => y[0] === x[0] && y[1] === x[1]) === i);
     H.sheet(`<h2 style="margin-top:0;font-size:20px;color:#000;text-transform:none;letter-spacing:0">Revisió de disseny</h2>` + (uniq.length ? uniq.map(([n, m]) => `<div class="r" data-rk="${n}"><i class="dot" style="background:#ff9f0a"></i><div class="g"><b>${n ? "Diapositiva " + n : "Tot el dossier"}</b><small>${E(m)}</small></div></div>`).join("") : `<p class="em">Tot correcte: res tallat, imatges amb prou resolució i bon contrast.</p>`));
   }
@@ -248,7 +261,7 @@
       let z = document.getElementById("printzone"); if (!z) { z = document.createElement("div"); z.id = "printzone"; document.body.appendChild(z) }
       z.innerHTML = `<style>@page{size:${w}px ${h}px;margin:0}#printzone .dk{page-break-after:always;break-after:page}</style>` + ls.map(s => DK.dibuixa(doc, s, { img: imgUrl, n: doc.slides.indexOf(s) + 1, final: 1 })).join("");
       document.body.classList.add("printing"); DK.ajusta(z); const fi = () => { document.body.classList.remove("printing"); z.innerHTML = ""; window.removeEventListener("afterprint", fi) }; window.addEventListener("afterprint", fi);
-      await Promise.all([...z.querySelectorAll(".im")].map(x => { const u = (x.style.backgroundImage.match(/url\("?([^")]+)/) || [])[1]; return u ? new Image().decode.call(Object.assign(new Image(), { src: u })).catch(() => { }) : 0 }));
+      await Promise.all([...z.querySelectorAll(".im, .elib")].map(x => { const u = (x.style.backgroundImage.match(/url\("?([^")]+)/) || [])[1]; return u ? new Image().decode.call(Object.assign(new Image(), { src: u })).catch(() => { }) : 0 }));
       await document.fonts.ready; setTimeout(() => window.print(), 150); return;
     }
     H.toast("Preparant les imatges…");
@@ -258,7 +271,7 @@
     for (const [i, s] of ls.entries()) {
       box.innerHTML = DK.dibuixa(doc, s, { img: imgUrl, n: doc.slides.indexOf(s) + 1, final: 1 }); await document.fonts.ready; await new Promise(r => setTimeout(r, 60)); DK.ajusta(box);
       const fn = f === "PNG" ? htmlToImage.toBlob : (n, o) => htmlToImage.toJpeg(n, o).then(u => fetch(u).then(r => r.blob()));
-      out.push([`${nom} ${String(doc.slides.indexOf(s) + 1).padStart(2, "0")}.${f === "PNG" ? "png" : "jpg"}`, await fn(box.firstElementChild, { pixelRatio: +q, quality: .92, width: w, height: h, cacheBust: false, backgroundColor: DK.tema(doc).bg })]);
+      out.push([`${nom} ${String(doc.slides.indexOf(s) + 1).padStart(2, "0")}.${f === "PNG" ? "png" : "jpg"}`, await fn(box.firstElementChild, { pixelRatio: +q, quality: .92, width: w, height: h, cacheBust: false, backgroundColor: s.tipus === "lliure" && s.bg ? s.bg : DK.tema(doc).bg })]);
     }
     box.remove();
     if (out.length === 1) return baixa(out[0][1], out[0][0]);
@@ -318,6 +331,8 @@
     if (k === "samaga") { marcaMa(); S().amaga = !S().amaga; refresca(1) }
     if (k === "estil") { doc.estil = b.dataset.v; doc.tema = {}; refresca(1) }
     if (k === "resta") { doc.tema = {}; refresca(1) }
+    if (k === "lliure") { doc.ma = true; b.disabled = true; try { await aLliure(sel); refresca(1) } catch (er) { console.error(er); H.toast("No s'ha pogut convertir"); b.disabled = false } return }
+    if (k === "lliuretot") { if (!await H.confirma("Passar totes les diapositives a edició lliure? Cada una es podrà tornar a la seva maqueta, però el formulari «Omplir per apartats» ja no les refarà soles.", { ok: "Passar-les totes" })) return; doc.ma = true; H.toast("Convertint…"); try { for (let j = 0; j < doc.slides.length; j++) await aLliure(j) } catch (er) { console.error(er) } refresca(1); return }
     if (k === "assist") assistent();
     if (k === "rev") revisio();
     if (k === "down") descarregar();
@@ -398,7 +413,7 @@
   el.addEventListener("dragstart", e => { const t = e.target.closest("[data-dr]"); if (t) { dr = +t.dataset.dr; e.dataTransfer.setData("text/plain", "x") } });
   el.addEventListener("dragover", e => { if (dr != null && e.target.closest("[data-dr]")) e.preventDefault() });
   el.addEventListener("drop", e => { const t = e.target.closest("[data-dr]"); if (dr == null || !t) return; e.preventDefault(); marcaMa(); const to = +t.dataset.dr, [s] = doc.slides.splice(dr, 1); doc.slides.splice(to, 0, s); sel = to; dr = null; refresca(1) });
-  document.addEventListener("keydown", e => { if (el.hidden || !doc || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || !document.getElementById("hsh").hidden) return; if (e.key === "ArrowRight" && sel < doc.slides.length - 1) { sel++; pintar() } if (e.key === "ArrowLeft" && sel) { sel--; pintar() } });
+  document.addEventListener("keydown", e => { if (e.defaultPrevented || el.hidden || !doc || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.activeElement.isContentEditable || document.querySelector(".hdlg") || !document.getElementById("hsh").hidden || (window.DKL && DKL.actiu())) return; if (e.key === "ArrowRight" && sel < doc.slides.length - 1) { sel++; pintar() } if (e.key === "ArrowLeft" && sel) { sel--; pintar() } });
 
   window.addEventListener("hub-sec", e => { if (e.detail === "decks" && (!doc || !H.dePj(doc))) { mode = "slides"; lista() } });
   window.DECKS = { obre };
